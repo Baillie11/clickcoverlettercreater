@@ -2195,6 +2195,7 @@
     const companyName = sanitizeText(DOM.companyName.value);
     const contactPerson = sanitizeText(DOM.contactPerson.value);
     const businessAddress = sanitizeText(DOM.businessAddress.value);
+    const todayLong = formatDateLongAU(new Date());
 
     const printEl = document.createElement('div');
     printEl.style.padding = '20px';
@@ -2255,6 +2256,13 @@
       headerBlock.appendChild(hr);
 
       printEl.appendChild(headerBlock);
+
+      // Date (right-aligned)
+      const dateEl = document.createElement('div');
+      dateEl.innerText = todayLong;
+      dateEl.style.textAlign = 'right';
+      dateEl.style.marginBottom = '10px';
+      printEl.appendChild(dateEl);
 
       const salutationP = document.createElement('p');
       if (contactPerson && contactPerson.trim()) {
@@ -2415,6 +2423,13 @@
         content.appendChild(header);
       }
 
+      // Date (right-aligned within content)
+      const dateEl = document.createElement('div');
+      dateEl.innerText = todayLong;
+      dateEl.style.textAlign = 'right';
+      dateEl.style.marginBottom = '8px';
+      content.appendChild(dateEl);
+
       const sal = document.createElement('p');
       if (contactPerson && contactPerson.trim()) sal.innerText = `Dear ${contactPerson.trim()},`; else sal.innerText = 'Dear Hiring Manager,';
       sal.style.marginBottom = '12px';
@@ -2482,6 +2497,13 @@
         bar.appendChild(c);
       }
       printEl.appendChild(bar);
+
+      // Date (right-aligned)
+      const dateEl = document.createElement('div');
+      dateEl.innerText = todayLong;
+      dateEl.style.textAlign = 'right';
+      dateEl.style.margin = '6px 0 10px';
+      printEl.appendChild(dateEl);
 
       // Body
       const salutationP = document.createElement('p');
@@ -2574,6 +2596,13 @@
     printEl.appendChild(header);
 
     printEl.appendChild(document.createElement('br'));
+
+    // Date (right-aligned)
+    const dateEl = document.createElement('div');
+    dateEl.innerText = todayLong;
+    dateEl.style.textAlign = 'right';
+    dateEl.style.marginBottom = '10px';
+    printEl.appendChild(dateEl);
 
     const salutationP = document.createElement('p');
     salutationP.style.marginBottom = '16px';
