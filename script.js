@@ -117,25 +117,44 @@
     // Extract full name (usually appears near the top of the document)
     const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
     
+    console.log('First 10 lines for name detection:', lines.slice(0, 10));
+    
     // Look for name in first few lines
-    for (let i = 0; i < Math.min(5, lines.length); i++) {
+    for (let i = 0; i < Math.min(8, lines.length); i++) {
       const line = lines[i];
       
-      // Skip lines with email or phone (these aren't names)
-      if (line.includes('@') || /\d{4}\s?\d{4}/.test(line)) continue;
+      // Skip lines with email, phone, dates, or job-related keywords
+      if (line.includes('@') || 
+          /\d{4}\s?\d{4}/.test(line) || 
+          /\b\d{4}\b/.test(line) || // Skip years
+          /\b(analyst|developer|manager|officer|coordinator|assistant|specialist|consultant|admin|clerk|representative|advisor)\b/i.test(line) ||
+          /\b(resume|cv|curriculum|vitae)\b/i.test(line) ||
+          line.length > 40) { // Skip very long lines
+        console.log('Skipping line (not a name):', line);
+        continue;
+      }
       
-      // Look for a line that looks like a name (2-3 words, proper case)
-      const nameMatch = line.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})$/);;
+      // Look for a line that looks like a name (2-4 words, proper case, reasonable length)
+      const nameMatch = line.match(/^([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,}){1,3})$/);
       if (nameMatch) {
         const fullName = nameMatch[1];
         const nameParts = fullName.split(/\s+/);
         
-        if (nameParts.length >= 2) {
-          personalInfo.fullName = fullName;
-          personalInfo.firstName = nameParts[0];
-          personalInfo.lastName = nameParts[nameParts.length - 1];
-          console.log('Found name:', personalInfo.fullName);
-          break;
+        // Validate this looks like a real name
+        if (nameParts.length >= 2 && nameParts.length <= 4) {
+          // Check each part looks like a name (not too short, not common words)
+          const validName = nameParts.every(part => 
+            part.length >= 2 && 
+            !/\b(the|and|for|with|from|service|desk|pay|ltd|inc|pty)\b/i.test(part)
+          );
+          
+          if (validName) {
+            personalInfo.fullName = fullName;
+            personalInfo.firstName = nameParts[0];
+            personalInfo.lastName = nameParts[nameParts.length - 1];
+            console.log('Found name:', personalInfo.fullName);
+            break;
+          }
         }
       }
     }
@@ -144,37 +163,67 @@
     const addressPatterns = [
       // Street address with suburb, state, postcode
       /\b\d+[\w\s,-]+(?:Street|St|Road|Rd|Avenue|Ave|Lane|Ln|Drive|Dr|Court|Ct|Place|Pl)\b[\s\S]*?\b(?:NSW|VIC|QLD|WA|SA|TAS|NT|ACT)\s*\d{4}\b/gi,
-      // Just suburb, state, postcode
-      /\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s*,?\s*(?:NSW|VIC|QLD|WA|SA|TAS|NT|ACT)\s*\d{4}\b/gi,
-      // Street address without full state info
-      /\b\d+[\w\s,-]+(?:Street|St|Road|Rd|Avenue|Ave|Lane|Ln|Drive|Dr|Court|Ct|Place|Pl)\b[\s\S]*?\b[A-Z][a-z]+/gi
+      // Just suburb, state, postcode (but not years like 2024)
+      /\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s*,?\s*(?:NSW|VIC|QLD|WA|SA|TAS|NT|ACT)\s*\d{4}\b/gi
     ];
     
     for (const pattern of addressPatterns) {
-      const addressMatch = text.match(pattern);
-      if (addressMatch) {
-        const address = addressMatch[0].replace(/\s+/g, ' ').trim();
-        personalInfo.address = address;
-        console.log('Found address:', personalInfo.address);
-        
-        // Try to extract state and postcode separately
-        const statePostcodeMatch = address.match(/\b(NSW|VIC|QLD|WA|SA|TAS|NT|ACT)\s*(\d{4})\b/i);
-        if (statePostcodeMatch) {
-          personalInfo.state = statePostcodeMatch[1];
-          personalInfo.postcode = statePostcodeMatch[2];
+      const addressMatches = text.match(pattern);
+      if (addressMatches) {
+        for (const addressCandidate of addressMatches) {
+          const address = addressCandidate.replace(/\s+/g, ' ').trim();
+          
+          // Filter out job titles, years, and non-address content
+          if (
+            // Skip if it contains job-related keywords
+            /\b(analyst|developer|manager|officer|coordinator|assistant|specialist|consultant|admin|clerk|representative|advisor|engineer|technician|supervisor|director)\b/i.test(address) ||
+            // Skip if it starts with a year (like "2024 Service Desk")
+            /^(19|20)\d{2}\b/.test(address) ||
+            // Skip if it contains company-related terms
+            /\b(service|desk|pay|ltd|inc|pty|corp|company|solutions|systems|technologies)\b/i.test(address) ||
+            // Skip if it's too long to be a reasonable address
+            address.length > 80
+          ) {
+            console.log('Skipping address candidate (job title/company):', address);
+            continue;
+          }
+          
+          personalInfo.address = address;
+          console.log('Found address:', personalInfo.address);
+          
+          // Try to extract state and postcode separately
+          const statePostcodeMatch = address.match(/\b(NSW|VIC|QLD|WA|SA|TAS|NT|ACT)\s*(\d{4})\b/i);
+          if (statePostcodeMatch) {
+            personalInfo.state = statePostcodeMatch[1];
+            personalInfo.postcode = statePostcodeMatch[2];
+          }
+          
+          break;
         }
         
-        break;
+        if (personalInfo.address) break; // Stop if we found a valid address
       }
     }
     
     // If no full address found, look for just city/suburb
     if (!personalInfo.address) {
       const cityPattern = /\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s*,\s*(?:NSW|VIC|QLD|WA|SA|TAS|NT|ACT)\b/g;
-      const cityMatch = text.match(cityPattern);
-      if (cityMatch) {
-        personalInfo.city = cityMatch[0];
-        console.log('Found city:', personalInfo.city);
+      const cityMatches = text.match(cityPattern);
+      if (cityMatches) {
+        for (const cityCandidate of cityMatches) {
+          // Skip if it looks like a job title or company reference
+          if (
+            /\b(analyst|developer|manager|officer|service|desk|pay|ltd|inc|pty)\b/i.test(cityCandidate) ||
+            /^(19|20)\d{2}\b/.test(cityCandidate)
+          ) {
+            console.log('Skipping city candidate (job title):', cityCandidate);
+            continue;
+          }
+          
+          personalInfo.city = cityCandidate;
+          console.log('Found city:', personalInfo.city);
+          break;
+        }
       }
     }
     
