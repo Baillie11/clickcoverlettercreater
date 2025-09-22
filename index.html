@@ -8,6 +8,7 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.11.2/html2pdf.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 <body>
   <header class="app-header">
@@ -43,6 +44,25 @@
         <input type="text" id="lastName" placeholder="Last Name" />
         <input type="text" id="addressLine1" placeholder="Address Line 1" />
         <input type="text" id="addressLine2" placeholder="Address Line 2" />
+        
+        <div class="resume-upload-section">
+          <h4>Resume Upload</h4>
+          <div class="resume-upload-area" id="resumeUploadArea">
+            <div class="upload-placeholder" id="uploadPlaceholder">
+              <p>📄 Drag & drop your resume here or click to browse</p>
+              <p class="upload-hint">Supports PDF, DOC, DOCX files</p>
+            </div>
+            <input type="file" id="resumeFileInput" accept=".pdf,.doc,.docx" style="display: none;" />
+          </div>
+          <div class="resume-status" id="resumeStatus" style="display: none;">
+            <div class="resume-info">
+              <span class="resume-name" id="resumeName"></span>
+              <span class="resume-size" id="resumeSize"></span>
+              <button class="remove-resume-btn" id="removeResumeBtn">Remove</button>
+            </div>
+            <div class="parsing-status" id="parsingStatus"></div>
+          </div>
+        </div>
       </section>
 
       <section class="job-info">

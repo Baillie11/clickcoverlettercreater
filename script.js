@@ -10,6 +10,16 @@
     addressLine1: null,
     addressLine2: null,
     
+    // Resume Upload Elements
+    resumeUploadArea: null,
+    resumeFileInput: null,
+    uploadPlaceholder: null,
+    resumeStatus: null,
+    resumeName: null,
+    resumeSize: null,
+    removeResumeBtn: null,
+    parsingStatus: null,
+    
     // Job Information Elements
     roleTitle: null,
     companyName: null,
@@ -35,6 +45,14 @@
   let appState = {
     profile: {},
     responses: [],
+    resume: {
+      fileName: null,
+      fileSize: null,
+      uploadDate: null,
+      parsedText: null,
+      keywords: [],
+      sections: {}
+    },
     currentLetter: {
       paragraphs: []
     }
@@ -49,11 +67,20 @@
     return text.trim().replace(/<[^>]*>/g, '');
   }
 
+  function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
   // Local Storage Management
   function loadAppState() {
     try {
       const savedProfile = localStorage.getItem('userProfile');
       const savedResponses = localStorage.getItem('responses');
+      const savedResume = localStorage.getItem('resumeData');
       
       if (savedProfile) {
         appState.profile = JSON.parse(savedProfile);
@@ -65,6 +92,10 @@
         // First time - seed with default responses
         seedDefaultResponses();
       }
+      
+      if (savedResume) {
+        appState.resume = JSON.parse(savedResume);
+      }
     } catch (error) {
       console.error('Error loading app state:', error);
       seedDefaultResponses();
@@ -75,6 +106,7 @@
     try {
       localStorage.setItem('userProfile', JSON.stringify(appState.profile));
       localStorage.setItem('responses', JSON.stringify(appState.responses));
+      localStorage.setItem('resumeData', JSON.stringify(appState.resume));
     } catch (error) {
       console.error('Error saving app state:', error);
       alert('Unable to save data. Storage may be full.');
@@ -118,6 +150,363 @@
       addressLine2: sanitizeText(DOM.addressLine2.value)
     };
     saveAppState();
+  }
+
+  // Resume Management Functions
+  function setupResumeUpload() {
+    // Set up PDF.js worker
+    if (typeof pdfjsLib !== 'undefined') {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+
+    // Click to upload
+    DOM.resumeUploadArea.addEventListener('click', () => {
+      DOM.resumeFileInput.click();
+    });
+
+    // File input change
+    DOM.resumeFileInput.addEventListener('change', handleFileSelect);
+
+    // Drag and drop events
+    DOM.resumeUploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      DOM.resumeUploadArea.classList.add('drag-over');
+    });
+
+    DOM.resumeUploadArea.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      DOM.resumeUploadArea.classList.remove('drag-over');
+    });
+
+    DOM.resumeUploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      DOM.resumeUploadArea.classList.remove('drag-over');
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        handleFileSelect({ target: { files: files } });
+      }
+    });
+
+    // Remove resume button
+    DOM.removeResumeBtn.addEventListener('click', removeResume);
+  }
+
+  function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['.pdf', '.doc', '.docx'];
+    const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+    
+    if (!allowedTypes.includes(fileExtension)) {
+      alert('Please select a PDF, DOC, or DOCX file.');
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      alert('File size must be less than 10MB.');
+      return;
+    }
+
+    uploadResume(file);
+  }
+
+  function uploadResume(file) {
+    // Update UI to show upload in progress
+    showResumeStatus(file);
+    setParsingStatus('processing', 'Processing resume...');
+
+    // Store file info
+    appState.resume.fileName = file.name;
+    appState.resume.fileSize = file.size;
+    appState.resume.uploadDate = new Date().toISOString();
+
+    // Parse the file based on type
+    const fileExtension = file.name.split('.').pop().toLowerCase();
+    
+    if (fileExtension === 'pdf') {
+      parsePDF(file);
+    } else if (fileExtension === 'doc' || fileExtension === 'docx') {
+      parseWordDocument(file);
+    }
+  }
+
+  function parsePDF(file) {
+    const fileReader = new FileReader();
+    
+    fileReader.onload = function(event) {
+      const typedarray = new Uint8Array(event.target.result);
+      
+      if (typeof pdfjsLib === 'undefined') {
+        setParsingStatus('error', 'PDF parsing library not loaded.');
+        return;
+      }
+
+      pdfjsLib.getDocument(typedarray).promise.then(function(pdf) {
+        let textContent = '';
+        let pagesProcessed = 0;
+        const totalPages = pdf.numPages;
+
+        for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+          pdf.getPage(pageNum).then(function(page) {
+            page.getTextContent().then(function(content) {
+              const pageText = content.items.map(item => item.str).join(' ');
+              textContent += pageText + '\n';
+              pagesProcessed++;
+
+              if (pagesProcessed === totalPages) {
+                finishResumeProcessing(textContent);
+              }
+            });
+          });
+        }
+      }).catch(function(error) {
+        console.error('Error parsing PDF:', error);
+        setParsingStatus('error', 'Failed to parse PDF file.');
+      });
+    };
+
+    fileReader.readAsArrayBuffer(file);
+  }
+
+  function parseWordDocument(file) {
+    // For Word documents, we'll use a simple text extraction
+    // In a real implementation, you might want to use a library like mammoth.js
+    const fileReader = new FileReader();
+    
+    fileReader.onload = function(event) {
+      // This is a simplified approach - for production, use mammoth.js or similar
+      try {
+        let text = event.target.result;
+        
+        // Remove common Word document artifacts
+        text = text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '');
+        text = text.replace(/\s+/g, ' ');
+        
+        finishResumeProcessing(text);
+      } catch (error) {
+        console.error('Error parsing Word document:', error);
+        setParsingStatus('error', 'Failed to parse Word document. Please try converting to PDF first.');
+      }
+    };
+
+    fileReader.readAsText(file);
+  }
+
+  function finishResumeProcessing(text) {
+    // Clean and store the parsed text
+    appState.resume.parsedText = sanitizeText(text);
+    
+    // Extract keywords and sections
+    appState.resume.keywords = extractKeywords(text);
+    appState.resume.sections = extractSections(text);
+    
+    // Save to localStorage
+    saveAppState();
+    
+    // Update UI
+    setParsingStatus('success', `Resume parsed successfully! Found ${appState.resume.keywords.length} key skills and qualifications.`);
+    
+    // Generate AI responses based on resume
+    generateResumeBasedResponses();
+  }
+
+  function extractKeywords(text) {
+    // Common professional keywords to look for
+    const skillPatterns = [
+      /\b(JavaScript|Python|Java|C\+\+|HTML|CSS|SQL|React|Angular|Vue|Node\.js)\b/gi,
+      /\b(project management|leadership|team lead|manager|director|supervisor)\b/gi,
+      /\b(Bachelor|Master|PhD|degree|certification|certified|licensed)\b/gi,
+      /\b(years? of experience|experience with|expertise in|proficient in|skilled in)\b/gi
+    ];
+    
+    const keywords = new Set();
+    
+    skillPatterns.forEach(pattern => {
+      const matches = text.match(pattern);
+      if (matches) {
+        matches.forEach(match => keywords.add(match.toLowerCase()));
+      }
+    });
+    
+    return Array.from(keywords).slice(0, 20); // Limit to 20 keywords
+  }
+
+  function extractSections(text) {
+    // Try to identify common resume sections
+    const sections = {};
+    
+    // Look for education section
+    const educationMatch = text.match(/education([\s\S]*?)(?=experience|work|employment|skills|projects|$)/i);
+    if (educationMatch) {
+      sections.education = educationMatch[1].trim();
+    }
+    
+    // Look for experience section
+    const experienceMatch = text.match(/(?:experience|work|employment)([\s\S]*?)(?=education|skills|projects|$)/i);
+    if (experienceMatch) {
+      sections.experience = experienceMatch[1].trim();
+    }
+    
+    // Look for skills section
+    const skillsMatch = text.match(/skills([\s\S]*?)(?=experience|education|projects|$)/i);
+    if (skillsMatch) {
+      sections.skills = skillsMatch[1].trim();
+    }
+    
+    return sections;
+  }
+
+  function generateResumeBasedResponses() {
+    if (!appState.resume.parsedText) return;
+    
+    // Remove existing resume-based responses to regenerate
+    appState.responses = appState.responses.filter(r => r.source !== 'resume-based');
+    
+    const keywords = appState.resume.keywords;
+    const sections = appState.resume.sections;
+    const resumeText = appState.resume.parsedText;
+    
+    // Generate intelligent, personalized responses
+    const resumeResponses = [];
+    
+    // Experience-based opening
+    if (keywords.length > 0) {
+      resumeResponses.push({
+        id: 'resume-exp-' + Date.now(),
+        text: `With my background in ${keywords.slice(0, 3).join(', ')}, I am excited to bring my expertise to this role and contribute to your team's success.`,
+        category: 'ai',
+        userCreated: false,
+        source: 'resume-based'
+      });
+    }
+    
+    // Skills-based qualification
+    if (sections.skills) {
+      resumeResponses.push({
+        id: 'resume-skills-' + Date.now(),
+        text: `My technical proficiency and hands-on experience have prepared me well for the challenges of this position, and I am confident in my ability to make an immediate impact.`,
+        category: 'ai',
+        userCreated: false,
+        source: 'resume-based'
+      });
+    }
+    
+    // Education/certification based
+    if (resumeText.toLowerCase().includes('degree') || resumeText.toLowerCase().includes('certified')) {
+      resumeResponses.push({
+        id: 'resume-edu-' + Date.now(),
+        text: `My educational background and professional certifications have provided me with a strong foundation in the field, complemented by practical experience that directly applies to this role.`,
+        category: 'ai',
+        userCreated: false,
+        source: 'resume-based'
+      });
+    }
+    
+    // Leadership/management experience
+    if (keywords.some(k => k.includes('lead') || k.includes('manager') || k.includes('supervisor'))) {
+      resumeResponses.push({
+        id: 'resume-leadership-' + Date.now(),
+        text: `My leadership experience has taught me the importance of collaboration, strategic thinking, and driving results - qualities I am eager to bring to your organization.`,
+        category: 'ai',
+        userCreated: false,
+        source: 'resume-based'
+      });
+    }
+    
+    // Years of experience based
+    const experienceMatch = resumeText.match(/(\d+)\+?\s*years?\s*of\s*experience/i);
+    if (experienceMatch) {
+      const years = experienceMatch[1];
+      resumeResponses.push({
+        id: 'resume-years-' + Date.now(),
+        text: `With ${years} years of progressive experience in the industry, I have developed a comprehensive skill set and deep understanding that would be valuable to your team.`,
+        category: 'ai',
+        userCreated: false,
+        source: 'resume-based'
+      });
+    }
+    
+    // Project/achievement based
+    if (resumeText.toLowerCase().includes('project') || resumeText.toLowerCase().includes('achieved')) {
+      resumeResponses.push({
+        id: 'resume-achievements-' + Date.now(),
+        text: `Throughout my career, I have successfully delivered complex projects and achieved measurable results, demonstrating my ability to execute effectively and add value to any organization.`,
+        category: 'ai',
+        userCreated: false,
+        source: 'resume-based'
+      });
+    }
+    
+    // Add closing based on resume content
+    resumeResponses.push({
+      id: 'resume-closing-' + Date.now(),
+      text: `I am excited about the opportunity to leverage my background and expertise to contribute to your organization's continued success and would welcome the chance to discuss how my experience aligns with your needs.`,
+      category: 'ai',
+      userCreated: false,
+      source: 'resume-based'
+    });
+    
+    // Add all generated responses
+    appState.responses.push(...resumeResponses);
+    
+    saveAppState();
+    renderResponses();
+  }
+
+  function showResumeStatus(file) {
+    DOM.uploadPlaceholder.style.display = 'none';
+    DOM.resumeStatus.style.display = 'block';
+    
+    DOM.resumeName.textContent = file.name;
+    DOM.resumeSize.textContent = formatFileSize(file.size);
+  }
+
+  function setParsingStatus(type, message) {
+    DOM.parsingStatus.className = `parsing-status ${type}`;
+    DOM.parsingStatus.textContent = message;
+  }
+
+  function removeResume() {
+    if (confirm('Are you sure you want to remove your resume? This will also remove any AI-generated responses based on your resume.')) {
+      // Reset resume data
+      appState.resume = {
+        fileName: null,
+        fileSize: null,
+        uploadDate: null,
+        parsedText: null,
+        keywords: [],
+        sections: {}
+      };
+      
+      // Remove resume-based responses
+      appState.responses = appState.responses.filter(r => r.source !== 'resume-based');
+      
+      // Update UI
+      DOM.uploadPlaceholder.style.display = 'block';
+      DOM.resumeStatus.style.display = 'none';
+      DOM.resumeFileInput.value = '';
+      
+      saveAppState();
+      renderResponses();
+    }
+  }
+
+  function loadResumeStatus() {
+    if (appState.resume.fileName) {
+      DOM.uploadPlaceholder.style.display = 'none';
+      DOM.resumeStatus.style.display = 'block';
+      
+      DOM.resumeName.textContent = appState.resume.fileName;
+      DOM.resumeSize.textContent = formatFileSize(appState.resume.fileSize);
+      
+      if (appState.resume.parsedText) {
+        setParsingStatus('success', `Resume loaded! Found ${appState.resume.keywords.length} key skills and qualifications.`);
+      }
+    }
   }
 
   // Response Management
@@ -522,6 +911,16 @@
     DOM.addressLine1 = document.getElementById('addressLine1');
     DOM.addressLine2 = document.getElementById('addressLine2');
     
+    // Resume upload elements
+    DOM.resumeUploadArea = document.getElementById('resumeUploadArea');
+    DOM.resumeFileInput = document.getElementById('resumeFileInput');
+    DOM.uploadPlaceholder = document.getElementById('uploadPlaceholder');
+    DOM.resumeStatus = document.getElementById('resumeStatus');
+    DOM.resumeName = document.getElementById('resumeName');
+    DOM.resumeSize = document.getElementById('resumeSize');
+    DOM.removeResumeBtn = document.getElementById('removeResumeBtn');
+    DOM.parsingStatus = document.getElementById('parsingStatus');
+    
     DOM.roleTitle = document.getElementById('roleTitle');
     DOM.companyName = document.getElementById('companyName');
     DOM.contactPerson = document.getElementById('contactPerson');
@@ -545,11 +944,13 @@
     initializeDOM();
     loadAppState();
     loadUserProfile();
+    loadResumeStatus();
     renderResponses();
     setupLetterBuilder();
+    setupResumeUpload();
     setupEventListeners();
     
-    console.log('Click Cover Letter Creator initialized successfully!');
+    console.log('Click Cover Letter Creator with Resume Upload initialized successfully!');
   }
 
   // Start the application when DOM is ready

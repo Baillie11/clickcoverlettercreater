@@ -218,3 +218,121 @@ body {
 .add-response button:hover {
   background-color: #27ae60;
 }
+
+/* Resume Upload Section */
+.resume-upload-section {
+  margin-top: 25px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+}
+
+.resume-upload-section h4 {
+  margin-bottom: 10px;
+  color: #2C3E50;
+  font-size: 1.1rem;
+}
+
+.resume-upload-area {
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  background: #fafafa;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 15px;
+}
+
+.resume-upload-area:hover {
+  border-color: #3498db;
+  background: #f0f8ff;
+}
+
+.resume-upload-area.drag-over {
+  border-color: #2ecc71;
+  background: #f0fff0;
+  transform: scale(1.02);
+}
+
+.upload-placeholder p {
+  margin: 5px 0;
+  color: #666;
+}
+
+.upload-placeholder p:first-child {
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.upload-hint {
+  font-size: 0.9rem;
+  color: #999 !important;
+}
+
+.resume-status {
+  background: #e8f5e8;
+  border: 1px solid #c3e6c3;
+  border-radius: 6px;
+  padding: 15px;
+  margin-top: 10px;
+}
+
+.resume-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 10px;
+}
+
+.resume-name {
+  font-weight: 600;
+  color: #2C3E50;
+  flex: 1;
+}
+
+.resume-size {
+  font-size: 0.9rem;
+  color: #666;
+  background: #fff;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.remove-resume-btn {
+  background: #ff4757;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.2s;
+}
+
+.remove-resume-btn:hover {
+  background: #ff3838;
+}
+
+.parsing-status {
+  font-size: 0.9rem;
+  color: #666;
+  padding: 8px;
+  background: #fff;
+  border-radius: 4px;
+  border-left: 4px solid #3498db;
+}
+
+.parsing-status.success {
+  border-left-color: #2ecc71;
+  color: #27ae60;
+}
+
+.parsing-status.error {
+  border-left-color: #e74c3c;
+  color: #c0392b;
+}
+
+.parsing-status.processing {
+  border-left-color: #f39c12;
+  color: #d68910;
+}
