@@ -70,6 +70,9 @@
     },
     currentLetter: {
       paragraphs: []
+    },
+    settings: {
+      theme: 'standard'
     }
   };
 
@@ -439,6 +442,7 @@
       const savedProfile = localStorage.getItem('userProfile');
       const savedResponses = localStorage.getItem('responses');
       const savedResume = localStorage.getItem('resumeData');
+      const savedSettings = localStorage.getItem('appSettings');
       
       if (savedProfile) {
         appState.profile = JSON.parse(savedProfile);
@@ -453,6 +457,10 @@
       
       if (savedResume) {
         appState.resume = JSON.parse(savedResume);
+      }
+
+      if (savedSettings) {
+        try { appState.settings = JSON.parse(savedSettings); } catch {}
       }
 
       // Sync with backend: try to load all responses from DB.
@@ -487,6 +495,7 @@
       localStorage.setItem('userProfile', JSON.stringify(appState.profile));
       localStorage.setItem('responses', JSON.stringify(appState.responses));
       localStorage.setItem('resumeData', JSON.stringify(appState.resume));
+      localStorage.setItem('appSettings', JSON.stringify(appState.settings || { theme: 'standard' }));
     } catch (error) {
       console.error('Error saving app state:', error);
       alert('Unable to save data. Storage may be full.');
@@ -2190,6 +2199,118 @@
     printEl.style.overflowWrap = 'anywhere';
     printEl.style.whiteSpace = 'pre-wrap';
 
+    // Check theme selection
+    const selectedTheme = (DOM.themeSelect && DOM.themeSelect.value) || (appState.settings?.theme) || 'standard';
+
+    // Theme: Modern centered header (emulating shared PDF style)
+    if (selectedTheme === 'modern-centered') {
+      // Header block centered
+      const headerBlock = document.createElement('div');
+      headerBlock.style.textAlign = 'center';
+      headerBlock.style.marginBottom = '18px';
+
+      if (fullName) {
+        const nameEl = document.createElement('div');
+        nameEl.innerText = fullName.toUpperCase().split('').join(' ');
+        nameEl.style.fontWeight = '700';
+        nameEl.style.fontSize = '20pt';
+        nameEl.style.letterSpacing = '6px';
+        nameEl.style.marginBottom = '6px';
+        nameEl.style.pageBreakInside = 'avoid';
+        nameEl.style.breakInside = 'avoid-page';
+        headerBlock.appendChild(nameEl);
+      }
+
+      // Tagline
+      const taglineEl = document.createElement('div');
+      const defaultTagline = 'NDIS SUPPORT SPECIALIST | DISABILITY CARE ADVOCATE';
+      taglineEl.innerText = defaultTagline;
+      taglineEl.style.fontSize = '10pt';
+      taglineEl.style.letterSpacing = '3px';
+      taglineEl.style.color = '#444';
+      taglineEl.style.marginBottom = '6px';
+      taglineEl.style.pageBreakInside = 'avoid';
+      taglineEl.style.breakInside = 'avoid-page';
+      headerBlock.appendChild(taglineEl);
+
+      // Contact line
+      const contacts = [];
+      if (profile.phoneNumber) contacts.push(profile.phoneNumber);
+      if (profile.emailAddress) contacts.push(profile.emailAddress);
+      if (contacts.length) {
+        const contactEl = document.createElement('div');
+        contactEl.innerText = contacts.join(' | ');
+        contactEl.style.fontSize = '10pt';
+        contactEl.style.color = '#333';
+        contactEl.style.pageBreakInside = 'avoid';
+        contactEl.style.breakInside = 'avoid-page';
+        headerBlock.appendChild(contactEl);
+      }
+
+      // Divider
+      const hr = document.createElement('div');
+      hr.style.height = '1px';
+      hr.style.background = '#ddd';
+      hr.style.margin = '12px 0 8px';
+      headerBlock.appendChild(hr);
+
+      printEl.appendChild(headerBlock);
+
+      // Salutation
+      const salutationP = document.createElement('p');
+      if (contactPerson && contactPerson.trim()) {
+        salutationP.innerText = `Dear ${contactPerson.trim()},`;
+      } else if (companyName && companyName.trim()) {
+        salutationP.innerText = 'Dear Hiring Team,';
+      } else {
+        salutationP.innerText = 'Dear Hiring Team,';
+      }
+      salutationP.style.marginBottom = '16px';
+      salutationP.style.pageBreakInside = 'avoid';
+      salutationP.style.breakInside = 'avoid-page';
+      printEl.appendChild(salutationP);
+
+      // Paragraphs
+      const paras = DOM.letterArea.querySelectorAll('.letter-paragraph');
+      paras.forEach(para => {
+        const p = document.createElement('p');
+        p.innerText = para.textContent.replace('×', '');
+        p.style.marginBottom = '12px';
+        p.style.pageBreakInside = 'avoid';
+        p.style.breakInside = 'avoid-page';
+        p.style.wordBreak = 'break-word';
+        p.style.overflowWrap = 'anywhere';
+        p.style.whiteSpace = 'pre-wrap';
+        printEl.appendChild(p);
+      });
+
+      // Signature (use existing structure)
+      if (fullName || profile.phoneNumber || profile.emailAddress) {
+        const signatureP = document.createElement('p');
+        signatureP.style.marginTop = '30px';
+        signatureP.style.pageBreakInside = 'avoid';
+        signatureP.style.breakInside = 'avoid-page';
+        let sig = 'Sincerely,';
+        if (fullName) sig += `\n${fullName}`;
+        if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
+        if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
+        signatureP.innerText = sig;
+        printEl.appendChild(signatureP);
+      }
+
+      const opt = {
+        margin: 0.6,
+        filename: fileName,
+        image: { type: 'jpeg', quality: 0.98 },
+        pagebreak: { mode: ['css', 'legacy'] },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+      };
+
+      html2pdf().set(opt).from(printEl).save();
+      return; // Done for this theme
+    }
+
     // Header with company (left) and user details (right)
     const header = document.createElement('div');
     header.style.display = 'flex';
@@ -2352,6 +2473,18 @@
     // Header/Nav events
     if (DOM.themeToggleBtn) DOM.themeToggleBtn.addEventListener('click', toggleTheme);
     if (DOM.syncResponsesBtn) DOM.syncResponsesBtn.addEventListener('click', syncResponsesFromDb);
+
+    // Theme selection
+    if (DOM.themeSelect) {
+      if (appState.settings && appState.settings.theme) {
+        DOM.themeSelect.value = appState.settings.theme;
+      }
+      DOM.themeSelect.addEventListener('change', () => {
+        appState.settings = appState.settings || {};
+        appState.settings.theme = DOM.themeSelect.value;
+        saveAppState();
+      });
+    }
   }
 
   // Initialize DOM Elements
@@ -2397,6 +2530,7 @@
     DOM.newLetterBtn = document.getElementById('newLetterBtn');
     DOM.saveLetterBtn = document.getElementById('saveLetterBtn');
     DOM.downloadPdfBtn = document.getElementById('downloadPdfBtn');
+    DOM.themeSelect = document.getElementById('themeSelect');
 
     // Header/Nav
     DOM.dbStatusBadge = document.getElementById('dbStatusBadge');

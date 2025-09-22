@@ -214,6 +214,9 @@ body {
   box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.2);
 }
 
+.letter-toolbar { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin: 8px 0 6px; }
+.letter-toolbar select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
+
 .letter-drop-area {
   min-height: 220px;
   border: 2px dashed var(--border);
