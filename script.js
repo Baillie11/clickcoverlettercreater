@@ -406,19 +406,33 @@
         // Try to extract readable text from Word document binary
         // Word documents contain a mix of binary and text data
         
-        // Remove non-printable characters but keep basic punctuation
-        text = text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, ' ');
+        // Remove non-printable and control characters
+        text = text.replace(/[\x00-\x1F\x7F-\x9F]/g, ' ');
         
-        // Remove excessive whitespace
-        text = text.replace(/\s+/g, ' ');
+        // Remove Word document specific artifacts
+        text = text.replace(/Microsoft\s*Word|Times New Roman|Calibri|Arial|Verdana|Tahoma/gi, ' ');
+        text = text.replace(/Normal|Heading|Title|Document|Header|Footer/gi, ' ');
+        text = text.replace(/\\[a-z]+\d*\s*/gi, ' '); // Remove RTF codes
         
-        // Remove common Word document binary markers
-        text = text.replace(/Microsoft\s*Word|Times New Roman|Calibri|Arial/gi, '');
-        text = text.replace(/Normal|Heading|Title|Document/g, '');
+        // Remove unusual character combinations that suggest binary data
+        text = text.replace(/[^\w\s\.\,\;\:\!\?\-\'\"\(\)\[\]\{\}\@\#\%\&\+\=\/]/g, ' ');
         
-        // Clean up remaining artifacts
-        text = text.replace(/[^\w\s\.\,\;\:\!\?\-\'\"\(\)\[\]\{\}]/g, ' ');
+        // Remove isolated single characters and numbers
+        text = text.replace(/\b[a-z]\b/gi, ' ');
+        text = text.replace(/\b\d\b/g, ' ');
+        
+        // Clean up excessive whitespace
         text = text.replace(/\s+/g, ' ').trim();
+        
+        // Additional cleaning: remove short meaningless fragments
+        const words = text.split(' ');
+        const cleanedWords = words.filter(word => {
+          // Keep words that are at least 3 characters OR are common short words
+          const commonShorts = ['a', 'an', 'at', 'be', 'by', 'do', 'go', 'he', 'if', 'in', 'is', 'it', 'me', 'my', 'no', 'of', 'on', 'or', 'so', 'to', 'up', 'we'];
+          return word.length >= 3 || commonShorts.includes(word.toLowerCase());
+        });
+        
+        text = cleanedWords.join(' ').trim();
         
         console.log('Cleaned Word document:', text.substring(0, 500));
         
@@ -578,6 +592,14 @@
       return regex.test(text);
     }
     
+    // Create a whitelist of all valid skills
+    const validSkillsSet = new Set([
+      ...allSkills,
+      ...softSkills,
+      ...educationTerms,
+      ...certifications
+    ]);
+    
     // Check for all professional skills with word boundaries
     allSkills.forEach(skill => {
       if (findSkillWithBoundary(skill, text)) {
@@ -675,15 +697,65 @@
       });
     }
     
-    // Filter out meaningless fragments and very short terms
+    // Strong filtering: Only accept known skills or valid English words
     const filteredKeywords = Array.from(keywords).filter(keyword => {
-      return keyword.length >= 3 && // At least 3 characters
-             !keyword.match(/^[a-z]{1,2}$/) && // No single/double letters
-             !keyword.match(/^\d+$/) && // No pure numbers
-             keyword.includes(' ') || keyword.length >= 4; // Either phrase or meaningful word
+      const cleanKeyword = keyword.toLowerCase().trim();
+      
+      // First priority: Is it a known skill from our lists?
+      if (validSkillsSet.has(cleanKeyword)) {
+        return true;
+      }
+      
+      // Second priority: Is it a valid experience phrase?
+      if (cleanKeyword.match(/\d+\s*years?\s*(of\s*)?(experience|exp)/i)) {
+        return true;
+      }
+      
+      // Must be at least 4 characters for unknown words
+      if (cleanKeyword.length < 4) {
+        return false;
+      }
+      
+      // Check for reasonable English word patterns
+      const vowelCount = (cleanKeyword.match(/[aeiou]/g) || []).length;
+      const consonantCount = cleanKeyword.length - vowelCount - (cleanKeyword.match(/[\s-]/g) || []).length;
+      
+      // Must have vowels (unless it's a short acronym)
+      if (vowelCount === 0) {
+        return false;
+      }
+      
+      // Reject if mostly consonants (likely garbled Word doc text)
+      if (consonantCount > vowelCount * 3) {
+        return false;
+      }
+      
+      // Reject obvious garbled patterns
+      if (cleanKeyword.match(/^[bcdfghjklmnpqrstvwxyz]{4,}$|[qxz]{2,}|[bcdfghjklmnpqrstvwxyz]{5,}/)) {
+        return false;
+      }
+      
+      // Reject pure numbers or weird character combos
+      if (cleanKeyword.match(/^\d+$|^[\d\s]+$|^[^a-zA-Z\s]+$|[^a-zA-Z\s]{2,}/)) {
+        return false;
+      }
+      
+      // For unknown words, be very strict
+      // Only accept if it looks like a real English word (good vowel/consonant ratio)
+      return vowelCount > 0 && consonantCount <= vowelCount * 2 && cleanKeyword.length <= 15;
     });
     
-    return filteredKeywords.slice(0, 25); // Reduced to 25 quality keywords
+    // Sort by length and meaningfulness (longer phrases first, then known skills)
+    const sortedKeywords = filteredKeywords.sort((a, b) => {
+      // Prioritize phrases with spaces
+      if (a.includes(' ') && !b.includes(' ')) return -1;
+      if (!a.includes(' ') && b.includes(' ')) return 1;
+      
+      // Then by length (longer first)
+      return b.length - a.length;
+    });
+    
+    return sortedKeywords.slice(0, 20); // Top 20 meaningful keywords
   }
 
   function extractSections(text) {
