@@ -477,6 +477,9 @@
 
       if (savedSettings) {
         try { appState.settings = JSON.parse(savedSettings); } catch {}
+        // defaults
+        appState.settings.theme = appState.settings.theme || 'standard';
+        appState.settings.pageSize = appState.settings.pageSize || 'letter';
       }
 
       // Sync with backend: try to load all responses from DB.
@@ -511,7 +514,7 @@
       localStorage.setItem('userProfile', JSON.stringify(appState.profile));
       localStorage.setItem('responses', JSON.stringify(appState.responses));
       localStorage.setItem('resumeData', JSON.stringify(appState.resume));
-      localStorage.setItem('appSettings', JSON.stringify(appState.settings || { theme: 'standard' }));
+      localStorage.setItem('appSettings', JSON.stringify(appState.settings || { theme: 'standard', pageSize: 'letter' }));
     } catch (error) {
       console.error('Error saving app state:', error);
       alert('Unable to save data. Storage may be full.');
@@ -2676,13 +2679,15 @@
     const selectedTheme = (DOM.themeSelect && DOM.themeSelect.value) || (appState.settings?.theme) || 'standard';
     const el = buildLetterElement(selectedTheme);
 
+    const pageSize = (DOM.pageSizeSelect && DOM.pageSizeSelect.value) || (appState.settings?.pageSize) || 'letter';
+
     const opt = {
       margin: 0.6,
       filename: fileName,
       image: { type: 'jpeg', quality: 0.98 },
       pagebreak: { mode: ['css', 'legacy'] },
       html2canvas: { scale: 2 },
-      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+      jsPDF: { unit: 'in', format: pageSize === 'a4' ? 'a4' : 'letter', orientation: 'portrait' }
     };
 
     html2pdf().set(opt).from(el).save();
@@ -2733,7 +2738,21 @@
         appState.settings = appState.settings || {};
         appState.settings.theme = DOM.themeSelect.value;
         saveAppState();
-        // auto-refresh preview if visible
+        if (DOM.letterPreview && DOM.letterPreview.childNodes.length) {
+          renderLetterPreview();
+        }
+      });
+    }
+
+    // Page size selection
+    if (DOM.pageSizeSelect) {
+      if (appState.settings && appState.settings.pageSize) {
+        DOM.pageSizeSelect.value = appState.settings.pageSize;
+      }
+      DOM.pageSizeSelect.addEventListener('change', () => {
+        appState.settings = appState.settings || {};
+        appState.settings.pageSize = DOM.pageSizeSelect.value;
+        saveAppState();
         if (DOM.letterPreview && DOM.letterPreview.childNodes.length) {
           renderLetterPreview();
         }
@@ -2790,6 +2809,7 @@
     DOM.saveLetterBtn = document.getElementById('saveLetterBtn');
     DOM.downloadPdfBtn = document.getElementById('downloadPdfBtn');
     DOM.themeSelect = document.getElementById('themeSelect');
+    DOM.pageSizeSelect = document.getElementById('pageSizeSelect');
 
     // Preview
     DOM.previewLetterBtn = document.getElementById('previewLetterBtn');

@@ -74,21 +74,31 @@
 
       <section class="letter-builder">
         <h3>Your Cover Letter</h3>
-        <div class="letter-toolbar">
-          <label for="themeSelect">Theme:</label>
-          <select id="themeSelect">
-            <option value="standard">Standard (Left/Right Header)</option>
-            <option value="modern-centered">Modern Header (Centered)</option>
-          </select>
-        </div>
         <div class="letter-drop-area" id="letterArea">
           <p class="placeholder">Drag responses here to build your letter</p>
         </div>
         <div class="letter-actions">
-          <button id="newLetterBtn">New Cover Letter</button>
-          <button id="saveLetterBtn">Save Letter (locally)</button>
-          <button id="previewLetterBtn">Preview</button>
-          <button id="downloadPdfBtn">Download as PDF</button>
+          <div class="left-actions">
+            <button id="newLetterBtn">New Cover Letter</button>
+            <button id="saveLetterBtn">Save Letter (locally)</button>
+            <button id="previewLetterBtn">Preview</button>
+            <button id="downloadPdfBtn">Download as PDF</button>
+          </div>
+          <div class="right-actions">
+            <label for="themeSelect">Theme:</label>
+            <select id="themeSelect">
+              <option value="standard">Standard (Left/Right Header)</option>
+              <option value="modern-centered">Modern Header (Centered)</option>
+              <option value="formal-classic">Formal Classic (Sender Right + Date)</option>
+              <option value="sidebar-profile">Sidebar Profile (Left)</option>
+              <option value="letterhead-accent">Letterhead Accent Bar</option>
+            </select>
+            <label for="pageSizeSelect">Page:</label>
+            <select id="pageSizeSelect">
+              <option value="letter">Letter</option>
+              <option value="a4">A4</option>
+            </select>
+          </div>
         </div>
         <div id="letterPreview" class="letter-preview" aria-live="polite"></div>
       </section>

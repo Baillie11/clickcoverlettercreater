@@ -242,13 +242,22 @@ body {
 
 .letter-actions {
   margin-top: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 12px;
 }
+.letter-actions .right-actions { display: flex; align-items: center; gap: 8px; }
+.letter-actions label { color: var(--muted); font-size: 0.95rem; }
+.letter-actions select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
 
-.letter-actions button { position: relative; }
+.letter-actions button {
 .letter-actions button::before { position: relative; margin-right: 6px; }
 #newLetterBtn::before { content: "🆕"; }
 #saveLetterBtn::before { content: "💾"; }
 #downloadPdfBtn::before { content: "⬇️"; }
+#previewLetterBtn::before { content: "👁️"; }
 
 .letter-actions button {
   padding: 10px 16px;
