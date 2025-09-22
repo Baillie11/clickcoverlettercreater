@@ -2185,6 +2185,10 @@
     printEl.style.fontFamily = 'Segoe UI, sans-serif';
     printEl.style.lineHeight = '1.5';
     printEl.style.fontSize = '12pt';
+    // Improve wrapping and page breaking safety
+    printEl.style.wordBreak = 'break-word';
+    printEl.style.overflowWrap = 'anywhere';
+    printEl.style.whiteSpace = 'pre-wrap';
 
     // Header with company (left) and user details (right)
     const header = document.createElement('div');
@@ -2203,12 +2207,16 @@
       p.innerText = companyName;
       p.style.margin = '0 0 4px 0';
       p.style.fontWeight = '600';
+      p.style.pageBreakInside = 'avoid';
+      p.style.breakInside = 'avoid-page';
       leftCol.appendChild(p);
     }
     if (businessAddress) {
       const p = document.createElement('p');
       p.innerText = businessAddress;
       p.style.margin = '0';
+      p.style.pageBreakInside = 'avoid';
+      p.style.breakInside = 'avoid-page';
       leftCol.appendChild(p);
     }
 
@@ -2221,18 +2229,24 @@
       p.innerText = fullName;
       p.style.margin = '0 0 4px 0';
       p.style.fontWeight = '600';
+      p.style.pageBreakInside = 'avoid';
+      p.style.breakInside = 'avoid-page';
       rightCol.appendChild(p);
     }
     if (profile.addressLine1) {
       const p = document.createElement('p');
       p.innerText = profile.addressLine1;
       p.style.margin = '0';
+      p.style.pageBreakInside = 'avoid';
+      p.style.breakInside = 'avoid-page';
       rightCol.appendChild(p);
     }
     if (profile.addressLine2) {
       const p = document.createElement('p');
       p.innerText = profile.addressLine2;
       p.style.margin = '0';
+      p.style.pageBreakInside = 'avoid';
+      p.style.breakInside = 'avoid-page';
       rightCol.appendChild(p);
     }
 
@@ -2246,6 +2260,8 @@
     // Salutation
     const salutationP = document.createElement('p');
     salutationP.style.marginBottom = '16px';
+    salutationP.style.pageBreakInside = 'avoid';
+    salutationP.style.breakInside = 'avoid-page';
     
     if (contactPerson && contactPerson.trim()) {
       // Use contact person's name
@@ -2266,6 +2282,11 @@
       const p = document.createElement('p');
       p.innerText = para.textContent.replace('×', ''); // Remove the × button text
       p.style.marginBottom = '12px';
+      p.style.pageBreakInside = 'avoid';
+      p.style.breakInside = 'avoid-page';
+      p.style.wordBreak = 'break-word';
+      p.style.overflowWrap = 'anywhere';
+      p.style.whiteSpace = 'pre-wrap';
       printEl.appendChild(p);
     });
 
@@ -2274,6 +2295,9 @@
       const signatureP = document.createElement('p');
       signatureP.style.marginTop = '30px';
       let sig = 'Sincerely,';
+      signatureP.style.pageBreakInside = 'avoid';
+      signatureP.style.breakInside = 'avoid-page';
+      signatureP.style.whiteSpace = 'pre-wrap';
       if (fullName) sig += `\n${fullName}`;
       if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
       if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
@@ -2282,9 +2306,10 @@
     }
 
     const opt = {
-      margin: 0.5,
+      margin: 0.6,
       filename: fileName,
       image: { type: 'jpeg', quality: 0.98 },
+      pagebreak: { mode: ['css', 'legacy'] },
       html2canvas: { scale: 2 },
       jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
     };
