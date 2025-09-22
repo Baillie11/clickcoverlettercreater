@@ -392,23 +392,44 @@
   }
 
   function parseWordDocument(file) {
-    // For Word documents, we'll use a simple text extraction
-    // In a real implementation, you might want to use a library like mammoth.js
+    // For Word documents, we'll try multiple parsing approaches
+    // Note: This is a basic approach - for production, consider mammoth.js for better parsing
     const fileReader = new FileReader();
     
     fileReader.onload = function(event) {
-      // This is a simplified approach - for production, use mammoth.js or similar
       try {
         let text = event.target.result;
         
-        // Remove common Word document artifacts
-        text = text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '');
+        console.log('Raw Word document length:', text.length);
+        console.log('Raw Word document sample:', text.substring(0, 200));
+        
+        // Try to extract readable text from Word document binary
+        // Word documents contain a mix of binary and text data
+        
+        // Remove non-printable characters but keep basic punctuation
+        text = text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, ' ');
+        
+        // Remove excessive whitespace
         text = text.replace(/\s+/g, ' ');
+        
+        // Remove common Word document binary markers
+        text = text.replace(/Microsoft\s*Word|Times New Roman|Calibri|Arial/gi, '');
+        text = text.replace(/Normal|Heading|Title|Document/g, '');
+        
+        // Clean up remaining artifacts
+        text = text.replace(/[^\w\s\.\,\;\:\!\?\-\'\"\(\)\[\]\{\}]/g, ' ');
+        text = text.replace(/\s+/g, ' ').trim();
+        
+        console.log('Cleaned Word document:', text.substring(0, 500));
+        
+        if (text.length < 50) {
+          throw new Error('Document appears to be mostly binary data');
+        }
         
         finishResumeProcessing(text);
       } catch (error) {
         console.error('Error parsing Word document:', error);
-        setParsingStatus('error', 'Failed to parse Word document. Please try converting to TXT or PDF format.');
+        setParsingStatus('error', 'Failed to parse Word document. Word files contain binary data that is difficult to parse. Please save as TXT file for best results, or try PDF format.');
       }
     };
 
@@ -416,46 +437,147 @@
       setParsingStatus('error', 'Failed to read Word document.');
     };
 
-    fileReader.readAsText(file);
+    // Try reading as text first
+    fileReader.readAsText(file, 'UTF-8');
   }
 
   function finishResumeProcessing(text) {
     // Clean and store the parsed text
-    appState.resume.parsedText = sanitizeText(text);
+    const cleanedText = sanitizeText(text);
+    appState.resume.parsedText = cleanedText;
+    
+    // Debug logging
+    console.log('Parsed text length:', cleanedText.length);
+    console.log('First 500 characters:', cleanedText.substring(0, 500));
     
     // Extract keywords and sections
-    appState.resume.keywords = extractKeywords(text);
-    appState.resume.sections = extractSections(text);
+    appState.resume.keywords = extractKeywords(cleanedText);
+    appState.resume.sections = extractSections(cleanedText);
+    
+    console.log('Extracted keywords:', appState.resume.keywords);
+    console.log('Extracted sections:', Object.keys(appState.resume.sections));
     
     // Save to localStorage
     saveAppState();
     
-    // Update UI
-    setParsingStatus('success', `Resume parsed successfully! Found ${appState.resume.keywords.length} key skills and qualifications.`);
+    // Update UI with more detailed information
+    const statusMessage = appState.resume.keywords.length > 0 
+      ? `Resume parsed successfully! Found ${appState.resume.keywords.length} key skills and qualifications: ${appState.resume.keywords.slice(0, 5).join(', ')}${appState.resume.keywords.length > 5 ? '...' : ''}`
+      : `Resume parsed (${Math.round(cleanedText.length/1000)}k characters). Check console for debug info. Keywords may not have been detected - try TXT format for better parsing.`;
+    
+    setParsingStatus('success', statusMessage);
     
     // Generate AI responses based on resume
     generateResumeBasedResponses();
   }
 
   function extractKeywords(text) {
-    // Common professional keywords to look for
-    const skillPatterns = [
-      /\b(JavaScript|Python|Java|C\+\+|HTML|CSS|SQL|React|Angular|Vue|Node\.js)\b/gi,
-      /\b(project management|leadership|team lead|manager|director|supervisor)\b/gi,
-      /\b(Bachelor|Master|PhD|degree|certification|certified|licensed)\b/gi,
-      /\b(years? of experience|experience with|expertise in|proficient in|skilled in)\b/gi
+    const keywords = new Set();
+    const lowerText = text.toLowerCase();
+    
+    // Technical Skills - Expanded list
+    const techSkills = [
+      // Programming Languages
+      'javascript', 'python', 'java', 'c++', 'c#', 'php', 'ruby', 'go', 'rust', 'swift',
+      'kotlin', 'typescript', 'scala', 'perl', 'r', 'matlab', 'vba',
+      
+      // Web Technologies
+      'html', 'css', 'react', 'angular', 'vue', 'node.js', 'express', 'django', 'flask',
+      'spring', 'laravel', 'wordpress', 'drupal', 'bootstrap', 'jquery', 'ajax',
+      
+      // Databases
+      'sql', 'mysql', 'postgresql', 'mongodb', 'oracle', 'sqlite', 'redis', 'nosql',
+      
+      // Cloud & DevOps
+      'aws', 'azure', 'gcp', 'docker', 'kubernetes', 'jenkins', 'git', 'ci/cd',
+      
+      // Other Tech
+      'linux', 'windows', 'macos', 'excel', 'powerbi', 'tableau', 'salesforce', 'sap'
     ];
     
-    const keywords = new Set();
+    // Professional Skills
+    const professionalSkills = [
+      'management', 'leadership', 'project management', 'team lead', 'supervisor',
+      'director', 'manager', 'coordinator', 'analyst', 'consultant', 'specialist',
+      'communication', 'presentation', 'negotiation', 'problem solving', 'analysis',
+      'planning', 'strategy', 'budgeting', 'training', 'mentoring'
+    ];
     
-    skillPatterns.forEach(pattern => {
-      const matches = text.match(pattern);
-      if (matches) {
-        matches.forEach(match => keywords.add(match.toLowerCase()));
+    // Education & Certifications
+    const educationTerms = [
+      'bachelor', 'master', 'phd', 'doctorate', 'degree', 'diploma', 'certificate',
+      'certification', 'certified', 'licensed', 'accredited', 'qualification'
+    ];
+    
+    // Check for technical skills
+    techSkills.forEach(skill => {
+      if (lowerText.includes(skill)) {
+        keywords.add(skill);
       }
     });
     
-    return Array.from(keywords).slice(0, 20); // Limit to 20 keywords
+    // Check for professional skills
+    professionalSkills.forEach(skill => {
+      if (lowerText.includes(skill)) {
+        keywords.add(skill);
+      }
+    });
+    
+    // Check for education terms
+    educationTerms.forEach(term => {
+      if (lowerText.includes(term)) {
+        keywords.add(term);
+      }
+    });
+    
+    // Extract years of experience
+    const experienceMatches = text.match(/(\d+)\+?\s*years?\s*(of\s*)?(experience|exp)/gi);
+    if (experienceMatches) {
+      experienceMatches.forEach(match => keywords.add(match.toLowerCase()));
+    }
+    
+    // Look for common resume section headers and extract nearby terms
+    const sections = ['skills', 'experience', 'education', 'qualifications', 'competencies', 'expertise'];
+    sections.forEach(section => {
+      const sectionRegex = new RegExp(`\\b${section}\\b([\\s\\S]{0,200})`, 'gi');
+      const sectionMatches = text.match(sectionRegex);
+      if (sectionMatches) {
+        keywords.add(section);
+        // Extract words from the section content
+        sectionMatches.forEach(match => {
+          const words = match.split(/\W+/).filter(word => 
+            word.length > 2 && 
+            !['and', 'the', 'for', 'with', 'have', 'been', 'that', 'this', 'from', 'they'].includes(word.toLowerCase())
+          );
+          words.slice(0, 5).forEach(word => keywords.add(word.toLowerCase()));
+        });
+      }
+    });
+    
+    // Extract capitalized words (likely to be proper nouns, technologies, companies)
+    const capitalizedWords = text.match(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b/g);
+    if (capitalizedWords) {
+      capitalizedWords.forEach(word => {
+        if (word.length > 2 && word !== word.toUpperCase()) { // Avoid all-caps words
+          keywords.add(word.toLowerCase());
+        }
+      });
+    }
+    
+    // Extract common action verbs from resume
+    const actionVerbs = [
+      'managed', 'led', 'developed', 'created', 'implemented', 'designed', 'built',
+      'achieved', 'improved', 'increased', 'reduced', 'optimized', 'delivered',
+      'collaborated', 'coordinated', 'supervised', 'trained', 'mentored'
+    ];
+    
+    actionVerbs.forEach(verb => {
+      if (lowerText.includes(verb)) {
+        keywords.add(verb);
+      }
+    });
+    
+    return Array.from(keywords).slice(0, 30); // Increased limit to 30 keywords
   }
 
   function extractSections(text) {
