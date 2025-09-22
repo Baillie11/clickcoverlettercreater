@@ -23,11 +23,11 @@ A modern, interactive web application for creating professional cover letters us
 
 ## 🚀 **Quick Start**
 
-1. **Open `index.html`** in any modern web browser
-2. **Fill in your profile** information (name, address)
-3. **Drag responses** from the library to build your letter
-4. **Customize** by adding your own response snippets
-5. **Export as PDF** with professional formatting
+1. Open `profile.html` and fill in your profile (name, address, phone, email) and upload your resume (optional)
+2. Open `index.html` to build your letter
+3. Paste a job ad (or URL) to auto-fill fields if desired
+4. Drag responses from the library, select a theme, and click Preview
+5. Choose Page size (Letter/A4) and Download as PDF
 
 ## 📁 **Project Structure**
 
@@ -62,7 +62,17 @@ Click Cover Letter Creator/
 3. Your app will be available at `https://username.github.io/repository-name`
 
 ### **Local Development**
-Simply open `index.html` in your browser - no server required!
+
+Option A: No backend (basic features)  
+Simply open `index.html` in your browser - no server required.
+
+Option B: With local DB (persist responses across browsers/sessions)
+1. Install Node.js 18+
+2. In project folder: `npm install`
+3. Start server: `npm run dev:server`
+4. Open `index.html` in your browser
+
+The app will automatically detect the database server at `http://localhost:5050`. When online, User/Crowd/AI responses are synced to SQLite. If offline, it falls back to localStorage.
 
 ## 📝 **Usage Guide**
 
@@ -114,8 +124,12 @@ The application uses CSS custom properties and is designed to be easily themeabl
 
 ## 🤝 **Contributing**
 
-This is a complete, production-ready application. However, potential enhancements could include:
+### Branching & PRs
+- Create a feature branch (e.g., `feature/my-change`)
+- Push your branch and open a PR on GitHub (we’ll use PRs for merges going forward)
+- Keep commits scoped and include a concise PR description
 
+### Ideas & Enhancements
 - **Cloud Storage Integration** (Google Drive, Dropbox)
 - **Template Variations** (different letter formats)
 - **Company Database** (auto-fill company information)
