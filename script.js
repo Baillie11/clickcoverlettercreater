@@ -48,7 +48,12 @@
     letterArea: null,
     newLetterBtn: null,
     saveLetterBtn: null,
-    downloadPdfBtn: null
+    downloadPdfBtn: null,
+
+    // Header/Nav Controls
+    dbStatusBadge: null,
+    syncResponsesBtn: null,
+    themeToggleBtn: null
   };
 
   // Application State
@@ -622,6 +627,66 @@
     });
     if (!r.ok) throw new Error(`DELETE failed ${r.status}`);
     return true;
+  }
+
+  // UI helpers
+  async function updateDbStatusBadge() {
+    if (!DOM.dbStatusBadge) return;
+    const badge = DOM.dbStatusBadge;
+    badge.textContent = 'Checking…';
+    badge.classList.remove('online','offline');
+    try {
+      const ok = await apiHealthCheck();
+      if (ok) {
+        badge.textContent = 'DB Online';
+        badge.classList.add('online');
+        badge.classList.remove('offline');
+      } else {
+        badge.textContent = 'DB Offline';
+        badge.classList.add('offline');
+        badge.classList.remove('online');
+      }
+    } catch {
+      badge.textContent = 'DB Offline';
+      badge.classList.add('offline');
+      badge.classList.remove('online');
+    }
+  }
+
+  async function syncResponsesFromDb() {
+    try {
+      const list = await apiGetResponsesAll();
+      if (Array.isArray(list)) {
+        appState.responses = list.map(r => ({
+          id: r.id,
+          text: r.text,
+          category: r.category || 'user',
+          userCreated: !!r.userCreated,
+          source: r.source || null
+        }));
+        localStorage.setItem('responses', JSON.stringify(appState.responses));
+        renderResponses();
+      }
+    } catch (e) {
+      alert('Unable to sync from database. Is the server running?');
+    }
+  }
+
+  // Theme toggle
+  function initializeTheme() {
+    try {
+      const pref = localStorage.getItem('theme');
+      if (pref === 'dark') {
+        document.body.classList.add('theme-dark');
+        if (DOM.themeToggleBtn) DOM.themeToggleBtn.textContent = '☀️';
+      }
+    } catch {}
+  }
+
+  function toggleTheme() {
+    const dark = document.body.classList.toggle('theme-dark');
+    try { localStorage.setItem('theme', dark ? 'dark' : 'light'); } catch {}
+    if (DOM.themeToggleBtn) DOM.themeToggleBtn.textContent = dark ? '☀️' : '🌙';
   }
 
   async function persistAllResponsesToDb(responses) {
@@ -2258,6 +2323,10 @@
     if (DOM.parseJobAdBtn) DOM.parseJobAdBtn.addEventListener('click', handleParseJobAd);
     if (DOM.fetchJobAdBtn) DOM.fetchJobAdBtn.addEventListener('click', handleFetchJobAdUrl);
     if (DOM.jobAdUrl) DOM.jobAdUrl.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); handleFetchJobAdUrl(); }});
+
+    // Header/Nav events
+    if (DOM.themeToggleBtn) DOM.themeToggleBtn.addEventListener('click', toggleTheme);
+    if (DOM.syncResponsesBtn) DOM.syncResponsesBtn.addEventListener('click', syncResponsesFromDb);
   }
 
   // Initialize DOM Elements
@@ -2303,18 +2372,31 @@
     DOM.newLetterBtn = document.getElementById('newLetterBtn');
     DOM.saveLetterBtn = document.getElementById('saveLetterBtn');
     DOM.downloadPdfBtn = document.getElementById('downloadPdfBtn');
+
+    // Header/Nav
+    DOM.dbStatusBadge = document.getElementById('dbStatusBadge');
+    DOM.syncResponsesBtn = document.getElementById('syncResponsesBtn');
+    DOM.themeToggleBtn = document.getElementById('themeToggleBtn');
   }
 
   // Application Initialization
   async function initializeApp() {
     initializeDOM();
     await loadAppState();
+
+    // Theme init
+    initializeTheme();
+
     loadUserProfile();
     loadResumeStatus();
     renderResponses();
     setupLetterBuilder();
     setupResumeUpload();
     setupEventListeners();
+
+    // Update DB status badge initially and periodically
+    updateDbStatusBadge();
+    setInterval(updateDbStatusBadge, 15000);
     
     console.log('Click Cover Letter Creator initialized successfully!');
   }

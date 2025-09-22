@@ -17,20 +17,38 @@ body {
   font-family: 'Poppins', 'Segoe UI', sans-serif;
   background: var(--bg);
   color: var(--text);
+  background-image:
+    radial-gradient(circle at 10% 10%, rgba(108,99,255,0.06) 0px, transparent 80px),
+    radial-gradient(circle at 90% 20%, rgba(0,184,148,0.06) 0px, transparent 100px),
+    radial-gradient(circle at 30% 80%, rgba(255,118,117,0.06) 0px, transparent 90px);
+  background-attachment: fixed;
 }
 
 .app-header {
   width: 100%;
-  background: linear-gradient(135deg, var(--primary) 0%, #8a84ff 100%);
+  background: linear-gradient(120deg, #151a6a 0%, #6c63ff 50%, #18c4a5 100%);
   color: #fff;
-  padding: 16px 30px;
-  box-shadow: 0 8px 20px rgba(108, 99, 255, 0.25);
+  padding: 16px 30px 20px;
+  box-shadow: 0 12px 28px rgba(108, 99, 255, 0.32);
   position: fixed;
   top: 0;
   left: 0;
   z-index: 1000;
   text-align: center;
+  overflow: hidden;
 }
+.app-header::before, .app-header::after {
+  content: '';
+  position: absolute;
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.35), rgba(255,255,255,0) 60%);
+  filter: blur(2px);
+  z-index: 0;
+}
+.app-header::before { top: -60px; left: -60px; }
+.app-header::after { bottom: -80px; right: -80px; background: radial-gradient(circle at 70% 70%, rgba(255,255,255,0.25), rgba(255,255,255,0) 60%); }
+.app-header > * { position: relative; z-index: 1; }
 
 .app-header h1 {
   margin: 0;
@@ -141,10 +159,21 @@ body {
 }
 
 /* Header nav */
-.app-nav { margin-top: 6px; }
-.app-nav a { color: #fff; text-decoration: none; margin: 0 8px; opacity: 0.85; }
+.app-nav { margin-top: 6px; display: flex; align-items: center; gap: 10px; justify-content: center; }
+.app-nav a { color: #fff; text-decoration: none; margin: 0 8px; opacity: 0.9; padding-bottom: 2px; }
 .app-nav a.active { font-weight: 600; opacity: 1; border-bottom: 2px solid #fff; }
 .app-nav a:hover { opacity: 1; }
+.nav-btn { background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.25); border-radius: 20px; padding: 6px 10px; cursor: pointer; box-shadow: none; }
+.nav-btn:hover { background: rgba(255,255,255,0.25); }
+.db-badge { display: inline-flex; align-items: center; gap: 6px; color: #fff; font-weight: 500; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); padding: 4px 10px; border-radius: 14px; }
+.db-badge::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #ffd166; display: inline-block; }
+.db-badge.online::before { background: #2ecc71; }
+.db-badge.offline::before { background: #e74c3c; }
+
+/* Section header color-coding */
+#category-user > h3 { border-left-color: #2ec9d6; color: #2aa7b2; }
+#category-crowd > h3 { border-left-color: #ffb366; color: #d98a3f; }
+#category-ai > h3 { border-left-color: #b084f5; color: #8a6bd0; }
 
 /* RIGHT PANEL */
 .builder-panel {
@@ -211,6 +240,12 @@ body {
 .letter-actions {
   margin-top: 15px;
 }
+
+.letter-actions button { position: relative; }
+.letter-actions button::before { position: relative; margin-right: 6px; }
+#newLetterBtn::before { content: "🆕"; }
+#saveLetterBtn::before { content: "💾"; }
+#downloadPdfBtn::before { content: "⬇️"; }
 
 .letter-actions button {
   padding: 10px 16px;
@@ -282,6 +317,8 @@ body {
   border: 1px solid #ccc;
   border-radius: 4px;
 }
+#fetchJobAdBtn { position: relative; }
+#fetchJobAdBtn::before { content: "🌐"; margin-right: 6px; }
 #fetchJobAdBtn {
   padding: 8px 12px;
   background: linear-gradient(135deg, #16a085, #13856f);
@@ -300,6 +337,8 @@ body {
   justify-content: space-between;
   margin-top: 8px;
 }
+.job-ad-controls button { position: relative; }
+#parseJobAdBtn::before { content: "🧠"; margin-right: 6px; }
 .job-ad-controls button {
   padding: 8px 12px;
   background-color: var(--primary);
@@ -328,6 +367,22 @@ body {
 
 /* Profile page layout adjustments */
 body.profile-page .builder-panel { width: 100%; max-width: 900px; margin: 0 auto; }
+
+/* Dark theme overrides */
+body.theme-dark {
+  --bg: #0e111a;
+  --surface: #141a2a;
+  --text: #e8edf7;
+  --muted: #a6b1c2;
+  --border: #1f2840;
+  --primary: #8b84ff;
+  --primary-600: #7a73e8;
+}
+body.theme-dark .app-header { box-shadow: 0 12px 28px rgba(0,0,0,0.4); }
+body.theme-dark .letter-drop-area, body.theme-dark .resume-upload-area { background: linear-gradient(180deg, #121725, #0e111a); border-color: #253150; }
+body.theme-dark .response { background: #161d2e; border-color: #22304c; }
+body.theme-dark .job-ad-status { background: #101623; border-color: #22304c; color: #dbe6ff; }
+body.theme-dark .nav-btn, body.theme-dark .db-badge { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
 
 /* Resume Upload Section */
 .resume-upload-section {
