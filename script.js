@@ -9,6 +9,8 @@
     lastName: null,
     addressLine1: null,
     addressLine2: null,
+    phoneNumber: null,
+    emailAddress: null,
     
     // Resume Upload Elements
     resumeUploadArea: null,
@@ -26,6 +28,14 @@
     contactPerson: null,
     businessAddress: null,
     refNumber: null,
+
+    // Job Ad Paste Elements
+    jobAdText: null,
+    parseJobAdBtn: null,
+    jobAdParseStatus: null,
+    overwriteJobFields: null,
+    jobAdUrl: null,
+    fetchJobAdBtn: null,
     
     // Response Library Elements
     categoryUser: null,
@@ -89,6 +99,8 @@
       state: '',
       postcode: ''
     };
+
+    const fileName = (appState && appState.resume && appState.resume.fileName) ? appState.resume.fileName : '';
     
     // Extract email address
     const emailPattern = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g;
@@ -119,7 +131,7 @@
     
     console.log('First 10 lines for name detection:', lines.slice(0, 10));
     
-    // Look for name in first few lines
+    // 1) Try extracting from header lines (normal case)
     for (let i = 0; i < Math.min(8, lines.length); i++) {
       const line = lines[i];
       
@@ -129,7 +141,7 @@
           /\b\d{4}\b/.test(line) || // Skip years
           /\b(analyst|developer|manager|officer|coordinator|assistant|specialist|consultant|admin|clerk|representative|advisor)\b/i.test(line) ||
           /\b(resume|cv|curriculum|vitae)\b/i.test(line) ||
-          line.length > 40) { // Skip very long lines
+          line.length > 60) { // Skip very long lines
         console.log('Skipping line (not a name):', line);
         continue;
       }
@@ -142,52 +154,171 @@
         
         // Validate this looks like a real name
         if (nameParts.length >= 2 && nameParts.length <= 4) {
-          // Check each part looks like a name (not too short, not common words)
-          const validName = nameParts.every(part => 
-            part.length >= 2 && 
-            !/\b(the|and|for|with|from|service|desk|pay|ltd|inc|pty)\b/i.test(part)
-          );
-          
+          const blacklist = /\b(the|and|for|with|from|service|desk|pay|ltd|inc|pty)\b/i;
+          const validName = nameParts.every(part => part.length >= 2 && !blacklist.test(part));
           if (validName) {
             personalInfo.fullName = fullName;
             personalInfo.firstName = nameParts[0];
             personalInfo.lastName = nameParts[nameParts.length - 1];
-            console.log('Found name:', personalInfo.fullName);
+            console.log('Found name (proper case):', personalInfo.fullName);
             break;
+          }
+        }
+      }
+    }
+
+    // 1b) Try DETECTING SPACED ALL-CAPS (e.g., "A N D R E W   B A I L L I E")
+    if (!personalInfo.firstName) {
+      for (let i = 0; i < Math.min(10, lines.length); i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        // Candidate has many uppercase letters separated by single spaces
+        const spacedTokens = line.split(/\s{2,}/); // split on 2+ spaces (word boundaries)
+        if (spacedTokens.length >= 2 && spacedTokens.length <= 4) {
+          const words = [];
+          let valid = true;
+          for (const token of spacedTokens) {
+            // Token made of single-letter uppercase segments e.g., "A N D R E W"
+            if (/^(?:[A-Z](?:\s+[A-Z]){1,})$/.test(token)) {
+              const compact = token.replace(/\s+/g, '');
+              words.push(compact);
+            } else if (/^[A-Z][A-Z\s]+$/.test(token) && token.replace(/\s+/g, '').length >= 2) {
+              // Allow general uppercase with spaces
+              words.push(token.replace(/\s+/g, ''));
+            } else {
+              valid = false;
+              break;
+            }
+          }
+          if (valid && words.length >= 2) {
+            const cap = s => s.charAt(0) + s.slice(1).toLowerCase();
+            personalInfo.firstName = cap(words[0].toLowerCase());
+            personalInfo.lastName = cap(words[1].toLowerCase());
+            personalInfo.fullName = `${personalInfo.firstName} ${personalInfo.lastName}`;
+            console.log('Found name (spaced ALL-CAPS):', personalInfo.fullName, 'from line:', line);
+            break;
+          }
+        }
+      }
+    }
+
+    // 2) If not found, try ALL CAPS names in header (e.g., ANDREW BAILLIE)
+    if (!personalInfo.firstName) {
+      for (let i = 0; i < Math.min(8, lines.length); i++) {
+        const line = lines[i];
+        if (/\b(resume|cv|curriculum|vitae)\b/i.test(line)) continue;
+        if (line.includes('@') || /\d/.test(line)) continue;
+        const capsMatch = line.match(/^([A-Z]{2,}(?:\s+[A-Z]{2,}){1,3})$/);
+        if (capsMatch) {
+          const fullName = capsMatch[1].toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+          const parts = fullName.split(/\s+/);
+          if (parts.length >= 2 && parts.length <= 4) {
+            personalInfo.fullName = fullName;
+            personalInfo.firstName = parts[0];
+            personalInfo.lastName = parts[parts.length - 1];
+            console.log('Found name (ALL CAPS):', personalInfo.fullName);
+            break;
+          }
+        }
+      }
+    }
+
+    // 3) If still not found, try file name (e.g., "Andrew Baillie Resume 2025.docx")
+    if (!personalInfo.firstName && fileName) {
+      const fileBase = fileName.replace(/\.[^.]+$/, '').replace(/[._-]+/g, ' ').trim();
+      console.log('File name base for name detection:', fileBase);
+      // Try generic: first two TitleCase words at start
+      let m = fileBase.match(/^([A-Z][a-z]+)\s+([A-Z][a-z]+)\b/);
+      if (m && !/\b(resume|cv|curriculum|vitae)\b/i.test(m[1])) {
+        personalInfo.firstName = m[1];
+        personalInfo.lastName = m[2];
+        personalInfo.fullName = `${m[1]} ${m[2]}`;
+        console.log('Found name (file name start):', personalInfo.fullName);
+      } else {
+        // Previous specific pattern with trailing markers
+        const fileNameMatch = fileBase.match(/([A-Z][a-z]{2,}\s+[A-Z][a-z]{2,})(?=\s+(resume|cv|curriculum|vitae|\d{4}[a-z]*|$))/i);
+        if (fileNameMatch) {
+          const fullName = fileNameMatch[1].trim();
+          const parts = fullName.split(/\s+/);
+          personalInfo.fullName = fullName;
+          personalInfo.firstName = parts[0];
+          personalInfo.lastName = parts[parts.length - 1];
+          console.log('Found name (file name pattern):', personalInfo.fullName);
+        }
+      }
+    }
+
+    // 4) If still not found, infer from email local part (e.g., andrew.baillie@...)
+    if (!personalInfo.firstName && personalInfo.email) {
+      const local = personalInfo.email.split('@')[0];
+      const parts = local.split(/[._-]+/).filter(Boolean);
+      if (parts.length >= 2) {
+        const cap = s => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+        personalInfo.firstName = cap(parts[0]);
+        personalInfo.lastName = cap(parts[1]);
+        personalInfo.fullName = `${personalInfo.firstName} ${personalInfo.lastName}`;
+        console.log('Found name (from email):', personalInfo.fullName);
+      }
+    }
+
+    // 5) As a last resort, look around contact lines (email/phone) for a preceding name
+    if (!personalInfo.firstName) {
+      const emailIndex = lines.findIndex(l => personalInfo.email && l.includes(personalInfo.email));
+      // Use a lenient phone pattern to locate the line
+      const phoneLineRegex = /(\+?\d[\d\s\-().]{7,}\d)/;
+      const phoneIndex = lines.findIndex(l => phoneLineRegex.test(l));
+      const idx = emailIndex !== -1 ? emailIndex : phoneIndex;
+      if (idx > 0) {
+        // Check up to two lines above
+        for (let i = Math.max(0, idx - 2); i < idx; i++) {
+          const cand = lines[i].trim();
+          if (!cand || cand.length > 60) continue;
+          if (/\d|@/.test(cand)) continue; // no digits or emails
+          const m = cand.match(/^([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,}){1,3})$/);
+          if (m) {
+            const parts = m[1].split(/\s+/);
+            const blacklist = /\b(the|and|for|with|from|service|desk|pay|resume|cv|curriculum|vitae)\b/i;
+            if (parts.length >= 2 && parts.length <= 4 && parts.every(p => !blacklist.test(p))) {
+              personalInfo.fullName = m[1];
+              personalInfo.firstName = parts[0];
+              personalInfo.lastName = parts[parts.length - 1];
+              console.log('Found name (near contact line):', personalInfo.fullName);
+              break;
+            }
           }
         }
       }
     }
     
     // Extract address (look for Australian address patterns)
+    const streetSuffix = '(Street|St|Road|Rd|Avenue|Ave|Lane|Ln|Drive|Dr|Court|Ct|Place|Pl|Boulevard|Blvd|Terrace|Tce|Parade|Pde|Crescent|Cres|Highway|Hwy)';
     const addressPatterns = [
       // Street address with suburb, state, postcode
-      /\b\d+[\w\s,-]+(?:Street|St|Road|Rd|Avenue|Ave|Lane|Ln|Drive|Dr|Court|Ct|Place|Pl)\b[\s\S]*?\b(?:NSW|VIC|QLD|WA|SA|TAS|NT|ACT)\s*\d{4}\b/gi,
+      new RegExp(`\\b\\d+[\\\w\\s,-]+${streetSuffix}\\b[\\s\\S]*?\\b(?:NSW|VIC|QLD|WA|SA|TAS|NT|ACT)\\s*\\d{4}\\b`, 'gi'),
+      // Street address without explicit state
+      new RegExp(`\\b\\d+[\\\w\\s,-]+${streetSuffix}\\b`, 'gi'),
       // Just suburb, state, postcode (but not years like 2024)
       /\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s*,?\s*(?:NSW|VIC|QLD|WA|SA|TAS|NT|ACT)\s*\d{4}\b/gi
     ];
     
+    const looksLikeAddress = (addr) => {
+      // must have either a street suffix or a state+postcode
+      const hasSuffix = new RegExp(streetSuffix, 'i').test(addr);
+      const hasStatePostcode = /\b(NSW|VIC|QLD|WA|SA|TAS|NT|ACT)\s*\d{4}\b/i.test(addr);
+      const startsWithYear = /^(19|20)\d{2}\b/.test(addr);
+      const containsBiz = /\b(analyst|developer|manager|officer|coordinator|assistant|specialist|consultant|admin|clerk|representative|advisor|engineer|technician|supervisor|director|service|desk|pay|solutions|systems|technologies|ltd|inc|pty|corp|company)\b/i.test(addr);
+      return !startsWithYear && !containsBiz && (hasSuffix || hasStatePostcode) && addr.length <= 120;
+    };
+
     for (const pattern of addressPatterns) {
       const addressMatches = text.match(pattern);
       if (addressMatches) {
         for (const addressCandidate of addressMatches) {
           const address = addressCandidate.replace(/\s+/g, ' ').trim();
-          
-          // Filter out job titles, years, and non-address content
-          if (
-            // Skip if it contains job-related keywords
-            /\b(analyst|developer|manager|officer|coordinator|assistant|specialist|consultant|admin|clerk|representative|advisor|engineer|technician|supervisor|director)\b/i.test(address) ||
-            // Skip if it starts with a year (like "2024 Service Desk")
-            /^(19|20)\d{2}\b/.test(address) ||
-            // Skip if it contains company-related terms
-            /\b(service|desk|pay|ltd|inc|pty|corp|company|solutions|systems|technologies)\b/i.test(address) ||
-            // Skip if it's too long to be a reasonable address
-            address.length > 80
-          ) {
-            console.log('Skipping address candidate (job title/company):', address);
+          if (!looksLikeAddress(address)) {
+            console.log('Skipping address candidate (fails validation):', address);
             continue;
           }
-          
           personalInfo.address = address;
           console.log('Found address:', personalInfo.address);
           
@@ -200,7 +331,6 @@
           
           break;
         }
-        
         if (personalInfo.address) break; // Stop if we found a valid address
       }
     }
@@ -275,6 +405,16 @@
     // Save the updated profile
     saveAppState();
     
+    // Also auto-fill phone and email if available and empty
+    if (personalDetails.phone && DOM.phoneNumber && !DOM.phoneNumber.value) {
+      DOM.phoneNumber.value = personalDetails.phone;
+      appState.profile.phoneNumber = personalDetails.phone;
+    }
+    if (personalDetails.email && DOM.emailAddress && !DOM.emailAddress.value) {
+      DOM.emailAddress.value = personalDetails.email;
+      appState.profile.emailAddress = personalDetails.email;
+    }
+
     // Show a notification to the user
     const extractedInfo = [];
     if (personalDetails.firstName) extractedInfo.push('name');
@@ -289,7 +429,7 @@
   }
 
   // Local Storage Management
-  function loadAppState() {
+  async function loadAppState() {
     try {
       const savedProfile = localStorage.getItem('userProfile');
       const savedResponses = localStorage.getItem('responses');
@@ -308,6 +448,28 @@
       
       if (savedResume) {
         appState.resume = JSON.parse(savedResume);
+      }
+
+      // Sync with backend: try to load all responses from DB.
+      try {
+        const dbResponses = await apiGetResponsesAll();
+        if (dbResponses && dbResponses.length) {
+          appState.responses = dbResponses.map(r => ({
+            id: r.id,
+            text: r.text,
+            category: r.category || 'user',
+            userCreated: !!r.userCreated,
+            source: r.source || null
+          }));
+          // Cache to localStorage as well
+          localStorage.setItem('responses', JSON.stringify(appState.responses));
+        } else {
+          // DB empty: seed it with current in-memory responses
+          await persistAllResponsesToDb(appState.responses || []);
+        }
+      } catch (e) {
+        // Backend offline - continue using local storage
+        console.warn('Responses DB not available, using local storage cache.');
       }
     } catch (error) {
       console.error('Error loading app state:', error);
@@ -348,19 +510,156 @@
   }
 
   // Profile Management
+  function toTitleCase(s) {
+    return s.replace(/([A-Za-z\u00C0-\u024F][^\s-]*)/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+  }
+
+  // Replace placeholders like [Role Title], {Company Name}, etc. with current job input field values
+  function replacePlaceholders(text) {
+    const val = s => sanitizeText((s || '').toString());
+    const fields = {
+      // Role
+      'role title': val(DOM.roleTitle?.value),
+      'role':        val(DOM.roleTitle?.value),
+      'position':    val(DOM.roleTitle?.value),
+      // Company
+      'company name': val(DOM.companyName?.value),
+      'company':      val(DOM.companyName?.value),
+      'employer':     val(DOM.companyName?.value),
+      // Contact
+      'contact':       val(DOM.contactPerson?.value),
+      'contact name':  val(DOM.contactPerson?.value),
+      // Reference
+      'ref':              val(DOM.refNumber?.value),
+      'reference':        val(DOM.refNumber?.value),
+      'reference number': val(DOM.refNumber?.value),
+      'ref number':       val(DOM.refNumber?.value),
+      // Address
+      'business address': val(DOM.businessAddress?.value),
+      'address':          val(DOM.businessAddress?.value),
+      // User contact details
+      'phone':            val(DOM.phoneNumber?.value),
+      'phone number':     val(DOM.phoneNumber?.value),
+      'email':            val(DOM.emailAddress?.value),
+      'email address':    val(DOM.emailAddress?.value)
+    };
+    return (text || '').replace(/[\[{]([^}\]]+)[}\]]/g, (m, rawKey) => {
+      const k = rawKey.trim().toLowerCase();
+      const v = fields[k];
+      return v && v.length ? v : m;
+    });
+  }
+
+  // Backend API (local) for persisting user responses
+  const API_BASE = 'http://localhost:5050';
+  const API_TIMEOUT_MS = 3000;
+  let apiHealthy = null; // null=unknown, true=ok, false=down
+
+  function fetchWithTimeout(url, opts = {}, timeoutMs = API_TIMEOUT_MS) {
+    return new Promise((resolve, reject) => {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), timeoutMs);
+      fetch(url, { ...opts, signal: controller.signal }).then(r => {
+        clearTimeout(id);
+        resolve(r);
+      }).catch(err => {
+        clearTimeout(id);
+        reject(err);
+      });
+    });
+  }
+
+  async function apiHealthCheck() {
+    if (apiHealthy === false) return false;
+    try {
+      const r = await fetchWithTimeout(`${API_BASE}/health`);
+      apiHealthy = r.ok;
+      return apiHealthy;
+    } catch {
+      apiHealthy = false;
+      return false;
+    }
+  }
+
+  async function apiGetResponsesAll() {
+    const healthy = await apiHealthCheck();
+    if (!healthy) throw new Error('API offline');
+    const r = await fetchWithTimeout(`${API_BASE}/responses`);
+    if (!r.ok) throw new Error(`GET failed ${r.status}`);
+    const list = await r.json();
+    return Array.isArray(list) ? list : [];
+  }
+
+  async function apiCreateResponse(resp) {
+    const healthy = await apiHealthCheck();
+    if (!healthy) throw new Error('API offline');
+    const r = await fetchWithTimeout(`${API_BASE}/responses`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(resp)
+    });
+    if (!r.ok) throw new Error(`POST failed ${r.status}`);
+    return await r.json();
+  }
+
+  async function apiUpdateResponse(resp) {
+    const healthy = await apiHealthCheck();
+    if (!healthy) throw new Error('API offline');
+    const r = await fetchWithTimeout(`${API_BASE}/responses/${encodeURIComponent(resp.id)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(resp)
+    });
+    if (!r.ok) throw new Error(`PUT failed ${r.status}`);
+    return await r.json();
+  }
+
+  async function apiDeleteResponse(id) {
+    const healthy = await apiHealthCheck();
+    if (!healthy) throw new Error('API offline');
+    const r = await fetchWithTimeout(`${API_BASE}/responses/${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    });
+    if (!r.ok) throw new Error(`DELETE failed ${r.status}`);
+    return true;
+  }
+
+  async function persistAllResponsesToDb(responses) {
+    try {
+      const healthy = await apiHealthCheck();
+      if (!healthy) throw new Error('API offline');
+    } catch {
+      return; // Silently skip if API down
+    }
+    for (const resp of responses) {
+      try {
+        await apiCreateResponse(resp);
+      } catch (e) {
+        // Ignore duplicates, log others
+        if (!String(e.message || '').includes('409')) {
+          console.warn('Persist create failed for', resp.id, e.message || e);
+        }
+      }
+    }
+  }
+
   function loadUserProfile() {
-    DOM.firstName.value = appState.profile.firstName || '';
-    DOM.lastName.value = appState.profile.lastName || '';
-    DOM.addressLine1.value = appState.profile.addressLine1 || '';
-    DOM.addressLine2.value = appState.profile.addressLine2 || '';
+    if (DOM.firstName) DOM.firstName.value = appState.profile.firstName || '';
+    if (DOM.lastName) DOM.lastName.value = appState.profile.lastName || '';
+    if (DOM.addressLine1) DOM.addressLine1.value = appState.profile.addressLine1 || '';
+    if (DOM.addressLine2) DOM.addressLine2.value = appState.profile.addressLine2 || '';
+    if (DOM.phoneNumber) DOM.phoneNumber.value = appState.profile.phoneNumber || '';
+    if (DOM.emailAddress) DOM.emailAddress.value = appState.profile.emailAddress || '';
   }
 
   function saveUserProfile() {
     appState.profile = {
-      firstName: sanitizeText(DOM.firstName.value),
-      lastName: sanitizeText(DOM.lastName.value),
-      addressLine1: sanitizeText(DOM.addressLine1.value),
-      addressLine2: sanitizeText(DOM.addressLine2.value)
+      firstName: sanitizeText(DOM.firstName?.value || ''),
+      lastName: sanitizeText(DOM.lastName?.value || ''),
+      addressLine1: sanitizeText(DOM.addressLine1?.value || ''),
+      addressLine2: sanitizeText(DOM.addressLine2?.value || ''),
+      phoneNumber: sanitizeText(DOM.phoneNumber?.value || ''),
+      emailAddress: sanitizeText(DOM.emailAddress?.value || '')
     };
     saveAppState();
   }
@@ -400,6 +699,8 @@
   }
   
   function setupResumeUpload() {
+    // If resume UI not present (e.g., on letter page), skip
+    if (!DOM.resumeUploadArea || !DOM.resumeFileInput) return;
 
     // Click to upload
     DOM.resumeUploadArea.addEventListener('click', () => {
@@ -430,7 +731,7 @@
     });
 
     // Remove resume button
-    DOM.removeResumeBtn.addEventListener('click', removeResume);
+    if (DOM.removeResumeBtn) DOM.removeResumeBtn.addEventListener('click', removeResume);
   }
 
   function handleFileSelect(event) {
@@ -618,23 +919,22 @@
       reader.onload = function(event) {
         const arrayBuffer = event.target.result;
         
-        mammoth.extractRawText({arrayBuffer: arrayBuffer})
-          .then(function(result) {
-            const text = result.value;
-            console.log('Mammoth.js successful. Extracted text length:', text.length);
-            console.log('Sample:', text.substring(0, 300));
-            
-            if (text.length < 20) {
-              throw new Error('Very little text extracted');
-            }
-            
-            finishResumeProcessing(text);
-          })
-          .catch(function(error) {
-            console.error('Mammoth.js failed:', error);
-            // Fallback to basic parsing
-            parseWordDocumentFallback(file);
-          });
+        // In parallel: use mammoth and low-level XML extraction (captures shapes/headers)
+        Promise.all([
+          mammoth.extractRawText({arrayBuffer: arrayBuffer}).then(res => res.value).catch(() => ''),
+          extractDocxXmlText(arrayBuffer).catch(() => '')
+        ]).then(([mammothText, xmlText]) => {
+          const combined = [mammothText || '', xmlText || ''].join('\n');
+          console.log('Combined DOCX text length:', combined.length);
+          if ((mammothText?.length || 0) < 20 && (xmlText?.length || 0) < 20) {
+            throw new Error('Very little text extracted');
+          }
+          finishResumeProcessing(combined);
+        }).catch(function(error) {
+          console.error('DOCX parsing failed or insufficient:', error);
+          // Fallback to basic parsing
+          parseWordDocumentFallback(file);
+        });
       };
       reader.onerror = function() {
         console.error('Failed to read file as ArrayBuffer');
@@ -646,6 +946,42 @@
       console.log('Using fallback method for .doc file or mammoth.js unavailable');
       parseWordDocumentFallback(file);
     }
+  }
+
+  async function extractDocxXmlText(arrayBuffer) {
+    // Ensure JSZip is available
+    if (typeof JSZip === 'undefined') {
+      await loadJsZip();
+    }
+    const zip = await JSZip.loadAsync(arrayBuffer);
+    const xmlFiles = Object.keys(zip.files).filter(name => name.startsWith('word/') && name.endsWith('.xml'));
+    const xmlStrings = await Promise.all(xmlFiles.map(name => zip.file(name).async('string')));
+    let textParts = [];
+    const decodeXml = (s) => s
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'");
+    const tokenRegex = /<(?:w|a):t[^>]*>([\s\S]*?)<\/(?:w|a):t>/gim;
+    for (const xml of xmlStrings) {
+      let m;
+      while ((m = tokenRegex.exec(xml)) !== null) {
+        const val = decodeXml(m[1]);
+        if (val && val.trim()) textParts.push(val.trim());
+      }
+    }
+    return textParts.join(' ');
+  }
+
+  function loadJsZip() {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('Failed to load JSZip'));
+      document.head.appendChild(script);
+    });
   }
   
   function parseWordDocumentFallback(file) {
@@ -1065,10 +1401,14 @@
     return sections;
   }
 
-  function generateResumeBasedResponses() {
+  async function generateResumeBasedResponses() {
     if (!appState.resume.parsedText) return;
     
-    // Remove existing resume-based responses to regenerate
+    // Remove existing resume-based responses to regenerate (and delete from DB)
+    const toDelete = appState.responses.filter(r => r.source === 'resume-based').map(r => r.id);
+    for (const id of toDelete) {
+      try { await apiDeleteResponse(id); } catch {}
+    }
     appState.responses = appState.responses.filter(r => r.source !== 'resume-based');
     
     const keywords = appState.resume.keywords;
@@ -1155,8 +1495,13 @@
       source: 'resume-based'
     });
     
-    // Add all generated responses
+    // Add all generated responses and persist to DB
     appState.responses.push(...resumeResponses);
+
+    // Persist creations
+    for (const resp of resumeResponses) {
+      try { await apiCreateResponse(resp); } catch (e) { console.warn('Backend create (resume-based) failed:', e.message || e); }
+    }
     
     saveAppState();
     renderResponses();
@@ -1171,6 +1516,7 @@
   }
 
   function setParsingStatus(type, message) {
+    if (!DOM.parsingStatus) return;
     DOM.parsingStatus.className = `parsing-status ${type}`;
     DOM.parsingStatus.textContent = message;
   }
@@ -1200,7 +1546,230 @@
     }
   }
 
+  // Job Ad Parsing
+  function handleParseJobAd() {
+    const text = (DOM.jobAdText?.value || '').trim();
+    if (!text) {
+      DOM.jobAdParseStatus.textContent = 'Please paste a job ad to parse.';
+      return;
+    }
+    const overwrite = !!(DOM.overwriteJobFields && DOM.overwriteJobFields.checked);
+    const domain = (DOM.jobAdText?.dataset?.sourceDomain || (DOM.jobAdUrl?.value ? (normalizeUrl(DOM.jobAdUrl.value) ? new URL(normalizeUrl(DOM.jobAdUrl.value)).hostname : '') : '')).toLowerCase();
+    const parsed = parseJobAdText(text, domain);
+
+    const filled = [];
+    const maybeSet = (el, key) => {
+      if (!el) return;
+      if (overwrite || !el.value) {
+        if (parsed[key]) {
+          el.value = parsed[key];
+          filled.push(key);
+        }
+      }
+    };
+
+    maybeSet(DOM.roleTitle, 'roleTitle');
+    maybeSet(DOM.companyName, 'companyName');
+    maybeSet(DOM.contactPerson, 'contactPerson');
+    maybeSet(DOM.refNumber, 'refNumber');
+
+    if (filled.length) {
+      DOM.jobAdParseStatus.textContent = `Parsed: ${filled.join(', ')}.`;
+    } else {
+      DOM.jobAdParseStatus.textContent = 'No new fields parsed. Try enabling "Overwrite existing fields" or adjust the job ad text.';
+    }
+    console.log('Job Ad Parsed ->', parsed);
+  }
+
+  async function handleFetchJobAdUrl() {
+    const raw = (DOM.jobAdUrl?.value || '').trim();
+    if (!raw) {
+      DOM.jobAdParseStatus.textContent = 'Please paste a job URL to fetch.';
+      return;
+    }
+    try {
+      const url = normalizeUrl(raw);
+      if (!url) {
+        DOM.jobAdParseStatus.textContent = 'That does not look like a valid URL.';
+        return;
+      }
+      DOM.jobAdParseStatus.textContent = 'Fetching job ad text...';
+      const readableUrl = buildReadableProxyUrl(url);
+      const resp = await fetch(readableUrl, { mode: 'cors' });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const text = await resp.text();
+      const trimmed = text.replace(/\u0000/g,'').trim();
+      if (!trimmed) throw new Error('Empty content');
+      // Fill textarea and parse
+      if (DOM.jobAdText) {
+        DOM.jobAdText.value = trimmed;
+        try { DOM.jobAdText.dataset.sourceDomain = new URL(url).hostname.toLowerCase(); } catch {}
+      }
+      DOM.jobAdParseStatus.textContent = 'Fetched ad successfully. Parsing...';
+      // Slight delay to update UI
+      setTimeout(()=> handleParseJobAd(), 10);
+    } catch (err) {
+      console.error('Fetch job ad failed:', err);
+      DOM.jobAdParseStatus.textContent = `Failed to fetch job ad. ${err.message}.`;
+    }
+  }
+
+  function normalizeUrl(input) {
+    try {
+      let u = input.trim();
+      if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+      const url = new URL(u);
+      return url.href;
+    } catch { return null; }
+  }
+
+  function buildReadableProxyUrl(u) {
+    // Use r.jina.ai proxy to bypass CORS and extract readable text
+    // Always prefix target with http:// for the proxy path
+    try {
+      const url = new URL(u);
+      const target = 'http://' + url.hostname + url.pathname + url.search;
+      return 'https://r.jina.ai/' + target;
+    } catch {
+      return 'https://r.jina.ai/' + u.replace(/^https?:\/\//i,'http://');
+    }
+  }
+
+  function parseJobAdText(text, domain) {
+    const original = text;
+    text = text.replace(/\r/g, '');
+    const lines = text.split(/\n+/).map(l => l.trim()).filter(Boolean);
+    const joined = ' ' + lines.join(' ') + ' ';
+    const out = { roleTitle: '', companyName: '', contactPerson: '', refNumber: '' };
+
+    // Reference number / Job ID
+    const refRegexes = [
+      /(reference|ref(?:erence)?\s*(?:no\.?|number)?)[:\s#-]*([A-Z0-9\-_/]{3,})/i,
+      /(job|req(?:uest)?)\s*id[:\s#-]*([A-Z0-9\-_/]{3,})/i
+    ];
+    for (const r of refRegexes) {
+      const m = joined.match(r);
+      if (m) { out.refNumber = m[2].trim(); break; }
+    }
+
+    // Company Name heuristics
+    const companyLabel = joined.match(/(?:company|employer|organisation|organization)[:\s-]*([A-Z][\w&.,\-\s]{2,50})/i);
+    if (companyLabel) out.companyName = toTitleCase(companyLabel[1].trim());
+    if (!out.companyName) {
+      const atPattern = joined.match(/\b(?:at|with)\s+([A-Z][A-Za-z0-9&'\-\s]{2,60})(?=[\.,;\)\s])/);
+      if (atPattern) out.companyName = toTitleCase(atPattern[1].trim());
+    }
+    if (!out.companyName) {
+      // Derive from email domain
+      const email = joined.match(/[A-Za-z0-9._%+-]+@([A-Za-z0-9.-]+)\.[A-Za-z]{2,}/);
+      if (email) {
+        const dom = email[1].split('.').filter(p => !['com','au','uk','co','org','io','net'].includes(p.toLowerCase()))[0];
+        if (dom) out.companyName = toTitleCase(dom.replace(/[-_]/g, ' '));
+      }
+    }
+
+    // Role Title heuristics
+    const titleLabels = [/(?:role|position|job|title|position\s*title)[:\s-]*([^\n\r]{3,80})/i];
+    for (const r of titleLabels) {
+      const m = text.match(r);
+      if (m) { out.roleTitle = toTitleCase(m[1].replace(/^[\-\s]+/, '').trim()); break; }
+    }
+    if (!out.roleTitle && lines.length) {
+      // Look for a headline-like first line (short, title-cased, few punctuation)
+      const first = lines[0];
+      if (/^[A-Za-z].{2,80}$/.test(first) && (first.match(/[A-Za-z]/g)||[]).length > (first.match(/[^A-Za-z\s]/g)||[]).length) {
+        out.roleTitle = toTitleCase(first.replace(/^[\-\s]+/, ''));
+      }
+    }
+    if (!out.roleTitle) {
+      const seeking = joined.match(/\b(?:seeking|looking\s+for|hiring\s+an?)\s+([A-Za-z][A-Za-z\-\s]{2,60})(?=\s+(?:at|with|for)\b|[\.,;\)])/i);
+      if (seeking) out.roleTitle = toTitleCase(seeking[1].trim());
+    }
+
+    // Contact person heuristics
+    const contactRegexes = [
+      /(?:contact|hiring\s+manager|recruiter|recruitment\s+(?:officer|consultant|team|manager))[:\s-]*([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})/i,
+      /please\s+contact\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})/i,
+      /for\s+further\s+information.*?contact\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})/i
+    ];
+    for (const r of contactRegexes) {
+      const m = joined.match(r);
+      if (m) { out.contactPerson = toTitleCase(m[1].trim()); break; }
+    }
+
+    // Site-specific tweaks
+    if (domain) {
+      const d = domain.toLowerCase();
+      try {
+        if (d.includes('seek')) applySeekHeuristics(out, lines, joined);
+        else if (d.includes('indeed')) applyIndeedHeuristics(out, lines, joined);
+        else if (d.includes('linkedin')) applyLinkedInHeuristics(out, lines, joined);
+      } catch (e) { console.warn('Site-specific parse error:', e); }
+    }
+
+    // Cleanup: truncate and trim
+    ['roleTitle','companyName','contactPerson','refNumber'].forEach(k => {
+      if (out[k]) out[k] = out[k].toString().replace(/\s+/g,' ').trim().slice(0, 100);
+    });
+
+    return out;
+  }
+
+  function applySeekHeuristics(out, lines, joined) {
+    // Role title: try first non-empty line if reasonable
+    if (!out.roleTitle && lines.length) {
+      const l0 = lines[0];
+      if (/^[A-Za-z].{2,100}$/.test(l0)) out.roleTitle = toTitleCase(l0.replace(/\s{2,}/g,' ').trim());
+    }
+    // Company: often appears after "at" or under title
+    if (!out.companyName) {
+      const at = joined.match(/\b(?:at|with)\s+([A-Z][A-Za-z0-9&'\-\s]{2,60})(?=\s+(?:on|in|for|\||\.|,|\)|$))/);
+      if (at) out.companyName = toTitleCase(at[1].trim());
+    }
+    // Reference: Job no/Job ID patterns
+    if (!out.refNumber) {
+      const m = joined.match(/\b(?:job\s*(?:no\.?|number|id)|reference\s*(?:no\.?|number|id)|ref\s*(?:no\.?|number|id)|req\s*id)[:\s#-]*([A-Z0-9\-_/]{3,})/i);
+      if (m) out.refNumber = m[1];
+    }
+  }
+
+  function applyIndeedHeuristics(out, lines, joined) {
+    // Title - Company often in first line separated by "-"
+    if ((!out.roleTitle || !out.companyName) && lines.length) {
+      const l0 = lines[0];
+      if (l0.includes(' - ')) {
+        const parts = l0.split(' - ').map(s=>s.trim()).filter(Boolean);
+        if (parts.length >= 2) {
+          if (!out.roleTitle) out.roleTitle = toTitleCase(parts[0]);
+          if (!out.companyName) out.companyName = toTitleCase(parts[1]);
+        }
+      }
+    }
+    if (!out.refNumber) {
+      const m = joined.match(/\b(?:job|req)\s*id[:\s#-]*([A-Z0-9\-_/]{3,})/i);
+      if (m) out.refNumber = m[1];
+    }
+  }
+
+  function applyLinkedInHeuristics(out, lines, joined) {
+    // About the job appears below header; first line is title, second is company
+    if (lines.length >= 2) {
+      if (!out.roleTitle && /^[A-Za-z].{2,100}$/.test(lines[0])) {
+        out.roleTitle = toTitleCase(lines[0].replace(/\s{2,}/g,' '));
+      }
+      if (!out.companyName && /^[A-Z][A-Za-z0-9&'\-\s]{2,60}$/.test(lines[1]) && !/about\s+the\s+job/i.test(lines[1])) {
+        out.companyName = toTitleCase(lines[1]);
+      }
+    }
+    if (!out.refNumber) {
+      const m = joined.match(/\b(?:job|req)\s*id[:\s#-]*([A-Z0-9\-_/]{3,})/i);
+      if (m) out.refNumber = m[1];
+    }
+  }
+
   function loadResumeStatus() {
+    // Only applicable on pages with resume UI
+    if (!DOM.resumeStatus || !DOM.uploadPlaceholder || !DOM.resumeName || !DOM.resumeSize) return;
     if (appState.resume.fileName) {
       DOM.uploadPlaceholder.style.display = 'none';
       DOM.resumeStatus.style.display = 'block';
@@ -1216,6 +1785,8 @@
 
   // Response Management
   function renderResponses() {
+    // Skip if response columns not present (e.g., on profile page)
+    if (!DOM.categoryUser || !DOM.categoryCrowd || !DOM.categoryAi) return;
     // Clear existing responses
     DOM.categoryUser.innerHTML = '<h3>User Created</h3>';
     DOM.categoryCrowd.innerHTML = '<h3>Crowd Sourced</h3>';
@@ -1279,7 +1850,7 @@
     return responseEl;
   }
 
-  function addResponse() {
+  async function addResponse() {
     const text = sanitizeText(DOM.newResponseText.value);
     if (!text) {
       alert('Please enter some response text.');
@@ -1292,6 +1863,13 @@
       category: 'user',
       userCreated: true
     };
+
+    // Try to persist to backend; fallback to local only
+    try {
+      await apiCreateResponse({ ...newResponse, source: 'user' });
+    } catch (e) {
+      console.warn('Backend create failed, caching locally:', e.message || e);
+    }
     
     appState.responses.push(newResponse);
     saveAppState();
@@ -1315,10 +1893,12 @@
     const saveBtn = document.createElement('button');
     saveBtn.textContent = 'Save';
     saveBtn.className = 'save-edit-btn';
-    saveBtn.onclick = () => {
+    saveBtn.onclick = async () => {
       const newText = sanitizeText(textarea.value);
       if (newText) {
         response.text = newText;
+        // Persist any category to backend
+        try { await apiUpdateResponse(response); } catch (e) { console.warn('Backend update failed:', e.message || e); }
         saveAppState();
         renderResponses();
       }
@@ -1332,8 +1912,9 @@
     textarea.select();
   }
 
-  function deleteResponse(responseId) {
+  async function deleteResponse(responseId) {
     if (confirm('Are you sure you want to delete this response?')) {
+      try { await apiDeleteResponse(responseId); } catch (e) { console.warn('Backend delete failed:', e.message || e); }
       appState.responses = appState.responses.filter(r => r.id !== responseId);
       saveAppState();
       renderResponses();
@@ -1342,6 +1923,7 @@
 
   // Letter Builder
   function setupLetterBuilder() {
+    if (!DOM.letterArea) return;
     DOM.letterArea.addEventListener('dragover', (e) => {
       e.preventDefault();
       e.dataTransfer.dropEffect = 'copy';
@@ -1374,7 +1956,7 @@
     const paragraphEl = document.createElement('div');
     paragraphEl.className = 'letter-paragraph';
     paragraphEl.dataset.responseId = responseId;
-    paragraphEl.textContent = response.text;
+    paragraphEl.textContent = replacePlaceholders(response.text);
     
     // Add remove button
     const removeBtn = document.createElement('button');
@@ -1430,6 +2012,24 @@
     } else {
       DOM.letterArea.insertBefore(salutationEl, DOM.letterArea.firstChild);
     }
+
+    // Refresh dynamic placeholders in current letter paragraphs
+    const paras = DOM.letterArea.querySelectorAll('.letter-paragraph');
+    paras.forEach(p => {
+      const id = p.dataset.responseId;
+      const resp = appState.responses.find(r => r.id === id);
+      if (!resp) return;
+      // Update only the text node content, keep the remove button
+      const first = p.firstChild;
+      if (first && first.nodeType === Node.TEXT_NODE) {
+        first.nodeValue = replacePlaceholders(resp.text);
+      } else {
+        // Fallback: reset text content then re-append the remove button if present
+        const removeBtn = p.querySelector('button');
+        p.textContent = replacePlaceholders(resp.text);
+        if (removeBtn) p.appendChild(removeBtn);
+      }
+    });
   }
 
   function updateLetterState() {
@@ -1521,20 +2121,61 @@
     printEl.style.lineHeight = '1.5';
     printEl.style.fontSize = '12pt';
 
-    // User profile block
-    if (fullName) printEl.appendChild(Object.assign(document.createElement('p'), { innerText: fullName }));
-    if (profile.addressLine1) printEl.appendChild(Object.assign(document.createElement('p'), { innerText: profile.addressLine1 }));
-    if (profile.addressLine2) printEl.appendChild(Object.assign(document.createElement('p'), { innerText: profile.addressLine2 }));
+    // Header with company (left) and user details (right)
+    const header = document.createElement('div');
+    header.style.display = 'flex';
+    header.style.justifyContent = 'space-between';
+    header.style.alignItems = 'flex-start';
+    header.style.gap = '20px';
+    header.style.marginBottom = '16px';
 
-    printEl.appendChild(document.createElement('br'));
+    const leftCol = document.createElement('div');
+    leftCol.style.flex = '1';
+    leftCol.style.textAlign = 'left';
 
-    // Job Info block (only if data exists)
-    if (companyName) printEl.appendChild(Object.assign(document.createElement('p'), { innerText: `Company: ${companyName}` }));
-    if (jobTitle) printEl.appendChild(Object.assign(document.createElement('p'), { innerText: `Role: ${jobTitle}` }));
-    if (contactPerson) printEl.appendChild(Object.assign(document.createElement('p'), { innerText: `Contact: ${contactPerson}` }));
-    if (businessAddress) printEl.appendChild(Object.assign(document.createElement('p'), { innerText: `Address: ${businessAddress}` }));
-    if (refNumber) printEl.appendChild(Object.assign(document.createElement('p'), { innerText: `Reference No: ${refNumber}` }));
+    if (companyName) {
+      const p = document.createElement('p');
+      p.innerText = companyName;
+      p.style.margin = '0 0 4px 0';
+      p.style.fontWeight = '600';
+      leftCol.appendChild(p);
+    }
+    if (businessAddress) {
+      const p = document.createElement('p');
+      p.innerText = businessAddress;
+      p.style.margin = '0';
+      leftCol.appendChild(p);
+    }
 
+    const rightCol = document.createElement('div');
+    rightCol.style.flex = '1';
+    rightCol.style.textAlign = 'right';
+
+    if (fullName) {
+      const p = document.createElement('p');
+      p.innerText = fullName;
+      p.style.margin = '0 0 4px 0';
+      p.style.fontWeight = '600';
+      rightCol.appendChild(p);
+    }
+    if (profile.addressLine1) {
+      const p = document.createElement('p');
+      p.innerText = profile.addressLine1;
+      p.style.margin = '0';
+      rightCol.appendChild(p);
+    }
+    if (profile.addressLine2) {
+      const p = document.createElement('p');
+      p.innerText = profile.addressLine2;
+      p.style.margin = '0';
+      rightCol.appendChild(p);
+    }
+
+    header.appendChild(leftCol);
+    header.appendChild(rightCol);
+    printEl.appendChild(header);
+
+    // Spacer between header and content
     printEl.appendChild(document.createElement('br'));
 
     // Salutation
@@ -1564,10 +2205,14 @@
     });
 
     // Signature
-    if (fullName) {
+    if (fullName || profile.phoneNumber || profile.emailAddress) {
       const signatureP = document.createElement('p');
       signatureP.style.marginTop = '30px';
-      signatureP.innerText = `Sincerely,\n${fullName}`;
+      let sig = 'Sincerely,';
+      if (fullName) sig += `\n${fullName}`;
+      if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
+      if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
+      signatureP.innerText = sig;
       printEl.appendChild(signatureP);
     }
 
@@ -1585,12 +2230,13 @@
   // Event Listeners Setup
   function setupEventListeners() {
     // Profile auto-save on input
-    [DOM.firstName, DOM.lastName, DOM.addressLine1, DOM.addressLine2].forEach(input => {
+    [DOM.firstName, DOM.lastName, DOM.addressLine1, DOM.addressLine2, DOM.phoneNumber, DOM.emailAddress].forEach(input => {
+      if (!input) return;
       input.addEventListener('blur', saveUserProfile);
     });
     
-    // Job info changes - update salutation preview
-    [DOM.contactPerson, DOM.companyName].forEach(input => {
+    // Job info changes - update salutation preview and refresh placeholders
+    [DOM.contactPerson, DOM.companyName, DOM.roleTitle, DOM.businessAddress, DOM.refNumber].forEach(input => {
       input.addEventListener('input', updateSalutationPreview);
       input.addEventListener('blur', updateSalutationPreview);
     });
@@ -1607,6 +2253,11 @@
     DOM.newLetterBtn.addEventListener('click', newLetter);
     DOM.saveLetterBtn.addEventListener('click', saveLetterLocally);
     DOM.downloadPdfBtn.addEventListener('click', downloadPdf);
+
+    // Job ad parsing
+    if (DOM.parseJobAdBtn) DOM.parseJobAdBtn.addEventListener('click', handleParseJobAd);
+    if (DOM.fetchJobAdBtn) DOM.fetchJobAdBtn.addEventListener('click', handleFetchJobAdUrl);
+    if (DOM.jobAdUrl) DOM.jobAdUrl.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); handleFetchJobAdUrl(); }});
   }
 
   // Initialize DOM Elements
@@ -1615,6 +2266,8 @@
     DOM.lastName = document.getElementById('lastName');
     DOM.addressLine1 = document.getElementById('addressLine1');
     DOM.addressLine2 = document.getElementById('addressLine2');
+    DOM.phoneNumber = document.getElementById('phoneNumber');
+    DOM.emailAddress = document.getElementById('emailAddress');
     
     // Resume upload elements
     DOM.resumeUploadArea = document.getElementById('resumeUploadArea');
@@ -1631,6 +2284,14 @@
     DOM.contactPerson = document.getElementById('contactPerson');
     DOM.businessAddress = document.getElementById('businessAddress');
     DOM.refNumber = document.getElementById('refNumber');
+
+    // Job Ad elements
+    DOM.jobAdText = document.getElementById('jobAdText');
+    DOM.parseJobAdBtn = document.getElementById('parseJobAdBtn');
+    DOM.jobAdParseStatus = document.getElementById('jobAdParseStatus');
+    DOM.overwriteJobFields = document.getElementById('overwriteJobFields');
+    DOM.jobAdUrl = document.getElementById('jobAdUrl');
+    DOM.fetchJobAdBtn = document.getElementById('fetchJobAdBtn');
     
     DOM.categoryUser = document.getElementById('category-user');
     DOM.categoryCrowd = document.getElementById('category-crowd');
@@ -1645,9 +2306,9 @@
   }
 
   // Application Initialization
-  function initializeApp() {
+  async function initializeApp() {
     initializeDOM();
-    loadAppState();
+    await loadAppState();
     loadUserProfile();
     loadResumeStatus();
     renderResponses();
@@ -1655,7 +2316,7 @@
     setupResumeUpload();
     setupEventListeners();
     
-    console.log('Click Cover Letter Creator with Resume Upload initialized successfully!');
+    console.log('Click Cover Letter Creator initialized successfully!');
   }
 
   // Start the application when DOM is ready

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profile • Click Cover Letter Creator</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.11.2/html2pdf.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body class="profile-page">
+  <header class="app-header">
+    <h1>Click Cover Letter Creator</h1>
+    <nav class="app-nav">
+      <a href="index.html">Create Letter</a>
+      <a href="profile.html" class="active">Profile</a>
+    </nav>
+  </header>
+
+  <div class="app-container">
+    <main class="builder-panel">
+      <section class="user-info">
+        <h3>Your Profile</h3>
+        <input type="text" id="firstName" placeholder="First Name" />
+        <input type="text" id="lastName" placeholder="Last Name" />
+        <input type="text" id="addressLine1" placeholder="Address Line 1" />
+        <input type="text" id="addressLine2" placeholder="Address Line 2" />
+        <input type="tel" id="phoneNumber" placeholder="Contact Number" />
+        <input type="email" id="emailAddress" placeholder="Email Address" />
+
+        <div class="resume-upload-section">
+          <h4>Resume Upload</h4>
+          <div class="resume-upload-area" id="resumeUploadArea">
+            <div class="upload-placeholder" id="uploadPlaceholder">
+              <p>📄 Drag & drop your resume here or click to browse</p>
+              <p class="upload-hint">Supports PDF, DOC, DOCX, TXT files</p>
+              <p class="upload-note">For best performance, try TXT or DOCX format</p>
+            </div>
+            <input type="file" id="resumeFileInput" accept=".pdf,.doc,.docx,.txt" style="display: none;" />
+          </div>
+          <div class="resume-status" id="resumeStatus" style="display: none;">
+            <div class="resume-info">
+              <span class="resume-name" id="resumeName"></span>
+              <span class="resume-size" id="resumeSize"></span>
+              <button class="remove-resume-btn" id="removeResumeBtn">Remove</button>
+            </div>
+            <div class="parsing-status" id="parsingStatus"></div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

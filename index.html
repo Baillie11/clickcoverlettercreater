@@ -9,10 +9,15 @@
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.11.2/html2pdf.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body>
   <header class="app-header">
     <h1>Click Cover Letter Creator</h1>
+    <nav class="app-nav">
+      <a href="index.html" class="active">Create Letter</a>
+      <a href="profile.html">Profile</a>
+    </nav>
   </header>
 
   <div class="app-container">
@@ -38,34 +43,6 @@
     </aside>
 
     <main class="builder-panel">
-      <section class="user-info">
-        <h3>Your Info</h3>
-        <input type="text" id="firstName" placeholder="First Name" />
-        <input type="text" id="lastName" placeholder="Last Name" />
-        <input type="text" id="addressLine1" placeholder="Address Line 1" />
-        <input type="text" id="addressLine2" placeholder="Address Line 2" />
-        
-        <div class="resume-upload-section">
-          <h4>Resume Upload</h4>
-          <div class="resume-upload-area" id="resumeUploadArea">
-            <div class="upload-placeholder" id="uploadPlaceholder">
-              <p>📄 Drag & drop your resume here or click to browse</p>
-              <p class="upload-hint">Supports PDF, DOC, DOCX, TXT files</p>
-              <p class="upload-note">For best performance, try TXT or DOCX format</p>
-            </div>
-            <input type="file" id="resumeFileInput" accept=".pdf,.doc,.docx,.txt" style="display: none;" />
-          </div>
-          <div class="resume-status" id="resumeStatus" style="display: none;">
-            <div class="resume-info">
-              <span class="resume-name" id="resumeName"></span>
-              <span class="resume-size" id="resumeSize"></span>
-              <button class="remove-resume-btn" id="removeResumeBtn">Remove</button>
-            </div>
-            <div class="parsing-status" id="parsingStatus"></div>
-          </div>
-        </div>
-      </section>
-
       <section class="job-info">
         <h3>Job Information</h3>
         <form id="jobForm">
@@ -75,6 +52,20 @@
           <input type="text" id="businessAddress" placeholder="Business Address" />
           <input type="text" id="refNumber" placeholder="Reference Number" />
         </form>
+
+        <div class="job-ad-section">
+          <h4>Paste Job Ad</h4>
+          <textarea id="jobAdText" placeholder="Paste the job ad text here..."></textarea>
+          <div class="job-ad-url">
+            <input type="url" id="jobAdUrl" placeholder="Or paste a job ad URL (https://...)" />
+            <button type="button" id="fetchJobAdBtn" title="Fetch via readable proxy">Fetch & Parse</button>
+          </div>
+          <div class="job-ad-controls">
+            <label class="overwrite-toggle"><input type="checkbox" id="overwriteJobFields" /> Overwrite existing fields</label>
+            <button type="button" id="parseJobAdBtn">Parse Job Ad</button>
+          </div>
+          <div id="jobAdParseStatus" class="job-ad-status" aria-live="polite"></div>
+        </div>
       </section>
 
       <section class="letter-builder">

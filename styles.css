@@ -128,6 +128,12 @@ body {
   cursor: pointer;
 }
 
+/* Header nav */
+.app-nav { margin-top: 6px; }
+.app-nav a { color: #fff; text-decoration: none; margin: 0 8px; opacity: 0.85; }
+.app-nav a.active { font-weight: 600; opacity: 1; border-bottom: 2px solid #fff; }
+.app-nav a:hover { opacity: 1; }
+
 /* RIGHT PANEL */
 .builder-panel {
   width: 70%;
@@ -218,6 +224,79 @@ body {
 .add-response button:hover {
   background-color: #27ae60;
 }
+
+/* Job Ad Paste Section */
+.job-ad-section {
+  margin-top: 16px;
+  border-top: 1px solid #eee;
+  padding-top: 12px;
+}
+.job-ad-section h4 {
+  margin: 6px 0 8px;
+}
+#jobAdText {
+  width: 100%;
+  min-height: 120px;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  resize: vertical;
+}
+.job-ad-url {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+}
+#jobAdUrl {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+#fetchJobAdBtn {
+  padding: 8px 12px;
+  background-color: #16a085;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+#fetchJobAdBtn:hover {
+  background-color: #13856f;
+}
+.job-ad-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+.job-ad-controls button {
+  padding: 8px 12px;
+  background-color: #3498db;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.job-ad-controls button:hover {
+  background-color: #2980b9;
+}
+.job-ad-status {
+  margin-top: 8px;
+  font-size: 0.95rem;
+  background: #f4f9ff;
+  border: 1px solid #cfe5ff;
+  color: #2c3e50;
+  padding: 8px;
+  border-radius: 4px;
+}
+.overwrite-toggle {
+  color: #555;
+  font-size: 0.95rem;
+}
+
+/* Profile page layout adjustments */
+body.profile-page .builder-panel { width: 100%; max-width: 900px; margin: 0 auto; }
 
 /* Resume Upload Section */
 .resume-upload-section {
