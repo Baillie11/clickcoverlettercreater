@@ -392,67 +392,39 @@
   }
 
   function parseWordDocument(file) {
-    // For Word documents, we'll try multiple parsing approaches
-    // Note: This is a basic approach - for production, consider mammoth.js for better parsing
-    const fileReader = new FileReader();
+    console.log('Parsing Word document with mammoth.js for clean text extraction');
     
-    fileReader.onload = function(event) {
-      try {
-        let text = event.target.result;
+    if (typeof mammoth === 'undefined') {
+      console.error('Mammoth.js not loaded');
+      setParsingStatus('error', 'Word document parser not available. Please try TXT or PDF format.');
+      return;
+    }
+    
+    setParsingStatus('processing', 'Extracting text from Word document...');
+    
+    mammoth.extractRawText(file)
+      .then(function(result) {
+        const text = result.value; // The extracted text
+        const messages = result.messages; // Any messages/warnings
         
-        console.log('Raw Word document length:', text.length);
-        console.log('Raw Word document sample:', text.substring(0, 200));
+        console.log('Mammoth.js extraction successful');
+        console.log('Extracted text length:', text.length);
+        console.log('Sample extracted text:', text.substring(0, 500));
         
-        // Try to extract readable text from Word document binary
-        // Word documents contain a mix of binary and text data
-        
-        // Remove non-printable and control characters
-        text = text.replace(/[\x00-\x1F\x7F-\x9F]/g, ' ');
-        
-        // Remove Word document specific artifacts
-        text = text.replace(/Microsoft\s*Word|Times New Roman|Calibri|Arial|Verdana|Tahoma/gi, ' ');
-        text = text.replace(/Normal|Heading|Title|Document|Header|Footer/gi, ' ');
-        text = text.replace(/\\[a-z]+\d*\s*/gi, ' '); // Remove RTF codes
-        
-        // Remove unusual character combinations that suggest binary data
-        text = text.replace(/[^\w\s\.\,\;\:\!\?\-\'\"\(\)\[\]\{\}\@\#\%\&\+\=\/]/g, ' ');
-        
-        // Remove isolated single characters and numbers
-        text = text.replace(/\b[a-z]\b/gi, ' ');
-        text = text.replace(/\b\d\b/g, ' ');
-        
-        // Clean up excessive whitespace
-        text = text.replace(/\s+/g, ' ').trim();
-        
-        // Additional cleaning: remove short meaningless fragments
-        const words = text.split(' ');
-        const cleanedWords = words.filter(word => {
-          // Keep words that are at least 3 characters OR are common short words
-          const commonShorts = ['a', 'an', 'at', 'be', 'by', 'do', 'go', 'he', 'if', 'in', 'is', 'it', 'me', 'my', 'no', 'of', 'on', 'or', 'so', 'to', 'up', 'we'];
-          return word.length >= 3 || commonShorts.includes(word.toLowerCase());
-        });
-        
-        text = cleanedWords.join(' ').trim();
-        
-        console.log('Cleaned Word document:', text.substring(0, 500));
+        if (messages.length > 0) {
+          console.log('Mammoth.js messages:', messages);
+        }
         
         if (text.length < 50) {
-          throw new Error('Document appears to be mostly binary data');
+          throw new Error('Very little text extracted from document');
         }
         
         finishResumeProcessing(text);
-      } catch (error) {
-        console.error('Error parsing Word document:', error);
-        setParsingStatus('error', 'Failed to parse Word document. Word files contain binary data that is difficult to parse. Please save as TXT file for best results, or try PDF format.');
-      }
-    };
-
-    fileReader.onerror = function() {
-      setParsingStatus('error', 'Failed to read Word document.');
-    };
-
-    // Try reading as text first
-    fileReader.readAsText(file, 'UTF-8');
+      })
+      .catch(function(error) {
+        console.error('Error parsing Word document with mammoth.js:', error);
+        setParsingStatus('error', `Failed to parse Word document: ${error.message}. Please try saving as TXT or PDF format for better results.`);
+      });
   }
 
   function finishResumeProcessing(text) {
@@ -488,6 +460,9 @@
   function extractKeywords(text) {
     const keywords = new Set();
     const lowerText = text.toLowerCase();
+    
+    console.log('Extracting keywords from clean text, length:', text.length);
+    console.log('Sample text:', text.substring(0, 300));
     
     // Healthcare & Social Services Skills
     const healthcareSkills = [
