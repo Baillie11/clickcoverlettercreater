@@ -48,7 +48,16 @@
     letterArea: null,
     newLetterBtn: null,
     saveLetterBtn: null,
-    downloadPdfBtn: null
+    downloadPdfBtn: null,
+
+    // Header/Nav Controls
+    dbStatusBadge: null,
+    syncResponsesBtn: null,
+    themeToggleBtn: null,
+
+    // Preview
+    previewLetterBtn: null,
+    letterPreview: null
   };
 
   // Application State
@@ -65,6 +74,9 @@
     },
     currentLetter: {
       paragraphs: []
+    },
+    settings: {
+      theme: 'standard'
     }
   };
 
@@ -83,6 +95,18 @@
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
+  function formatDateLongAU(dateObj = new Date()) {
+    try {
+      const opts = { day: 'numeric', month: 'long', year: 'numeric' };
+      return dateObj.toLocaleDateString('en-AU', opts);
+    } catch {
+      // Fallback
+      const d = dateObj.getDate();
+      const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      return `${d} ${months[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+    }
   }
   
   function extractPersonalDetails(text) {
@@ -434,6 +458,7 @@
       const savedProfile = localStorage.getItem('userProfile');
       const savedResponses = localStorage.getItem('responses');
       const savedResume = localStorage.getItem('resumeData');
+      const savedSettings = localStorage.getItem('appSettings');
       
       if (savedProfile) {
         appState.profile = JSON.parse(savedProfile);
@@ -448,6 +473,13 @@
       
       if (savedResume) {
         appState.resume = JSON.parse(savedResume);
+      }
+
+      if (savedSettings) {
+        try { appState.settings = JSON.parse(savedSettings); } catch {}
+        // defaults
+        appState.settings.theme = appState.settings.theme || 'standard';
+        appState.settings.pageSize = appState.settings.pageSize || 'letter';
       }
 
       // Sync with backend: try to load all responses from DB.
@@ -482,6 +514,7 @@
       localStorage.setItem('userProfile', JSON.stringify(appState.profile));
       localStorage.setItem('responses', JSON.stringify(appState.responses));
       localStorage.setItem('resumeData', JSON.stringify(appState.resume));
+      localStorage.setItem('appSettings', JSON.stringify(appState.settings || { theme: 'standard', pageSize: 'letter' }));
     } catch (error) {
       console.error('Error saving app state:', error);
       alert('Unable to save data. Storage may be full.');
@@ -622,6 +655,66 @@
     });
     if (!r.ok) throw new Error(`DELETE failed ${r.status}`);
     return true;
+  }
+
+  // UI helpers
+  async function updateDbStatusBadge() {
+    if (!DOM.dbStatusBadge) return;
+    const badge = DOM.dbStatusBadge;
+    badge.textContent = 'Checking…';
+    badge.classList.remove('online','offline');
+    try {
+      const ok = await apiHealthCheck();
+      if (ok) {
+        badge.textContent = 'DB Online';
+        badge.classList.add('online');
+        badge.classList.remove('offline');
+      } else {
+        badge.textContent = 'DB Offline';
+        badge.classList.add('offline');
+        badge.classList.remove('online');
+      }
+    } catch {
+      badge.textContent = 'DB Offline';
+      badge.classList.add('offline');
+      badge.classList.remove('online');
+    }
+  }
+
+  async function syncResponsesFromDb() {
+    try {
+      const list = await apiGetResponsesAll();
+      if (Array.isArray(list)) {
+        appState.responses = list.map(r => ({
+          id: r.id,
+          text: r.text,
+          category: r.category || 'user',
+          userCreated: !!r.userCreated,
+          source: r.source || null
+        }));
+        localStorage.setItem('responses', JSON.stringify(appState.responses));
+        renderResponses();
+      }
+    } catch (e) {
+      alert('Unable to sync from database. Is the server running?');
+    }
+  }
+
+  // Theme toggle
+  function initializeTheme() {
+    try {
+      const pref = localStorage.getItem('theme');
+      if (pref === 'dark') {
+        document.body.classList.add('theme-dark');
+        if (DOM.themeToggleBtn) DOM.themeToggleBtn.textContent = '☀️';
+      }
+    } catch {}
+  }
+
+  function toggleTheme() {
+    const dark = document.body.classList.toggle('theme-dark');
+    try { localStorage.setItem('theme', dark ? 'dark' : 'light'); } catch {}
+    if (DOM.themeToggleBtn) DOM.themeToggleBtn.textContent = dark ? '☀️' : '🌙';
   }
 
   async function persistAllResponsesToDb(responses) {
@@ -2097,21 +2190,15 @@
     alert(`Letter saved as: ${letterName}`);
   }
 
-  // PDF Export (Enhanced)
-  function downloadPdf() {
+  // Build a letter DOM element for preview/PDF based on selected theme
+  function buildLetterElement(selectedTheme) {
     const profile = appState.profile;
     const fullName = `${profile.firstName || ''} ${profile.lastName || ''}`.trim();
-    const today = new Date().toISOString().split('T')[0];
     const jobTitle = sanitizeText(DOM.roleTitle.value);
     const companyName = sanitizeText(DOM.companyName.value);
     const contactPerson = sanitizeText(DOM.contactPerson.value);
     const businessAddress = sanitizeText(DOM.businessAddress.value);
-    const refNumber = sanitizeText(DOM.refNumber.value);
-
-    const fileName = `${fullName} - ${jobTitle} - ${companyName} - ${today}`
-      .replace(/[^\w\d\- ]+/g, '')
-      .replace(/\s+/g, ' ')
-      .trim() + '.pdf';
+    const todayLong = formatDateLongAU(new Date());
 
     const printEl = document.createElement('div');
     printEl.style.padding = '20px';
@@ -2120,8 +2207,336 @@
     printEl.style.fontFamily = 'Segoe UI, sans-serif';
     printEl.style.lineHeight = '1.5';
     printEl.style.fontSize = '12pt';
+    printEl.style.wordBreak = 'break-word';
+    printEl.style.overflowWrap = 'anywhere';
+    printEl.style.whiteSpace = 'pre-wrap';
 
-    // Header with company (left) and user details (right)
+    if (selectedTheme === 'modern-centered') {
+      const headerBlock = document.createElement('div');
+      headerBlock.style.textAlign = 'center';
+      headerBlock.style.marginBottom = '18px';
+
+      if (fullName) {
+        const nameEl = document.createElement('div');
+        nameEl.innerText = fullName.toUpperCase().split('').join(' ');
+        nameEl.style.fontWeight = '700';
+        nameEl.style.fontSize = '20pt';
+        nameEl.style.letterSpacing = '6px';
+        nameEl.style.marginBottom = '6px';
+        nameEl.style.pageBreakInside = 'avoid';
+        nameEl.style.breakInside = 'avoid-page';
+        headerBlock.appendChild(nameEl);
+      }
+
+      const taglineEl = document.createElement('div');
+      const defaultTagline = 'NDIS SUPPORT SPECIALIST | DISABILITY CARE ADVOCATE';
+      taglineEl.innerText = defaultTagline;
+      taglineEl.style.fontSize = '10pt';
+      taglineEl.style.letterSpacing = '3px';
+      taglineEl.style.color = '#444';
+      taglineEl.style.marginBottom = '6px';
+      taglineEl.style.pageBreakInside = 'avoid';
+      taglineEl.style.breakInside = 'avoid-page';
+      headerBlock.appendChild(taglineEl);
+
+      const contacts = [];
+      if (profile.phoneNumber) contacts.push(profile.phoneNumber);
+      if (profile.emailAddress) contacts.push(profile.emailAddress);
+      if (contacts.length) {
+        const contactEl = document.createElement('div');
+        contactEl.innerText = contacts.join(' | ');
+        contactEl.style.fontSize = '10pt';
+        contactEl.style.color = '#333';
+        contactEl.style.pageBreakInside = 'avoid';
+        contactEl.style.breakInside = 'avoid-page';
+        headerBlock.appendChild(contactEl);
+      }
+
+      const hr = document.createElement('div');
+      hr.style.height = '1px';
+      hr.style.background = '#ddd';
+      hr.style.margin = '12px 0 8px';
+      headerBlock.appendChild(hr);
+
+      printEl.appendChild(headerBlock);
+
+      // Date (right-aligned)
+      const dateEl = document.createElement('div');
+      dateEl.innerText = todayLong;
+      dateEl.style.textAlign = 'right';
+      dateEl.style.marginBottom = '10px';
+      printEl.appendChild(dateEl);
+
+      const salutationP = document.createElement('p');
+      if (contactPerson && contactPerson.trim()) {
+        salutationP.innerText = `Dear ${contactPerson.trim()},`;
+      } else if (companyName && companyName.trim()) {
+        salutationP.innerText = 'Dear Hiring Team,';
+      } else {
+        salutationP.innerText = 'Dear Hiring Team,';
+      }
+      salutationP.style.marginBottom = '16px';
+      salutationP.style.pageBreakInside = 'avoid';
+      salutationP.style.breakInside = 'avoid-page';
+      printEl.appendChild(salutationP);
+
+      const paras = DOM.letterArea.querySelectorAll('.letter-paragraph');
+      paras.forEach(para => {
+        const p = document.createElement('p');
+        p.innerText = para.textContent.replace('×', '');
+        p.style.marginBottom = '12px';
+        p.style.pageBreakInside = 'avoid';
+        p.style.breakInside = 'avoid-page';
+        p.style.wordBreak = 'break-word';
+        p.style.overflowWrap = 'anywhere';
+        p.style.whiteSpace = 'pre-wrap';
+        printEl.appendChild(p);
+      });
+
+      if (fullName || profile.phoneNumber || profile.emailAddress) {
+        const signatureP = document.createElement('p');
+        signatureP.style.marginTop = '30px';
+        signatureP.style.pageBreakInside = 'avoid';
+        signatureP.style.breakInside = 'avoid-page';
+        let sig = 'Sincerely,';
+        if (fullName) sig += `\n${fullName}`;
+        if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
+        if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
+        signatureP.innerText = sig;
+        printEl.appendChild(signatureP);
+      }
+
+      return printEl;
+    }
+
+    // Formal Classic theme (Sender right + Date, Recipient left)
+    if (selectedTheme === 'formal-classic') {
+      // Sender block (right-aligned)
+      const sender = document.createElement('div');
+      sender.style.textAlign = 'right';
+      sender.style.marginBottom = '12px';
+
+      const senderName = document.createElement('div');
+      senderName.innerText = fullName || '';
+      senderName.style.fontWeight = '600';
+      senderName.style.fontSize = '12pt';
+      sender.appendChild(senderName);
+
+      if (profile.addressLine1) sender.appendChild(Object.assign(document.createElement('div'), { innerText: profile.addressLine1 }));
+      if (profile.addressLine2) sender.appendChild(Object.assign(document.createElement('div'), { innerText: profile.addressLine2 }));
+      if (profile.phoneNumber) sender.appendChild(Object.assign(document.createElement('div'), { innerText: `Tel: ${profile.phoneNumber}` }));
+      if (profile.emailAddress) sender.appendChild(Object.assign(document.createElement('div'), { innerText: `Email: ${profile.emailAddress}` }));
+
+      const dateEl = document.createElement('div');
+      dateEl.innerText = formatDateLongAU(new Date());
+      dateEl.style.marginTop = '8px';
+      sender.appendChild(dateEl);
+
+      printEl.appendChild(sender);
+
+      // Recipient block (left-aligned)
+      if (companyName || businessAddress) {
+        const recip = document.createElement('div');
+        recip.style.textAlign = 'left';
+        recip.style.marginBottom = '12px';
+        if (companyName) recip.appendChild(Object.assign(document.createElement('div'), { innerText: companyName }));
+        if (businessAddress) recip.appendChild(Object.assign(document.createElement('div'), { innerText: businessAddress }));
+        printEl.appendChild(recip);
+      }
+
+      // Salutation
+      const salutationP = document.createElement('p');
+      if (contactPerson && contactPerson.trim()) {
+        salutationP.innerText = `Dear ${contactPerson.trim()},`;
+      } else if (companyName && companyName.trim()) {
+        salutationP.innerText = 'Dear Hiring Manager,';
+      } else {
+        salutationP.innerText = 'Dear Hiring Team,';
+      }
+      salutationP.style.marginBottom = '16px';
+      salutationP.style.pageBreakInside = 'avoid';
+      salutationP.style.breakInside = 'avoid-page';
+      printEl.appendChild(salutationP);
+
+      // Body
+      const parasFC = DOM.letterArea.querySelectorAll('.letter-paragraph');
+      parasFC.forEach(para => {
+        const p = document.createElement('p');
+        p.innerText = para.textContent.replace('×', '');
+        p.style.marginBottom = '12px';
+        p.style.pageBreakInside = 'avoid';
+        p.style.breakInside = 'avoid-page';
+        p.style.wordBreak = 'break-word';
+        p.style.overflowWrap = 'anywhere';
+        p.style.whiteSpace = 'pre-wrap';
+        printEl.appendChild(p);
+      });
+
+      // Signature
+      if (fullName || profile.phoneNumber || profile.emailAddress) {
+        const signatureP = document.createElement('p');
+        signatureP.style.marginTop = '30px';
+        signatureP.style.pageBreakInside = 'avoid';
+        signatureP.style.breakInside = 'avoid-page';
+        let sig = 'Sincerely,';
+        if (fullName) sig += `\n${fullName}`;
+        if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
+        if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
+        signatureP.innerText = sig;
+        printEl.appendChild(signatureP);
+      }
+
+      return printEl;
+    }
+
+    // Sidebar Profile theme (left sidebar, right content)
+    if (selectedTheme === 'sidebar-profile') {
+      const container = document.createElement('div');
+      container.style.display = 'flex';
+      container.style.gap = '16px';
+
+      const sidebar = document.createElement('div');
+      sidebar.style.flex = '0 0 28%';
+      sidebar.style.minWidth = '180px';
+      sidebar.style.background = '#f7f8ff';
+      sidebar.style.border = '1px solid #e6eaf2';
+      sidebar.style.borderRadius = '8px';
+      sidebar.style.padding = '12px';
+
+      if (fullName) {
+        const name = document.createElement('div');
+        name.innerText = fullName;
+        name.style.fontWeight = '700';
+        name.style.marginBottom = '6px';
+        sidebar.appendChild(name);
+      }
+      if (profile.phoneNumber) sidebar.appendChild(Object.assign(document.createElement('div'), { innerText: profile.phoneNumber }));
+      if (profile.emailAddress) sidebar.appendChild(Object.assign(document.createElement('div'), { innerText: profile.emailAddress }));
+      if (profile.addressLine1) sidebar.appendChild(Object.assign(document.createElement('div'), { innerText: profile.addressLine1 }));
+      if (profile.addressLine2) sidebar.appendChild(Object.assign(document.createElement('div'), { innerText: profile.addressLine2 }));
+
+      const content = document.createElement('div');
+      content.style.flex = '1';
+
+      if (companyName || businessAddress) {
+        const header = document.createElement('div');
+        header.style.marginBottom = '8px';
+        if (companyName) header.appendChild(Object.assign(document.createElement('div'), { innerText: companyName, style: 'font-weight:600;' }));
+        if (businessAddress) header.appendChild(Object.assign(document.createElement('div'), { innerText: businessAddress }));
+        content.appendChild(header);
+      }
+
+      // Date (right-aligned within content)
+      const dateEl = document.createElement('div');
+      dateEl.innerText = todayLong;
+      dateEl.style.textAlign = 'right';
+      dateEl.style.marginBottom = '8px';
+      content.appendChild(dateEl);
+
+      const sal = document.createElement('p');
+      if (contactPerson && contactPerson.trim()) sal.innerText = `Dear ${contactPerson.trim()},`; else sal.innerText = 'Dear Hiring Manager,';
+      sal.style.marginBottom = '12px';
+      content.appendChild(sal);
+
+      const parasSB = DOM.letterArea.querySelectorAll('.letter-paragraph');
+      parasSB.forEach(para => {
+        const p = document.createElement('p');
+        p.innerText = para.textContent.replace('×', '');
+        p.style.marginBottom = '12px';
+        p.style.wordBreak = 'break-word';
+        p.style.overflowWrap = 'anywhere';
+        p.style.whiteSpace = 'pre-wrap';
+        content.appendChild(p);
+      });
+
+      if (fullName || profile.phoneNumber || profile.emailAddress) {
+        const signatureP = document.createElement('p');
+        signatureP.style.marginTop = '24px';
+        let sig = 'Sincerely,';
+        if (fullName) sig += `\n${fullName}`;
+        if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
+        if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
+        signatureP.innerText = sig;
+        content.appendChild(signatureP);
+      }
+
+      container.appendChild(sidebar);
+      container.appendChild(content);
+      printEl.appendChild(container);
+      return printEl;
+    }
+
+    // Letterhead Accent theme (top bar)
+    if (selectedTheme === 'letterhead-accent') {
+      const bar = document.createElement('div');
+      bar.style.background = 'linear-gradient(120deg, #151a6a, #6c63ff, #18c4a5)';
+      bar.style.color = '#fff';
+      bar.style.padding = '12px 16px';
+      bar.style.borderRadius = '8px';
+      bar.style.marginBottom = '12px';
+
+      if (fullName) {
+        const name = document.createElement('div');
+        name.innerText = fullName;
+        name.style.fontWeight = '700';
+        name.style.fontSize = '14pt';
+        bar.appendChild(name);
+      }
+      const sub = document.createElement('div');
+      sub.innerText = (appState.settings?.tagline) || 'NDIS SUPPORT SPECIALIST | DISABILITY CARE ADVOCATE';
+      sub.style.opacity = '0.9';
+      sub.style.letterSpacing = '1px';
+      sub.style.fontSize = '10pt';
+      bar.appendChild(sub);
+
+      const contact = [];
+      if (profile.phoneNumber) contact.push(profile.phoneNumber);
+      if (profile.emailAddress) contact.push(profile.emailAddress);
+      if (contact.length) {
+        const c = document.createElement('div');
+        c.innerText = contact.join(' | ');
+        c.style.opacity = '0.95';
+        c.style.fontSize = '9pt';
+        bar.appendChild(c);
+      }
+      printEl.appendChild(bar);
+
+      // Date (right-aligned)
+      const dateEl = document.createElement('div');
+      dateEl.innerText = todayLong;
+      dateEl.style.textAlign = 'right';
+      dateEl.style.margin = '6px 0 10px';
+      printEl.appendChild(dateEl);
+
+      // Body
+      const salutationP = document.createElement('p');
+      if (contactPerson && contactPerson.trim()) salutationP.innerText = `Dear ${contactPerson.trim()},`; else if (companyName) salutationP.innerText = 'Dear Hiring Team,'; else salutationP.innerText = 'Dear Hiring Team,';
+      salutationP.style.marginBottom = '16px';
+      printEl.appendChild(salutationP);
+
+      const parasLH = DOM.letterArea.querySelectorAll('.letter-paragraph');
+      parasLH.forEach(para => {
+        const p = document.createElement('p');
+        p.innerText = para.textContent.replace('×', '');
+        p.style.marginBottom = '12px';
+        printEl.appendChild(p);
+      });
+
+      if (fullName || profile.phoneNumber || profile.emailAddress) {
+        const signatureP = document.createElement('p');
+        signatureP.style.marginTop = '30px';
+        let sig = 'Sincerely,';
+        if (fullName) sig += `\n${fullName}`;
+        if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
+        if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
+        signatureP.innerText = sig;
+        printEl.appendChild(signatureP);
+      }
+
+      return printEl;
+    }
+
+    // Standard theme (left/right header)
     const header = document.createElement('div');
     header.style.display = 'flex';
     header.style.justifyContent = 'space-between';
@@ -2132,42 +2547,50 @@
     const leftCol = document.createElement('div');
     leftCol.style.flex = '1';
     leftCol.style.textAlign = 'left';
-
     if (companyName) {
       const p = document.createElement('p');
       p.innerText = companyName;
       p.style.margin = '0 0 4px 0';
       p.style.fontWeight = '600';
+      p.style.pageBreakInside = 'avoid';
+      p.style.breakInside = 'avoid-page';
       leftCol.appendChild(p);
     }
     if (businessAddress) {
       const p = document.createElement('p');
       p.innerText = businessAddress;
       p.style.margin = '0';
+      p.style.pageBreakInside = 'avoid';
+      p.style.breakInside = 'avoid-page';
       leftCol.appendChild(p);
     }
 
     const rightCol = document.createElement('div');
     rightCol.style.flex = '1';
     rightCol.style.textAlign = 'right';
-
     if (fullName) {
       const p = document.createElement('p');
       p.innerText = fullName;
       p.style.margin = '0 0 4px 0';
       p.style.fontWeight = '600';
+      p.style.pageBreakInside = 'avoid';
+      p.style.breakInside = 'avoid-page';
       rightCol.appendChild(p);
     }
     if (profile.addressLine1) {
       const p = document.createElement('p');
       p.innerText = profile.addressLine1;
       p.style.margin = '0';
+      p.style.pageBreakInside = 'avoid';
+      p.style.breakInside = 'avoid-page';
       rightCol.appendChild(p);
     }
     if (profile.addressLine2) {
       const p = document.createElement('p');
       p.innerText = profile.addressLine2;
       p.style.margin = '0';
+      p.style.pageBreakInside = 'avoid';
+      p.style.breakInside = 'avoid-page';
       rightCol.appendChild(p);
     }
 
@@ -2175,39 +2598,47 @@
     header.appendChild(rightCol);
     printEl.appendChild(header);
 
-    // Spacer between header and content
     printEl.appendChild(document.createElement('br'));
 
-    // Salutation
+    // Date (right-aligned)
+    const dateEl = document.createElement('div');
+    dateEl.innerText = todayLong;
+    dateEl.style.textAlign = 'right';
+    dateEl.style.marginBottom = '10px';
+    printEl.appendChild(dateEl);
+
     const salutationP = document.createElement('p');
     salutationP.style.marginBottom = '16px';
-    
+    salutationP.style.pageBreakInside = 'avoid';
+    salutationP.style.breakInside = 'avoid-page';
     if (contactPerson && contactPerson.trim()) {
-      // Use contact person's name
       salutationP.innerText = `Dear ${contactPerson.trim()},`;
     } else if (companyName && companyName.trim()) {
-      // Use company-specific default
       salutationP.innerText = 'Dear Hiring Manager,';
     } else {
-      // Generic default
       salutationP.innerText = 'Dear Recruitment Officer,';
     }
-    
     printEl.appendChild(salutationP);
 
-    // Letter paragraphs
     const paras = DOM.letterArea.querySelectorAll('.letter-paragraph');
     paras.forEach(para => {
       const p = document.createElement('p');
-      p.innerText = para.textContent.replace('×', ''); // Remove the × button text
+      p.innerText = para.textContent.replace('×', '');
       p.style.marginBottom = '12px';
+      p.style.pageBreakInside = 'avoid';
+      p.style.breakInside = 'avoid-page';
+      p.style.wordBreak = 'break-word';
+      p.style.overflowWrap = 'anywhere';
+      p.style.whiteSpace = 'pre-wrap';
       printEl.appendChild(p);
     });
 
-    // Signature
     if (fullName || profile.phoneNumber || profile.emailAddress) {
       const signatureP = document.createElement('p');
       signatureP.style.marginTop = '30px';
+      signatureP.style.pageBreakInside = 'avoid';
+      signatureP.style.breakInside = 'avoid-page';
+      signatureP.style.whiteSpace = 'pre-wrap';
       let sig = 'Sincerely,';
       if (fullName) sig += `\n${fullName}`;
       if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
@@ -2216,15 +2647,50 @@
       printEl.appendChild(signatureP);
     }
 
+    return printEl;
+  }
+
+  function renderLetterPreview() {
+    if (!DOM.letterPreview) return;
+    const theme = (DOM.themeSelect && DOM.themeSelect.value) || (appState.settings?.theme) || 'standard';
+    const el = buildLetterElement(theme);
+    // Center within preview panel
+    const wrapper = document.createElement('div');
+    wrapper.style.maxWidth = '700px';
+    wrapper.style.margin = '0 auto';
+    wrapper.appendChild(el);
+    DOM.letterPreview.innerHTML = '';
+    DOM.letterPreview.appendChild(wrapper);
+  }
+
+  // PDF Export (Enhanced)
+  function downloadPdf() {
+    const profile = appState.profile;
+    const fullName = `${profile.firstName || ''} ${profile.lastName || ''}`.trim();
+    const today = new Date().toISOString().split('T')[0];
+    const jobTitle = sanitizeText(DOM.roleTitle.value);
+    const companyName = sanitizeText(DOM.companyName.value);
+
+    const fileName = `${fullName} - ${jobTitle} - ${companyName} - ${today}`
+      .replace(/[^\w\d\- ]+/g, '')
+      .replace(/\s+/g, ' ')
+      .trim() + '.pdf';
+
+    const selectedTheme = (DOM.themeSelect && DOM.themeSelect.value) || (appState.settings?.theme) || 'standard';
+    const el = buildLetterElement(selectedTheme);
+
+    const pageSize = (DOM.pageSizeSelect && DOM.pageSizeSelect.value) || (appState.settings?.pageSize) || 'letter';
+
     const opt = {
-      margin: 0.5,
+      margin: 0.6,
       filename: fileName,
       image: { type: 'jpeg', quality: 0.98 },
+      pagebreak: { mode: ['css', 'legacy'] },
       html2canvas: { scale: 2 },
-      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+      jsPDF: { unit: 'in', format: pageSize === 'a4' ? 'a4' : 'letter', orientation: 'portrait' }
     };
 
-    html2pdf().set(opt).from(printEl).save();
+    html2pdf().set(opt).from(el).save();
   }
 
   // Event Listeners Setup
@@ -2258,6 +2724,45 @@
     if (DOM.parseJobAdBtn) DOM.parseJobAdBtn.addEventListener('click', handleParseJobAd);
     if (DOM.fetchJobAdBtn) DOM.fetchJobAdBtn.addEventListener('click', handleFetchJobAdUrl);
     if (DOM.jobAdUrl) DOM.jobAdUrl.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); handleFetchJobAdUrl(); }});
+
+    // Header/Nav events
+    if (DOM.themeToggleBtn) DOM.themeToggleBtn.addEventListener('click', toggleTheme);
+    if (DOM.syncResponsesBtn) DOM.syncResponsesBtn.addEventListener('click', syncResponsesFromDb);
+
+    // Theme selection
+    if (DOM.themeSelect) {
+      if (appState.settings && appState.settings.theme) {
+        DOM.themeSelect.value = appState.settings.theme;
+      }
+      DOM.themeSelect.addEventListener('change', () => {
+        appState.settings = appState.settings || {};
+        appState.settings.theme = DOM.themeSelect.value;
+        saveAppState();
+        if (DOM.letterPreview && DOM.letterPreview.childNodes.length) {
+          renderLetterPreview();
+        }
+      });
+    }
+
+    // Page size selection
+    if (DOM.pageSizeSelect) {
+      if (appState.settings && appState.settings.pageSize) {
+        DOM.pageSizeSelect.value = appState.settings.pageSize;
+      }
+      DOM.pageSizeSelect.addEventListener('change', () => {
+        appState.settings = appState.settings || {};
+        appState.settings.pageSize = DOM.pageSizeSelect.value;
+        saveAppState();
+        if (DOM.letterPreview && DOM.letterPreview.childNodes.length) {
+          renderLetterPreview();
+        }
+      });
+    }
+
+    // Preview button
+    if (DOM.previewLetterBtn) {
+      DOM.previewLetterBtn.addEventListener('click', renderLetterPreview);
+    }
   }
 
   // Initialize DOM Elements
@@ -2303,18 +2808,37 @@
     DOM.newLetterBtn = document.getElementById('newLetterBtn');
     DOM.saveLetterBtn = document.getElementById('saveLetterBtn');
     DOM.downloadPdfBtn = document.getElementById('downloadPdfBtn');
+    DOM.themeSelect = document.getElementById('themeSelect');
+    DOM.pageSizeSelect = document.getElementById('pageSizeSelect');
+
+    // Preview
+    DOM.previewLetterBtn = document.getElementById('previewLetterBtn');
+    DOM.letterPreview = document.getElementById('letterPreview');
+
+    // Header/Nav
+    DOM.dbStatusBadge = document.getElementById('dbStatusBadge');
+    DOM.syncResponsesBtn = document.getElementById('syncResponsesBtn');
+    DOM.themeToggleBtn = document.getElementById('themeToggleBtn');
   }
 
   // Application Initialization
   async function initializeApp() {
     initializeDOM();
     await loadAppState();
+
+    // Theme init
+    initializeTheme();
+
     loadUserProfile();
     loadResumeStatus();
     renderResponses();
     setupLetterBuilder();
     setupResumeUpload();
     setupEventListeners();
+
+    // Update DB status badge initially and periodically
+    updateDbStatusBadge();
+    setInterval(updateDbStatusBadge, 15000);
     
     console.log('Click Cover Letter Creator initialized successfully!');
   }

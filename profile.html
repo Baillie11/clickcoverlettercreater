@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Profile • Click Cover Letter Creator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
@@ -17,6 +18,9 @@
     <nav class="app-nav">
       <a href="index.html">Create Letter</a>
       <a href="profile.html" class="active">Profile</a>
+      <span id="dbStatusBadge" class="db-badge" title="Database status">Checking…</span>
+      <button type="button" id="syncResponsesBtn" class="nav-btn" title="Sync Responses">🔄 Sync</button>
+      <button type="button" id="themeToggleBtn" class="nav-btn" title="Toggle dark mode">🌙</button>
     </nav>
   </header>
 
