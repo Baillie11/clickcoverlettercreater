@@ -392,39 +392,113 @@
   }
 
   function parseWordDocument(file) {
-    console.log('Parsing Word document with mammoth.js for clean text extraction');
+    console.log('Parsing Word document:', file.name, 'Size:', file.size, 'Type:', file.type);
     
-    if (typeof mammoth === 'undefined') {
-      console.error('Mammoth.js not loaded');
-      setParsingStatus('error', 'Word document parser not available. Please try TXT or PDF format.');
-      return;
+    const fileExtension = file.name.split('.').pop().toLowerCase();
+    
+    // Check if it's a newer .docx file (should work with mammoth.js)
+    if (fileExtension === 'docx' && typeof mammoth !== 'undefined') {
+      setParsingStatus('processing', 'Parsing DOCX file with mammoth.js...');
+      
+      // Convert file to ArrayBuffer for mammoth.js
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const arrayBuffer = event.target.result;
+        
+        mammoth.extractRawText({arrayBuffer: arrayBuffer})
+          .then(function(result) {
+            const text = result.value;
+            console.log('Mammoth.js successful. Extracted text length:', text.length);
+            console.log('Sample:', text.substring(0, 300));
+            
+            if (text.length < 20) {
+              throw new Error('Very little text extracted');
+            }
+            
+            finishResumeProcessing(text);
+          })
+          .catch(function(error) {
+            console.error('Mammoth.js failed:', error);
+            // Fallback to basic parsing
+            parseWordDocumentFallback(file);
+          });
+      };
+      reader.onerror = function() {
+        console.error('Failed to read file as ArrayBuffer');
+        parseWordDocumentFallback(file);
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      // For .doc files or when mammoth.js fails, use fallback method
+      console.log('Using fallback method for .doc file or mammoth.js unavailable');
+      parseWordDocumentFallback(file);
     }
+  }
+  
+  function parseWordDocumentFallback(file) {
+    setParsingStatus('processing', 'Using alternative Word document parsing...');
     
-    setParsingStatus('processing', 'Extracting text from Word document...');
+    const fileReader = new FileReader();
     
-    mammoth.extractRawText(file)
-      .then(function(result) {
-        const text = result.value; // The extracted text
-        const messages = result.messages; // Any messages/warnings
+    fileReader.onload = function(event) {
+      try {
+        let text = event.target.result;
+        console.log('Raw document text length:', text.length);
         
-        console.log('Mammoth.js extraction successful');
-        console.log('Extracted text length:', text.length);
-        console.log('Sample extracted text:', text.substring(0, 500));
+        // Advanced cleaning for Word document text
+        text = cleanWordDocumentText(text);
         
-        if (messages.length > 0) {
-          console.log('Mammoth.js messages:', messages);
-        }
+        console.log('Cleaned text length:', text.length);
+        console.log('Cleaned sample:', text.substring(0, 300));
         
-        if (text.length < 50) {
-          throw new Error('Very little text extracted from document');
+        if (text.length < 20) {
+          setParsingStatus('error', 'Could not extract readable text from Word document. Please copy your resume text and save as a .txt file for best results.');
+          return;
         }
         
         finishResumeProcessing(text);
-      })
-      .catch(function(error) {
-        console.error('Error parsing Word document with mammoth.js:', error);
-        setParsingStatus('error', `Failed to parse Word document: ${error.message}. Please try saving as TXT or PDF format for better results.`);
-      });
+      } catch (error) {
+        console.error('Error in fallback Word parsing:', error);
+        setParsingStatus('error', 'Failed to parse Word document. Please copy your resume text and save as .txt file, or try PDF format.');
+      }
+    };
+
+    fileReader.onerror = function() {
+      setParsingStatus('error', 'Failed to read Word document file.');
+    };
+
+    fileReader.readAsText(file, 'UTF-8');
+  }
+  
+  function cleanWordDocumentText(rawText) {
+    let text = rawText;
+    
+    // Remove control characters and binary data
+    text = text.replace(/[\x00-\x1F\x7F-\xFF]/g, ' ');
+    
+    // Remove Word-specific artifacts
+    text = text.replace(/Microsoft\s*Word|Office|Times New Roman|Calibri|Arial|Verdana/gi, '');
+    text = text.replace(/Normal|Heading\d*|Title|Header|Footer/gi, '');
+    
+    // Remove common Word metadata
+    text = text.replace(/\\[a-z]+\d*\s*/gi, ' '); // RTF codes
+    text = text.replace(/[{}\\]/g, ' '); // RTF brackets
+    
+    // Keep only letters, numbers, and basic punctuation
+    text = text.replace(/[^\w\s\.\,\;\:\!\?\-\'\"\(\)]/g, ' ');
+    
+    // Clean up spacing
+    text = text.replace(/\s+/g, ' ').trim();
+    
+    // Remove very short words that are likely artifacts
+    const words = text.split(' ');
+    const cleanWords = words.filter(word => {
+      // Keep words 3+ characters, or common short words
+      const shortWords = ['a', 'an', 'at', 'be', 'by', 'do', 'go', 'he', 'if', 'in', 'is', 'it', 'me', 'my', 'no', 'of', 'on', 'or', 'so', 'to', 'up', 'we', 'am', 'as', 'us'];
+      return word.length >= 3 || shortWords.includes(word.toLowerCase());
+    });
+    
+    return cleanWords.join(' ');
   }
 
   function finishResumeProcessing(text) {
