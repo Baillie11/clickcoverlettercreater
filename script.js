@@ -302,6 +302,42 @@
     updateLetterState();
   }
 
+  function updateSalutationPreview() {
+    // Remove existing salutation
+    const existingSalutation = DOM.letterArea.querySelector('.letter-salutation');
+    if (existingSalutation) {
+      existingSalutation.remove();
+    }
+    
+    // Don't add salutation if only placeholder exists
+    const hasContent = DOM.letterArea.querySelectorAll('.letter-paragraph').length > 0;
+    if (!hasContent) return;
+    
+    // Create salutation element
+    const salutationEl = document.createElement('div');
+    salutationEl.className = 'letter-salutation';
+    salutationEl.style.cssText = 'margin-bottom: 15px; font-style: italic; color: #666; border-left: 3px solid #3498db; padding-left: 10px;';
+    
+    const contactPerson = sanitizeText(DOM.contactPerson.value);
+    const companyName = sanitizeText(DOM.companyName.value);
+    
+    if (contactPerson) {
+      salutationEl.textContent = `Dear ${contactPerson},`;
+    } else if (companyName) {
+      salutationEl.textContent = 'Dear Hiring Manager,';
+    } else {
+      salutationEl.textContent = 'Dear Recruitment Officer,';
+    }
+    
+    // Insert salutation at the beginning (after any placeholder removal)
+    const placeholder = DOM.letterArea.querySelector('.placeholder');
+    if (placeholder) {
+      DOM.letterArea.insertBefore(salutationEl, placeholder);
+    } else {
+      DOM.letterArea.insertBefore(salutationEl, DOM.letterArea.firstChild);
+    }
+  }
+
   function updateLetterState() {
     const paragraphs = DOM.letterArea.querySelectorAll('.letter-paragraph');
     appState.currentLetter.paragraphs = Array.from(paragraphs).map(p => p.dataset.responseId);
@@ -313,6 +349,9 @@
       placeholder.textContent = 'Drag responses here to build your letter';
       DOM.letterArea.appendChild(placeholder);
     }
+    
+    // Update salutation preview
+    updateSalutationPreview();
   }
 
   function newLetter() {
@@ -326,6 +365,9 @@
       DOM.contactPerson.value = '';
       DOM.businessAddress.value = '';
       DOM.refNumber.value = '';
+      
+      // Clear salutation preview
+      updateSalutationPreview();
     }
   }
 
@@ -401,6 +443,23 @@
 
     printEl.appendChild(document.createElement('br'));
 
+    // Salutation
+    const salutationP = document.createElement('p');
+    salutationP.style.marginBottom = '16px';
+    
+    if (contactPerson && contactPerson.trim()) {
+      // Use contact person's name
+      salutationP.innerText = `Dear ${contactPerson.trim()},`;
+    } else if (companyName && companyName.trim()) {
+      // Use company-specific default
+      salutationP.innerText = 'Dear Hiring Manager,';
+    } else {
+      // Generic default
+      salutationP.innerText = 'Dear Recruitment Officer,';
+    }
+    
+    printEl.appendChild(salutationP);
+
     // Letter paragraphs
     const paras = DOM.letterArea.querySelectorAll('.letter-paragraph');
     paras.forEach(para => {
@@ -434,6 +493,12 @@
     // Profile auto-save on input
     [DOM.firstName, DOM.lastName, DOM.addressLine1, DOM.addressLine2].forEach(input => {
       input.addEventListener('blur', saveUserProfile);
+    });
+    
+    // Job info changes - update salutation preview
+    [DOM.contactPerson, DOM.companyName].forEach(input => {
+      input.addEventListener('input', updateSalutationPreview);
+      input.addEventListener('blur', updateSalutationPreview);
     });
     
     // Response management
