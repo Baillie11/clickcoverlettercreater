@@ -475,109 +475,215 @@
     const keywords = new Set();
     const lowerText = text.toLowerCase();
     
-    // Technical Skills - Expanded list
-    const techSkills = [
-      // Programming Languages
-      'javascript', 'python', 'java', 'c++', 'c#', 'php', 'ruby', 'go', 'rust', 'swift',
-      'kotlin', 'typescript', 'scala', 'perl', 'r', 'matlab', 'vba',
-      
-      // Web Technologies
-      'html', 'css', 'react', 'angular', 'vue', 'node.js', 'express', 'django', 'flask',
-      'spring', 'laravel', 'wordpress', 'drupal', 'bootstrap', 'jquery', 'ajax',
-      
-      // Databases
-      'sql', 'mysql', 'postgresql', 'mongodb', 'oracle', 'sqlite', 'redis', 'nosql',
-      
-      // Cloud & DevOps
-      'aws', 'azure', 'gcp', 'docker', 'kubernetes', 'jenkins', 'git', 'ci/cd',
-      
-      // Other Tech
-      'linux', 'windows', 'macos', 'excel', 'powerbi', 'tableau', 'salesforce', 'sap'
+    // Healthcare & Social Services Skills
+    const healthcareSkills = [
+      'disability support', 'personal care', 'medication management', 'first aid',
+      'mental health', 'aged care', 'community support', 'behavioral support',
+      'ndis', 'therapeutic', 'rehabilitation', 'physiotherapy', 'occupational therapy',
+      'nursing', 'healthcare', 'patient care', 'clinical', 'medical', 'wellness',
+      'counseling', 'psychology', 'social work', 'case management', 'advocacy',
+      'crisis intervention', 'risk assessment', 'care planning', 'documentation'
     ];
     
-    // Professional Skills
-    const professionalSkills = [
-      'management', 'leadership', 'project management', 'team lead', 'supervisor',
-      'director', 'manager', 'coordinator', 'analyst', 'consultant', 'specialist',
-      'communication', 'presentation', 'negotiation', 'problem solving', 'analysis',
-      'planning', 'strategy', 'budgeting', 'training', 'mentoring'
+    // Education & Training Skills
+    const educationSkills = [
+      'teaching', 'tutoring', 'curriculum', 'lesson planning', 'assessment',
+      'classroom management', 'special needs', 'early childhood', 'adult education',
+      'training delivery', 'workshop facilitation', 'mentoring', 'coaching'
     ];
     
-    // Education & Certifications
+    // Business & Professional Skills
+    const businessSkills = [
+      'customer service', 'sales', 'marketing', 'accounting', 'bookkeeping',
+      'human resources', 'recruitment', 'payroll', 'administration', 'reception',
+      'data entry', 'scheduling', 'inventory', 'logistics', 'procurement',
+      'project management', 'team leadership', 'supervision', 'quality assurance'
+    ];
+    
+    // Technical Skills (IT & Engineering)
+    const technicalSkills = [
+      'javascript', 'python', 'java', 'php', 'ruby', 'html', 'css', 'sql',
+      'react', 'angular', 'vue', 'docker', 'kubernetes', 'aws', 'azure',
+      'linux', 'windows', 'excel', 'powerbi', 'tableau', 'salesforce',
+      'engineering', 'mechanical', 'electrical', 'civil', 'software development'
+    ];
+    
+    // Trades & Manual Skills
+    const tradesSkills = [
+      'carpentry', 'plumbing', 'electrical work', 'welding', 'construction',
+      'maintenance', 'repair', 'installation', 'fabrication', 'machining',
+      'automotive', 'landscaping', 'gardening', 'cleaning', 'security',
+      'forklift', 'crane operation', 'heavy machinery', 'safety procedures'
+    ];
+    
+    // Hospitality & Service Skills
+    const hospitalitySkills = [
+      'food service', 'cooking', 'kitchen management', 'barista', 'waitressing',
+      'hotel management', 'housekeeping', 'event planning', 'catering',
+      'retail', 'cashier', 'stock management', 'visual merchandising'
+    ];
+    
+    // Creative & Media Skills
+    const creativeSkills = [
+      'graphic design', 'photography', 'videography', 'writing', 'editing',
+      'social media', 'content creation', 'marketing campaigns', 'branding',
+      'web design', 'illustration', 'animation'
+    ];
+    
+    // Transport & Logistics Skills
+    const transportSkills = [
+      'driving', 'delivery', 'logistics', 'warehousing', 'dispatch',
+      'fleet management', 'route planning', 'freight', 'shipping'
+    ];
+    
+    // All professional skills combined
+    const allSkills = [
+      ...healthcareSkills,
+      ...educationSkills, 
+      ...businessSkills,
+      ...technicalSkills,
+      ...tradesSkills,
+      ...hospitalitySkills,
+      ...creativeSkills,
+      ...transportSkills
+    ];
+    
+    // Soft Skills & General Competencies
+    const softSkills = [
+      'communication', 'teamwork', 'leadership', 'problem solving', 'adaptability',
+      'time management', 'organization', 'attention to detail', 'reliability',
+      'initiative', 'creativity', 'flexibility', 'empathy', 'patience',
+      'cultural awareness', 'conflict resolution', 'decision making'
+    ];
+    
+    // Education & Certifications (All Fields)
     const educationTerms = [
-      'bachelor', 'master', 'phd', 'doctorate', 'degree', 'diploma', 'certificate',
-      'certification', 'certified', 'licensed', 'accredited', 'qualification'
+      'bachelor', 'master', 'doctorate', 'degree', 'diploma', 'certificate',
+      'certification', 'certified', 'licensed', 'accredited', 'qualification',
+      'training', 'course', 'workshop', 'apprenticeship', 'trade qualification',
+      'rto', 'tafe', 'university', 'college', 'professional development'
     ];
     
-    // Check for technical skills
-    techSkills.forEach(skill => {
-      if (lowerText.includes(skill)) {
+    // Industry Certifications & Licenses
+    const certifications = [
+      'first aid', 'cpr', 'working with children check', 'police check',
+      'drivers license', 'forklift license', 'white card', 'blue card',
+      'rsa', 'rcg', 'food safety', 'whs', 'occupational health and safety',
+      'manual handling', 'disability worker screening', 'ndis worker screening'
+    ];
+    
+    // Use word boundaries for better matching
+    function findSkillWithBoundary(skill, text) {
+      const regex = new RegExp(`\\b${skill}\\b`, 'i');
+      return regex.test(text);
+    }
+    
+    // Check for all professional skills with word boundaries
+    allSkills.forEach(skill => {
+      if (findSkillWithBoundary(skill, text)) {
         keywords.add(skill);
       }
     });
     
-    // Check for professional skills
-    professionalSkills.forEach(skill => {
-      if (lowerText.includes(skill)) {
+    // Special cases for commonly abbreviated skills
+    const specialSkills = {
+      'sql': /\bsql\b/i,
+      'aws': /\baws\b|amazon web services/i,
+      'azure': /\bazure\b|microsoft azure/i,
+      'gcp': /\bgcp\b|google cloud/i,
+      'git': /\bgit\b(?!hub)/i, // Git but not GitHub
+      'ai': /\bartificial intelligence\b|\bai\b/i,
+      'ml': /\bmachine learning\b|\bml\b/i,
+      'api': /\bapi\b|application programming interface/i,
+      'ui': /\bui\b|user interface/i,
+      'ux': /\bux\b|user experience/i
+    };
+    
+    Object.entries(specialSkills).forEach(([skill, pattern]) => {
+      if (pattern.test(text)) {
+        keywords.add(skill);
+      }
+    });
+    
+    // Check for soft skills
+    softSkills.forEach(skill => {
+      if (findSkillWithBoundary(skill, text)) {
         keywords.add(skill);
       }
     });
     
     // Check for education terms
     educationTerms.forEach(term => {
-      if (lowerText.includes(term)) {
+      if (findSkillWithBoundary(term, text)) {
         keywords.add(term);
       }
     });
     
-    // Extract years of experience
-    const experienceMatches = text.match(/(\d+)\+?\s*years?\s*(of\s*)?(experience|exp)/gi);
-    if (experienceMatches) {
-      experienceMatches.forEach(match => keywords.add(match.toLowerCase()));
-    }
-    
-    // Look for common resume section headers and extract nearby terms
-    const sections = ['skills', 'experience', 'education', 'qualifications', 'competencies', 'expertise'];
-    sections.forEach(section => {
-      const sectionRegex = new RegExp(`\\b${section}\\b([\\s\\S]{0,200})`, 'gi');
-      const sectionMatches = text.match(sectionRegex);
-      if (sectionMatches) {
-        keywords.add(section);
-        // Extract words from the section content
-        sectionMatches.forEach(match => {
-          const words = match.split(/\W+/).filter(word => 
-            word.length > 2 && 
-            !['and', 'the', 'for', 'with', 'have', 'been', 'that', 'this', 'from', 'they'].includes(word.toLowerCase())
-          );
-          words.slice(0, 5).forEach(word => keywords.add(word.toLowerCase()));
-        });
+    // Check for certifications and licenses
+    certifications.forEach(cert => {
+      if (findSkillWithBoundary(cert, text)) {
+        keywords.add(cert);
       }
     });
     
-    // Extract capitalized words (likely to be proper nouns, technologies, companies)
-    const capitalizedWords = text.match(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b/g);
-    if (capitalizedWords) {
-      capitalizedWords.forEach(word => {
-        if (word.length > 2 && word !== word.toUpperCase()) { // Avoid all-caps words
-          keywords.add(word.toLowerCase());
-        }
+    // Extract years of experience
+    const experienceMatches = text.match(/(\d+)\+?\s*years?\s*(?:of\s*)?(?:experience|exp)/gi);
+    if (experienceMatches) {
+      experienceMatches.forEach(match => {
+        const cleanMatch = match.toLowerCase().replace(/\s+/g, ' ').trim();
+        keywords.add(cleanMatch);
       });
     }
     
-    // Extract common action verbs from resume
+    // Extract action verbs for all professions
     const actionVerbs = [
-      'managed', 'led', 'developed', 'created', 'implemented', 'designed', 'built',
+      // Management & Leadership
+      'managed', 'led', 'supervised', 'coordinated', 'organized', 'directed',
+      'oversaw', 'administered', 'facilitated', 'guided', 'mentored', 'coached',
+      
+      // Healthcare & Care
+      'assisted', 'supported', 'cared', 'treated', 'assessed', 'monitored',
+      'administered', 'documented', 'advocated', 'counseled', 'rehabilitated',
+      
+      // General Professional
+      'developed', 'created', 'implemented', 'designed', 'built', 'established',
       'achieved', 'improved', 'increased', 'reduced', 'optimized', 'delivered',
-      'collaborated', 'coordinated', 'supervised', 'trained', 'mentored'
+      'collaborated', 'communicated', 'presented', 'negotiated', 'resolved',
+      
+      // Service & Customer Focus
+      'served', 'helped', 'provided', 'maintained', 'operated', 'performed',
+      'processed', 'handled', 'resolved', 'responded', 'delivered'
     ];
     
     actionVerbs.forEach(verb => {
-      if (lowerText.includes(verb)) {
+      if (findSkillWithBoundary(verb, text)) {
         keywords.add(verb);
       }
     });
     
-    return Array.from(keywords).slice(0, 30); // Increased limit to 30 keywords
+    // Extract meaningful capitalized terms (companies, technologies, certifications)
+    const meaningfulCapitalizedWords = text.match(/\b[A-Z][a-zA-Z]{2,}(?:\s+[A-Z][a-zA-Z]+)*\b/g);
+    if (meaningfulCapitalizedWords) {
+      meaningfulCapitalizedWords.forEach(word => {
+        const cleanWord = word.toLowerCase().trim();
+        // Only add if it's not a common word and has substance
+        if (cleanWord.length >= 4 && 
+            !['this', 'that', 'with', 'from', 'have', 'been', 'will', 'would', 'could', 'should'].includes(cleanWord) &&
+            !cleanWord.match(/^[a-z]{1,2}$/)) { // Avoid single/double letters
+          keywords.add(cleanWord);
+        }
+      });
+    }
+    
+    // Filter out meaningless fragments and very short terms
+    const filteredKeywords = Array.from(keywords).filter(keyword => {
+      return keyword.length >= 3 && // At least 3 characters
+             !keyword.match(/^[a-z]{1,2}$/) && // No single/double letters
+             !keyword.match(/^\d+$/) && // No pure numbers
+             keyword.includes(' ') || keyword.length >= 4; // Either phrase or meaningful word
+    });
+    
+    return filteredKeywords.slice(0, 25); // Reduced to 25 quality keywords
   }
 
   function extractSections(text) {
