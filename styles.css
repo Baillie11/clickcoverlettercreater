@@ -269,6 +269,13 @@ body {
   color: #999 !important;
 }
 
+.upload-note {
+  font-size: 0.8rem;
+  color: #3498db !important;
+  font-style: italic;
+  margin-top: 5px;
+}
+
 .resume-status {
   background: #e8f5e8;
   border: 1px solid #c3e6c3;

@@ -8,7 +8,6 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.11.2/html2pdf.bundle.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 <body>
   <header class="app-header">
@@ -50,9 +49,10 @@
           <div class="resume-upload-area" id="resumeUploadArea">
             <div class="upload-placeholder" id="uploadPlaceholder">
               <p>📄 Drag & drop your resume here or click to browse</p>
-              <p class="upload-hint">Supports PDF, DOC, DOCX files</p>
+              <p class="upload-hint">Supports PDF, DOC, DOCX, TXT files</p>
+              <p class="upload-note">For best performance, try TXT or DOCX format</p>
             </div>
-            <input type="file" id="resumeFileInput" accept=".pdf,.doc,.docx" style="display: none;" />
+            <input type="file" id="resumeFileInput" accept=".pdf,.doc,.docx,.txt" style="display: none;" />
           </div>
           <div class="resume-status" id="resumeStatus" style="display: none;">
             <div class="resume-info">

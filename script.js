@@ -153,11 +153,40 @@
   }
 
   // Resume Management Functions
-  function setupResumeUpload() {
-    // Set up PDF.js worker
-    if (typeof pdfjsLib !== 'undefined') {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  let pdfLibLoaded = false;
+  let pdfLibLoading = false;
+  
+  function loadPdfLibrary() {
+    if (pdfLibLoaded || pdfLibLoading) {
+      return Promise.resolve();
     }
+    
+    pdfLibLoading = true;
+    
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      script.onload = () => {
+        // Set up worker
+        if (typeof pdfjsLib !== 'undefined') {
+          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+          pdfLibLoaded = true;
+          pdfLibLoading = false;
+          resolve();
+        } else {
+          pdfLibLoading = false;
+          reject(new Error('PDF.js failed to load'));
+        }
+      };
+      script.onerror = () => {
+        pdfLibLoading = false;
+        reject(new Error('Failed to load PDF.js library'));
+      };
+      document.head.appendChild(script);
+    });
+  }
+  
+  function setupResumeUpload() {
 
     // Click to upload
     DOM.resumeUploadArea.addEventListener('click', () => {
@@ -196,18 +225,25 @@
     if (!file) return;
 
     // Validate file type
-    const allowedTypes = ['.pdf', '.doc', '.docx'];
+    const allowedTypes = ['.pdf', '.doc', '.docx', '.txt'];
     const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
     
     if (!allowedTypes.includes(fileExtension)) {
-      alert('Please select a PDF, DOC, or DOCX file.');
+      alert('Please select a PDF, DOC, DOCX, or TXT file.');
       return;
     }
 
-    // Validate file size (max 10MB)
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    // Validate file size (different limits for different types)
+    let maxSize;
+    if (fileExtension === '.pdf') {
+      maxSize = 5 * 1024 * 1024; // 5MB for PDFs (they're slower to process)
+    } else {
+      maxSize = 10 * 1024 * 1024; // 10MB for other formats
+    }
+    
     if (file.size > maxSize) {
-      alert('File size must be less than 10MB.');
+      const maxSizeMB = Math.round(maxSize / (1024 * 1024));
+      alert(`File size must be less than ${maxSizeMB}MB for ${fileExtension.toUpperCase()} files.`);
       return;
     }
 
@@ -217,7 +253,7 @@
   function uploadResume(file) {
     // Update UI to show upload in progress
     showResumeStatus(file);
-    setParsingStatus('processing', 'Processing resume...');
+    setParsingStatus('processing', 'Preparing to process resume...');
 
     // Store file info
     appState.resume.fileName = file.name;
@@ -227,9 +263,22 @@
     // Parse the file based on type
     const fileExtension = file.name.split('.').pop().toLowerCase();
     
-    if (fileExtension === 'pdf') {
-      parsePDF(file);
+    if (fileExtension === 'txt') {
+      setParsingStatus('processing', 'Processing text file...');
+      parseTextFile(file);
+    } else if (fileExtension === 'pdf') {
+      setParsingStatus('processing', 'Loading PDF processor...');
+      loadPdfLibrary()
+        .then(() => {
+          setParsingStatus('processing', 'Processing PDF file...');
+          parsePDF(file);
+        })
+        .catch((error) => {
+          console.error('Error loading PDF library:', error);
+          setParsingStatus('error', 'Failed to load PDF processor. Please try uploading as a text file or Word document.');
+        });
     } else if (fileExtension === 'doc' || fileExtension === 'docx') {
+      setParsingStatus('processing', 'Processing Word document...');
       parseWordDocument(file);
     }
   }
@@ -238,38 +287,108 @@
     const fileReader = new FileReader();
     
     fileReader.onload = function(event) {
-      const typedarray = new Uint8Array(event.target.result);
-      
-      if (typeof pdfjsLib === 'undefined') {
-        setParsingStatus('error', 'PDF parsing library not loaded.');
-        return;
-      }
-
-      pdfjsLib.getDocument(typedarray).promise.then(function(pdf) {
-        let textContent = '';
-        let pagesProcessed = 0;
-        const totalPages = pdf.numPages;
-
-        for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-          pdf.getPage(pageNum).then(function(page) {
-            page.getTextContent().then(function(content) {
-              const pageText = content.items.map(item => item.str).join(' ');
-              textContent += pageText + '\n';
-              pagesProcessed++;
-
-              if (pagesProcessed === totalPages) {
-                finishResumeProcessing(textContent);
-              }
-            });
-          });
+      try {
+        const typedarray = new Uint8Array(event.target.result);
+        
+        if (typeof pdfjsLib === 'undefined') {
+          setParsingStatus('error', 'PDF parsing library not loaded.');
+          return;
         }
-      }).catch(function(error) {
-        console.error('Error parsing PDF:', error);
-        setParsingStatus('error', 'Failed to parse PDF file.');
-      });
+
+        // Set timeout for PDF processing
+        const processingTimeout = setTimeout(() => {
+          setParsingStatus('error', 'PDF processing timed out. Please try a smaller file or convert to Word document.');
+        }, 30000); // 30 second timeout
+
+        pdfjsLib.getDocument({ data: typedarray, verbosity: 0 }).promise.then(function(pdf) {
+          clearTimeout(processingTimeout);
+          let textContent = '';
+          let pagesProcessed = 0;
+          const totalPages = Math.min(pdf.numPages, 10); // Limit to first 10 pages for performance
+          
+          if (totalPages > 5) {
+            setParsingStatus('processing', `Processing large PDF (${totalPages} pages)... this may take a moment.`);
+          }
+
+          // Process pages sequentially to avoid overwhelming the browser
+          processPageSequentially(pdf, 1, totalPages, textContent, (finalText) => {
+            finishResumeProcessing(finalText);
+          });
+          
+        }).catch(function(error) {
+          clearTimeout(processingTimeout);
+          console.error('Error parsing PDF:', error);
+          setParsingStatus('error', `Failed to parse PDF: ${error.message}. Try converting to Word document or reduce file size.`);
+        });
+      } catch (error) {
+        console.error('Error reading PDF file:', error);
+        setParsingStatus('error', 'Error reading PDF file. Please try a different file format.');
+      }
+    };
+
+    fileReader.onerror = function() {
+      setParsingStatus('error', 'Failed to read file. Please try again.');
     };
 
     fileReader.readAsArrayBuffer(file);
+  }
+  
+  function processPageSequentially(pdf, pageNum, totalPages, textContent, callback) {
+    if (pageNum > totalPages) {
+      callback(textContent);
+      return;
+    }
+    
+    setParsingStatus('processing', `Processing page ${pageNum} of ${totalPages}...`);
+    
+    pdf.getPage(pageNum).then(function(page) {
+      page.getTextContent().then(function(content) {
+        const pageText = content.items.map(item => item.str).join(' ');
+        textContent += pageText + '\n';
+        
+        // Small delay to prevent browser freezing
+        setTimeout(() => {
+          processPageSequentially(pdf, pageNum + 1, totalPages, textContent, callback);
+        }, 100);
+      }).catch(function(error) {
+        console.warn(`Error processing page ${pageNum}:`, error);
+        // Continue with next page even if one fails
+        setTimeout(() => {
+          processPageSequentially(pdf, pageNum + 1, totalPages, textContent, callback);
+        }, 100);
+      });
+    }).catch(function(error) {
+      console.warn(`Error loading page ${pageNum}:`, error);
+      // Continue with next page even if one fails
+      setTimeout(() => {
+        processPageSequentially(pdf, pageNum + 1, totalPages, textContent, callback);
+      }, 100);
+    });
+  }
+
+  function parseTextFile(file) {
+    const fileReader = new FileReader();
+    
+    fileReader.onload = function(event) {
+      try {
+        const text = event.target.result;
+        setParsingStatus('processing', 'Analyzing resume content...');
+        
+        // Small delay to show processing status
+        setTimeout(() => {
+          finishResumeProcessing(text);
+        }, 500);
+      } catch (error) {
+        console.error('Error parsing text file:', error);
+        setParsingStatus('error', 'Failed to parse text file.');
+      }
+    };
+
+    fileReader.onerror = function() {
+      setParsingStatus('error', 'Failed to read text file.');
+    };
+
+    fileReader.readAsText(file, 'UTF-8');
   }
 
   function parseWordDocument(file) {
@@ -289,8 +408,12 @@
         finishResumeProcessing(text);
       } catch (error) {
         console.error('Error parsing Word document:', error);
-        setParsingStatus('error', 'Failed to parse Word document. Please try converting to PDF first.');
+        setParsingStatus('error', 'Failed to parse Word document. Please try converting to TXT or PDF format.');
       }
+    };
+
+    fileReader.onerror = function() {
+      setParsingStatus('error', 'Failed to read Word document.');
     };
 
     fileReader.readAsText(file);
