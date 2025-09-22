@@ -1,0 +1,32 @@
+[build]
+  # No build command needed - static site
+  publish = "."
+  
+[build.environment]
+  # Node.js version (not needed but good to specify)
+  NODE_VERSION = "18"
+
+[[headers]]
+  # Apply to all files
+  for = "/*"
+  [headers.values]
+    # Security headers
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    X-XSS-Protection = "1; mode=block"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    
+    # Cache static assets
+    Cache-Control = "public, max-age=31536000"
+
+[[headers]]
+  # Don't cache HTML files
+  for = "*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  # Service worker special handling
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
