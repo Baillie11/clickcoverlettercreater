@@ -74,6 +74,170 @@
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
+  
+  function extractPersonalDetails(text) {
+    console.log('Extracting personal details from resume...');
+    
+    const personalInfo = {
+      firstName: '',
+      lastName: '',
+      fullName: '',
+      email: '',
+      phone: '',
+      address: '',
+      city: '',
+      state: '',
+      postcode: ''
+    };
+    
+    // Extract email address
+    const emailPattern = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g;
+    const emailMatch = text.match(emailPattern);
+    if (emailMatch) {
+      personalInfo.email = emailMatch[0];
+      console.log('Found email:', personalInfo.email);
+    }
+    
+    // Extract phone number (various Australian formats)
+    const phonePatterns = [
+      /\b(?:\+?61|0)\s?[2-9]\s?\d{4}\s?\d{4}\b/g, // Australian mobile/landline
+      /\b\(?0[2-9]\)?\s?\d{4}\s?\d{4}\b/g, // Standard Australian format
+      /\b\d{2,4}\s?\d{3,4}\s?\d{3,4}\b/g // General phone pattern
+    ];
+    
+    for (const pattern of phonePatterns) {
+      const phoneMatch = text.match(pattern);
+      if (phoneMatch) {
+        personalInfo.phone = phoneMatch[0].replace(/\s+/g, ' ').trim();
+        console.log('Found phone:', personalInfo.phone);
+        break;
+      }
+    }
+    
+    // Extract full name (usually appears near the top of the document)
+    const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+    
+    // Look for name in first few lines
+    for (let i = 0; i < Math.min(5, lines.length); i++) {
+      const line = lines[i];
+      
+      // Skip lines with email or phone (these aren't names)
+      if (line.includes('@') || /\d{4}\s?\d{4}/.test(line)) continue;
+      
+      // Look for a line that looks like a name (2-3 words, proper case)
+      const nameMatch = line.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})$/);;
+      if (nameMatch) {
+        const fullName = nameMatch[1];
+        const nameParts = fullName.split(/\s+/);
+        
+        if (nameParts.length >= 2) {
+          personalInfo.fullName = fullName;
+          personalInfo.firstName = nameParts[0];
+          personalInfo.lastName = nameParts[nameParts.length - 1];
+          console.log('Found name:', personalInfo.fullName);
+          break;
+        }
+      }
+    }
+    
+    // Extract address (look for Australian address patterns)
+    const addressPatterns = [
+      // Street address with suburb, state, postcode
+      /\b\d+[\w\s,-]+(?:Street|St|Road|Rd|Avenue|Ave|Lane|Ln|Drive|Dr|Court|Ct|Place|Pl)\b[\s\S]*?\b(?:NSW|VIC|QLD|WA|SA|TAS|NT|ACT)\s*\d{4}\b/gi,
+      // Just suburb, state, postcode
+      /\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s*,?\s*(?:NSW|VIC|QLD|WA|SA|TAS|NT|ACT)\s*\d{4}\b/gi,
+      // Street address without full state info
+      /\b\d+[\w\s,-]+(?:Street|St|Road|Rd|Avenue|Ave|Lane|Ln|Drive|Dr|Court|Ct|Place|Pl)\b[\s\S]*?\b[A-Z][a-z]+/gi
+    ];
+    
+    for (const pattern of addressPatterns) {
+      const addressMatch = text.match(pattern);
+      if (addressMatch) {
+        const address = addressMatch[0].replace(/\s+/g, ' ').trim();
+        personalInfo.address = address;
+        console.log('Found address:', personalInfo.address);
+        
+        // Try to extract state and postcode separately
+        const statePostcodeMatch = address.match(/\b(NSW|VIC|QLD|WA|SA|TAS|NT|ACT)\s*(\d{4})\b/i);
+        if (statePostcodeMatch) {
+          personalInfo.state = statePostcodeMatch[1];
+          personalInfo.postcode = statePostcodeMatch[2];
+        }
+        
+        break;
+      }
+    }
+    
+    // If no full address found, look for just city/suburb
+    if (!personalInfo.address) {
+      const cityPattern = /\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s*,\s*(?:NSW|VIC|QLD|WA|SA|TAS|NT|ACT)\b/g;
+      const cityMatch = text.match(cityPattern);
+      if (cityMatch) {
+        personalInfo.city = cityMatch[0];
+        console.log('Found city:', personalInfo.city);
+      }
+    }
+    
+    // Return the extracted details if we found at least a name or email
+    if (personalInfo.firstName || personalInfo.email) {
+      return personalInfo;
+    }
+    
+    return null;
+  }
+  
+  function autoFillProfile(personalDetails) {
+    console.log('Auto-filling profile with extracted details...');
+    
+    // Only fill empty fields to avoid overwriting user data
+    if (personalDetails.firstName && !DOM.firstName.value) {
+      DOM.firstName.value = personalDetails.firstName;
+      appState.profile.firstName = personalDetails.firstName;
+    }
+    
+    if (personalDetails.lastName && !DOM.lastName.value) {
+      DOM.lastName.value = personalDetails.lastName;
+      appState.profile.lastName = personalDetails.lastName;
+    }
+    
+    if (personalDetails.address && !DOM.addressLine1.value) {
+      // Split address into two lines if it's long
+      const addressText = personalDetails.address;
+      if (addressText.length > 50) {
+        const midpoint = addressText.indexOf(',', addressText.length / 2);
+        if (midpoint > 0) {
+          DOM.addressLine1.value = addressText.substring(0, midpoint).trim();
+          DOM.addressLine2.value = addressText.substring(midpoint + 1).trim();
+          appState.profile.addressLine1 = DOM.addressLine1.value;
+          appState.profile.addressLine2 = DOM.addressLine2.value;
+        } else {
+          DOM.addressLine1.value = addressText;
+          appState.profile.addressLine1 = addressText;
+        }
+      } else {
+        DOM.addressLine1.value = addressText;
+        appState.profile.addressLine1 = addressText;
+      }
+    } else if (personalDetails.city && !DOM.addressLine1.value) {
+      DOM.addressLine1.value = personalDetails.city;
+      appState.profile.addressLine1 = personalDetails.city;
+    }
+    
+    // Save the updated profile
+    saveAppState();
+    
+    // Show a notification to the user
+    const extractedInfo = [];
+    if (personalDetails.firstName) extractedInfo.push('name');
+    if (personalDetails.address || personalDetails.city) extractedInfo.push('address');
+    if (personalDetails.email) extractedInfo.push('email');
+    if (personalDetails.phone) extractedInfo.push('phone');
+    
+    if (extractedInfo.length > 0) {
+      console.log('Auto-filled profile fields:', extractedInfo.join(', '));
+      // Could show a toast notification here in the future
+    }
+  }
 
   // Local Storage Management
   function loadAppState() {
@@ -510,20 +674,40 @@
     console.log('Parsed text length:', cleanedText.length);
     console.log('First 500 characters:', cleanedText.substring(0, 500));
     
+    // Extract personal details and auto-fill profile
+    const personalDetails = extractPersonalDetails(cleanedText);
+    if (personalDetails) {
+      autoFillProfile(personalDetails);
+    }
+    
     // Extract keywords and sections
     appState.resume.keywords = extractKeywords(cleanedText);
     appState.resume.sections = extractSections(cleanedText);
     
     console.log('Extracted keywords:', appState.resume.keywords);
     console.log('Extracted sections:', Object.keys(appState.resume.sections));
+    console.log('Extracted personal details:', personalDetails);
     
     // Save to localStorage
     saveAppState();
     
     // Update UI with more detailed information
-    const statusMessage = appState.resume.keywords.length > 0 
+    let statusMessage = appState.resume.keywords.length > 0 
       ? `Resume parsed successfully! Found ${appState.resume.keywords.length} key skills and qualifications: ${appState.resume.keywords.slice(0, 5).join(', ')}${appState.resume.keywords.length > 5 ? '...' : ''}`
       : `Resume parsed (${Math.round(cleanedText.length/1000)}k characters). Check console for debug info. Keywords may not have been detected - try TXT format for better parsing.`;
+    
+    // Add auto-fill notification if we extracted personal details
+    if (personalDetails) {
+      const extractedInfo = [];
+      if (personalDetails.firstName) extractedInfo.push('name');
+      if (personalDetails.address || personalDetails.city) extractedInfo.push('address');
+      if (personalDetails.email) extractedInfo.push('email');
+      if (personalDetails.phone) extractedInfo.push('phone');
+      
+      if (extractedInfo.length > 0) {
+        statusMessage += ` Auto-filled profile: ${extractedInfo.join(', ')}.`;
+      }
+    }
     
     setParsingStatus('success', statusMessage);
     
