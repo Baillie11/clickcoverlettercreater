@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Click Cover Letter Creator</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.11.2/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+  <header class="app-header">
+    <h1>Click Cover Letter Creator</h1>
+  </header>
+
+  <div class="app-container">
+    <aside class="response-panel">
+      <h2>Response Library</h2>
+
+      <div class="category-section" id="category-user">
+        <h3>User Created</h3>
+      </div>
+
+      <div class="category-section" id="category-crowd">
+        <h3>Crowd Sourced</h3>
+      </div>
+
+      <div class="category-section" id="category-ai">
+        <h3>AI Generated</h3>
+      </div>
+
+      <div class="add-response">
+        <textarea id="newResponseText" placeholder="Write your own response..."></textarea>
+        <button id="addResponseBtn">Add Response</button>
+      </div>
+    </aside>
+
+    <main class="builder-panel">
+      <section class="user-info">
+        <h3>Your Info</h3>
+        <input type="text" id="firstName" placeholder="First Name" />
+        <input type="text" id="lastName" placeholder="Last Name" />
+        <input type="text" id="addressLine1" placeholder="Address Line 1" />
+        <input type="text" id="addressLine2" placeholder="Address Line 2" />
+      </section>
+
+      <section class="job-info">
+        <h3>Job Information</h3>
+        <form id="jobForm">
+          <input type="text" id="roleTitle" placeholder="Role Title" />
+          <input type="text" id="companyName" placeholder="Company Name" />
+          <input type="text" id="contactPerson" placeholder="Contact Person" />
+          <input type="text" id="businessAddress" placeholder="Business Address" />
+          <input type="text" id="refNumber" placeholder="Reference Number" />
+        </form>
+      </section>
+
+      <section class="letter-builder">
+        <h3>Your Cover Letter</h3>
+        <div class="letter-drop-area" id="letterArea">
+          <p class="placeholder">Drag responses here to build your letter</p>
+        </div>
+        <div class="letter-actions">
+          <button id="newLetterBtn">New Cover Letter</button>
+          <button id="saveLetterBtn">Save Letter (locally)</button>
+          <button id="downloadPdfBtn">Download as PDF</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
