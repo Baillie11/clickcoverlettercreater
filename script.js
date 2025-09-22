@@ -96,6 +96,18 @@
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
+
+  function formatDateLongAU(dateObj = new Date()) {
+    try {
+      const opts = { day: 'numeric', month: 'long', year: 'numeric' };
+      return dateObj.toLocaleDateString('en-AU', opts);
+    } catch {
+      // Fallback
+      const d = dateObj.getDate();
+      const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      return `${d} ${months[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+    }
+  }
   
   function extractPersonalDetails(text) {
     console.log('Extracting personal details from resume...');
@@ -2286,6 +2298,219 @@
       return printEl;
     }
 
+    // Formal Classic theme (Sender right + Date, Recipient left)
+    if (selectedTheme === 'formal-classic') {
+      // Sender block (right-aligned)
+      const sender = document.createElement('div');
+      sender.style.textAlign = 'right';
+      sender.style.marginBottom = '12px';
+
+      const senderName = document.createElement('div');
+      senderName.innerText = fullName || '';
+      senderName.style.fontWeight = '600';
+      senderName.style.fontSize = '12pt';
+      sender.appendChild(senderName);
+
+      if (profile.addressLine1) sender.appendChild(Object.assign(document.createElement('div'), { innerText: profile.addressLine1 }));
+      if (profile.addressLine2) sender.appendChild(Object.assign(document.createElement('div'), { innerText: profile.addressLine2 }));
+      if (profile.phoneNumber) sender.appendChild(Object.assign(document.createElement('div'), { innerText: `Tel: ${profile.phoneNumber}` }));
+      if (profile.emailAddress) sender.appendChild(Object.assign(document.createElement('div'), { innerText: `Email: ${profile.emailAddress}` }));
+
+      const dateEl = document.createElement('div');
+      dateEl.innerText = formatDateLongAU(new Date());
+      dateEl.style.marginTop = '8px';
+      sender.appendChild(dateEl);
+
+      printEl.appendChild(sender);
+
+      // Recipient block (left-aligned)
+      if (companyName || businessAddress) {
+        const recip = document.createElement('div');
+        recip.style.textAlign = 'left';
+        recip.style.marginBottom = '12px';
+        if (companyName) recip.appendChild(Object.assign(document.createElement('div'), { innerText: companyName }));
+        if (businessAddress) recip.appendChild(Object.assign(document.createElement('div'), { innerText: businessAddress }));
+        printEl.appendChild(recip);
+      }
+
+      // Salutation
+      const salutationP = document.createElement('p');
+      if (contactPerson && contactPerson.trim()) {
+        salutationP.innerText = `Dear ${contactPerson.trim()},`;
+      } else if (companyName && companyName.trim()) {
+        salutationP.innerText = 'Dear Hiring Manager,';
+      } else {
+        salutationP.innerText = 'Dear Hiring Team,';
+      }
+      salutationP.style.marginBottom = '16px';
+      salutationP.style.pageBreakInside = 'avoid';
+      salutationP.style.breakInside = 'avoid-page';
+      printEl.appendChild(salutationP);
+
+      // Body
+      const parasFC = DOM.letterArea.querySelectorAll('.letter-paragraph');
+      parasFC.forEach(para => {
+        const p = document.createElement('p');
+        p.innerText = para.textContent.replace('×', '');
+        p.style.marginBottom = '12px';
+        p.style.pageBreakInside = 'avoid';
+        p.style.breakInside = 'avoid-page';
+        p.style.wordBreak = 'break-word';
+        p.style.overflowWrap = 'anywhere';
+        p.style.whiteSpace = 'pre-wrap';
+        printEl.appendChild(p);
+      });
+
+      // Signature
+      if (fullName || profile.phoneNumber || profile.emailAddress) {
+        const signatureP = document.createElement('p');
+        signatureP.style.marginTop = '30px';
+        signatureP.style.pageBreakInside = 'avoid';
+        signatureP.style.breakInside = 'avoid-page';
+        let sig = 'Sincerely,';
+        if (fullName) sig += `\n${fullName}`;
+        if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
+        if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
+        signatureP.innerText = sig;
+        printEl.appendChild(signatureP);
+      }
+
+      return printEl;
+    }
+
+    // Sidebar Profile theme (left sidebar, right content)
+    if (selectedTheme === 'sidebar-profile') {
+      const container = document.createElement('div');
+      container.style.display = 'flex';
+      container.style.gap = '16px';
+
+      const sidebar = document.createElement('div');
+      sidebar.style.flex = '0 0 28%';
+      sidebar.style.minWidth = '180px';
+      sidebar.style.background = '#f7f8ff';
+      sidebar.style.border = '1px solid #e6eaf2';
+      sidebar.style.borderRadius = '8px';
+      sidebar.style.padding = '12px';
+
+      if (fullName) {
+        const name = document.createElement('div');
+        name.innerText = fullName;
+        name.style.fontWeight = '700';
+        name.style.marginBottom = '6px';
+        sidebar.appendChild(name);
+      }
+      if (profile.phoneNumber) sidebar.appendChild(Object.assign(document.createElement('div'), { innerText: profile.phoneNumber }));
+      if (profile.emailAddress) sidebar.appendChild(Object.assign(document.createElement('div'), { innerText: profile.emailAddress }));
+      if (profile.addressLine1) sidebar.appendChild(Object.assign(document.createElement('div'), { innerText: profile.addressLine1 }));
+      if (profile.addressLine2) sidebar.appendChild(Object.assign(document.createElement('div'), { innerText: profile.addressLine2 }));
+
+      const content = document.createElement('div');
+      content.style.flex = '1';
+
+      if (companyName || businessAddress) {
+        const header = document.createElement('div');
+        header.style.marginBottom = '8px';
+        if (companyName) header.appendChild(Object.assign(document.createElement('div'), { innerText: companyName, style: 'font-weight:600;' }));
+        if (businessAddress) header.appendChild(Object.assign(document.createElement('div'), { innerText: businessAddress }));
+        content.appendChild(header);
+      }
+
+      const sal = document.createElement('p');
+      if (contactPerson && contactPerson.trim()) sal.innerText = `Dear ${contactPerson.trim()},`; else sal.innerText = 'Dear Hiring Manager,';
+      sal.style.marginBottom = '12px';
+      content.appendChild(sal);
+
+      const parasSB = DOM.letterArea.querySelectorAll('.letter-paragraph');
+      parasSB.forEach(para => {
+        const p = document.createElement('p');
+        p.innerText = para.textContent.replace('×', '');
+        p.style.marginBottom = '12px';
+        p.style.wordBreak = 'break-word';
+        p.style.overflowWrap = 'anywhere';
+        p.style.whiteSpace = 'pre-wrap';
+        content.appendChild(p);
+      });
+
+      if (fullName || profile.phoneNumber || profile.emailAddress) {
+        const signatureP = document.createElement('p');
+        signatureP.style.marginTop = '24px';
+        let sig = 'Sincerely,';
+        if (fullName) sig += `\n${fullName}`;
+        if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
+        if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
+        signatureP.innerText = sig;
+        content.appendChild(signatureP);
+      }
+
+      container.appendChild(sidebar);
+      container.appendChild(content);
+      printEl.appendChild(container);
+      return printEl;
+    }
+
+    // Letterhead Accent theme (top bar)
+    if (selectedTheme === 'letterhead-accent') {
+      const bar = document.createElement('div');
+      bar.style.background = 'linear-gradient(120deg, #151a6a, #6c63ff, #18c4a5)';
+      bar.style.color = '#fff';
+      bar.style.padding = '12px 16px';
+      bar.style.borderRadius = '8px';
+      bar.style.marginBottom = '12px';
+
+      if (fullName) {
+        const name = document.createElement('div');
+        name.innerText = fullName;
+        name.style.fontWeight = '700';
+        name.style.fontSize = '14pt';
+        bar.appendChild(name);
+      }
+      const sub = document.createElement('div');
+      sub.innerText = (appState.settings?.tagline) || 'NDIS SUPPORT SPECIALIST | DISABILITY CARE ADVOCATE';
+      sub.style.opacity = '0.9';
+      sub.style.letterSpacing = '1px';
+      sub.style.fontSize = '10pt';
+      bar.appendChild(sub);
+
+      const contact = [];
+      if (profile.phoneNumber) contact.push(profile.phoneNumber);
+      if (profile.emailAddress) contact.push(profile.emailAddress);
+      if (contact.length) {
+        const c = document.createElement('div');
+        c.innerText = contact.join(' | ');
+        c.style.opacity = '0.95';
+        c.style.fontSize = '9pt';
+        bar.appendChild(c);
+      }
+      printEl.appendChild(bar);
+
+      // Body
+      const salutationP = document.createElement('p');
+      if (contactPerson && contactPerson.trim()) salutationP.innerText = `Dear ${contactPerson.trim()},`; else if (companyName) salutationP.innerText = 'Dear Hiring Team,'; else salutationP.innerText = 'Dear Hiring Team,';
+      salutationP.style.marginBottom = '16px';
+      printEl.appendChild(salutationP);
+
+      const parasLH = DOM.letterArea.querySelectorAll('.letter-paragraph');
+      parasLH.forEach(para => {
+        const p = document.createElement('p');
+        p.innerText = para.textContent.replace('×', '');
+        p.style.marginBottom = '12px';
+        printEl.appendChild(p);
+      });
+
+      if (fullName || profile.phoneNumber || profile.emailAddress) {
+        const signatureP = document.createElement('p');
+        signatureP.style.marginTop = '30px';
+        let sig = 'Sincerely,';
+        if (fullName) sig += `\n${fullName}`;
+        if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
+        if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
+        signatureP.innerText = sig;
+        printEl.appendChild(signatureP);
+      }
+
+      return printEl;
+    }
+
     // Standard theme (left/right header)
     const header = document.createElement('div');
     header.style.display = 'flex';
@@ -2413,253 +2638,14 @@
     const today = new Date().toISOString().split('T')[0];
     const jobTitle = sanitizeText(DOM.roleTitle.value);
     const companyName = sanitizeText(DOM.companyName.value);
-    const contactPerson = sanitizeText(DOM.contactPerson.value);
-    const businessAddress = sanitizeText(DOM.businessAddress.value);
-    const refNumber = sanitizeText(DOM.refNumber.value);
 
     const fileName = `${fullName} - ${jobTitle} - ${companyName} - ${today}`
       .replace(/[^\w\d\- ]+/g, '')
       .replace(/\s+/g, ' ')
       .trim() + '.pdf';
 
-    const printEl = document.createElement('div');
-    printEl.style.padding = '20px';
-    printEl.style.background = 'white';
-    printEl.style.color = '#000';
-    printEl.style.fontFamily = 'Segoe UI, sans-serif';
-    printEl.style.lineHeight = '1.5';
-    printEl.style.fontSize = '12pt';
-    // Improve wrapping and page breaking safety
-    printEl.style.wordBreak = 'break-word';
-    printEl.style.overflowWrap = 'anywhere';
-    printEl.style.whiteSpace = 'pre-wrap';
-
-    // Check theme selection
     const selectedTheme = (DOM.themeSelect && DOM.themeSelect.value) || (appState.settings?.theme) || 'standard';
-
-    // Theme: Modern centered header (emulating shared PDF style)
-    if (selectedTheme === 'modern-centered') {
-      // Header block centered
-      const headerBlock = document.createElement('div');
-      headerBlock.style.textAlign = 'center';
-      headerBlock.style.marginBottom = '18px';
-
-      if (fullName) {
-        const nameEl = document.createElement('div');
-        nameEl.innerText = fullName.toUpperCase().split('').join(' ');
-        nameEl.style.fontWeight = '700';
-        nameEl.style.fontSize = '20pt';
-        nameEl.style.letterSpacing = '6px';
-        nameEl.style.marginBottom = '6px';
-        nameEl.style.pageBreakInside = 'avoid';
-        nameEl.style.breakInside = 'avoid-page';
-        headerBlock.appendChild(nameEl);
-      }
-
-      // Tagline
-      const taglineEl = document.createElement('div');
-      const defaultTagline = 'NDIS SUPPORT SPECIALIST | DISABILITY CARE ADVOCATE';
-      taglineEl.innerText = defaultTagline;
-      taglineEl.style.fontSize = '10pt';
-      taglineEl.style.letterSpacing = '3px';
-      taglineEl.style.color = '#444';
-      taglineEl.style.marginBottom = '6px';
-      taglineEl.style.pageBreakInside = 'avoid';
-      taglineEl.style.breakInside = 'avoid-page';
-      headerBlock.appendChild(taglineEl);
-
-      // Contact line
-      const contacts = [];
-      if (profile.phoneNumber) contacts.push(profile.phoneNumber);
-      if (profile.emailAddress) contacts.push(profile.emailAddress);
-      if (contacts.length) {
-        const contactEl = document.createElement('div');
-        contactEl.innerText = contacts.join(' | ');
-        contactEl.style.fontSize = '10pt';
-        contactEl.style.color = '#333';
-        contactEl.style.pageBreakInside = 'avoid';
-        contactEl.style.breakInside = 'avoid-page';
-        headerBlock.appendChild(contactEl);
-      }
-
-      // Divider
-      const hr = document.createElement('div');
-      hr.style.height = '1px';
-      hr.style.background = '#ddd';
-      hr.style.margin = '12px 0 8px';
-      headerBlock.appendChild(hr);
-
-      printEl.appendChild(headerBlock);
-
-      // Salutation
-      const salutationP = document.createElement('p');
-      if (contactPerson && contactPerson.trim()) {
-        salutationP.innerText = `Dear ${contactPerson.trim()},`;
-      } else if (companyName && companyName.trim()) {
-        salutationP.innerText = 'Dear Hiring Team,';
-      } else {
-        salutationP.innerText = 'Dear Hiring Team,';
-      }
-      salutationP.style.marginBottom = '16px';
-      salutationP.style.pageBreakInside = 'avoid';
-      salutationP.style.breakInside = 'avoid-page';
-      printEl.appendChild(salutationP);
-
-      // Paragraphs
-      const paras = DOM.letterArea.querySelectorAll('.letter-paragraph');
-      paras.forEach(para => {
-        const p = document.createElement('p');
-        p.innerText = para.textContent.replace('×', '');
-        p.style.marginBottom = '12px';
-        p.style.pageBreakInside = 'avoid';
-        p.style.breakInside = 'avoid-page';
-        p.style.wordBreak = 'break-word';
-        p.style.overflowWrap = 'anywhere';
-        p.style.whiteSpace = 'pre-wrap';
-        printEl.appendChild(p);
-      });
-
-      // Signature (use existing structure)
-      if (fullName || profile.phoneNumber || profile.emailAddress) {
-        const signatureP = document.createElement('p');
-        signatureP.style.marginTop = '30px';
-        signatureP.style.pageBreakInside = 'avoid';
-        signatureP.style.breakInside = 'avoid-page';
-        let sig = 'Sincerely,';
-        if (fullName) sig += `\n${fullName}`;
-        if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
-        if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
-        signatureP.innerText = sig;
-        printEl.appendChild(signatureP);
-      }
-
-      const opt = {
-        margin: 0.6,
-        filename: fileName,
-        image: { type: 'jpeg', quality: 0.98 },
-        pagebreak: { mode: ['css', 'legacy'] },
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-      };
-
-      html2pdf().set(opt).from(printEl).save();
-      return; // Done for this theme
-    }
-
-    // Header with company (left) and user details (right)
-    const header = document.createElement('div');
-    header.style.display = 'flex';
-    header.style.justifyContent = 'space-between';
-    header.style.alignItems = 'flex-start';
-    header.style.gap = '20px';
-    header.style.marginBottom = '16px';
-
-    const leftCol = document.createElement('div');
-    leftCol.style.flex = '1';
-    leftCol.style.textAlign = 'left';
-
-    if (companyName) {
-      const p = document.createElement('p');
-      p.innerText = companyName;
-      p.style.margin = '0 0 4px 0';
-      p.style.fontWeight = '600';
-      p.style.pageBreakInside = 'avoid';
-      p.style.breakInside = 'avoid-page';
-      leftCol.appendChild(p);
-    }
-    if (businessAddress) {
-      const p = document.createElement('p');
-      p.innerText = businessAddress;
-      p.style.margin = '0';
-      p.style.pageBreakInside = 'avoid';
-      p.style.breakInside = 'avoid-page';
-      leftCol.appendChild(p);
-    }
-
-    const rightCol = document.createElement('div');
-    rightCol.style.flex = '1';
-    rightCol.style.textAlign = 'right';
-
-    if (fullName) {
-      const p = document.createElement('p');
-      p.innerText = fullName;
-      p.style.margin = '0 0 4px 0';
-      p.style.fontWeight = '600';
-      p.style.pageBreakInside = 'avoid';
-      p.style.breakInside = 'avoid-page';
-      rightCol.appendChild(p);
-    }
-    if (profile.addressLine1) {
-      const p = document.createElement('p');
-      p.innerText = profile.addressLine1;
-      p.style.margin = '0';
-      p.style.pageBreakInside = 'avoid';
-      p.style.breakInside = 'avoid-page';
-      rightCol.appendChild(p);
-    }
-    if (profile.addressLine2) {
-      const p = document.createElement('p');
-      p.innerText = profile.addressLine2;
-      p.style.margin = '0';
-      p.style.pageBreakInside = 'avoid';
-      p.style.breakInside = 'avoid-page';
-      rightCol.appendChild(p);
-    }
-
-    header.appendChild(leftCol);
-    header.appendChild(rightCol);
-    printEl.appendChild(header);
-
-    // Spacer between header and content
-    printEl.appendChild(document.createElement('br'));
-
-    // Salutation
-    const salutationP = document.createElement('p');
-    salutationP.style.marginBottom = '16px';
-    salutationP.style.pageBreakInside = 'avoid';
-    salutationP.style.breakInside = 'avoid-page';
-    
-    if (contactPerson && contactPerson.trim()) {
-      // Use contact person's name
-      salutationP.innerText = `Dear ${contactPerson.trim()},`;
-    } else if (companyName && companyName.trim()) {
-      // Use company-specific default
-      salutationP.innerText = 'Dear Hiring Manager,';
-    } else {
-      // Generic default
-      salutationP.innerText = 'Dear Recruitment Officer,';
-    }
-    
-    printEl.appendChild(salutationP);
-
-    // Letter paragraphs
-    const paras = DOM.letterArea.querySelectorAll('.letter-paragraph');
-    paras.forEach(para => {
-      const p = document.createElement('p');
-      p.innerText = para.textContent.replace('×', ''); // Remove the × button text
-      p.style.marginBottom = '12px';
-      p.style.pageBreakInside = 'avoid';
-      p.style.breakInside = 'avoid-page';
-      p.style.wordBreak = 'break-word';
-      p.style.overflowWrap = 'anywhere';
-      p.style.whiteSpace = 'pre-wrap';
-      printEl.appendChild(p);
-    });
-
-    // Signature
-    if (fullName || profile.phoneNumber || profile.emailAddress) {
-      const signatureP = document.createElement('p');
-      signatureP.style.marginTop = '30px';
-      let sig = 'Sincerely,';
-      signatureP.style.pageBreakInside = 'avoid';
-      signatureP.style.breakInside = 'avoid-page';
-      signatureP.style.whiteSpace = 'pre-wrap';
-      if (fullName) sig += `\n${fullName}`;
-      if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
-      if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
-      signatureP.innerText = sig;
-      printEl.appendChild(signatureP);
-    }
+    const el = buildLetterElement(selectedTheme);
 
     const opt = {
       margin: 0.6,
@@ -2670,7 +2656,7 @@
       jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
     };
 
-    html2pdf().set(opt).from(printEl).save();
+    html2pdf().set(opt).from(el).save();
   }
 
   // Event Listeners Setup
