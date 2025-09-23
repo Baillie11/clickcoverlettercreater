@@ -513,6 +513,12 @@
     try {
       localStorage.setItem('userProfile', JSON.stringify(appState.profile));
       localStorage.setItem('responses', JSON.stringify(appState.responses));
+        // Load auth from storage
+        try {
+          authToken = localStorage.getItem('authToken') || null;
+          const rawUser = localStorage.getItem('authUser');
+          if (rawUser) appState.authUser = JSON.parse(rawUser);
+        } catch {}
       localStorage.setItem('resumeData', JSON.stringify(appState.resume));
       localStorage.setItem('appSettings', JSON.stringify(appState.settings || { theme: 'standard', pageSize: 'letter' }));
     } catch (error) {
@@ -585,8 +591,15 @@
 
   // Backend API (local) for persisting user responses
   const API_BASE = 'http://localhost:5050';
+  let authToken = null;
   const API_TIMEOUT_MS = 3000;
   let apiHealthy = null; // null=unknown, true=ok, false=down
+
+  function apiHeaders(extra = {}) {
+    const base = { 'Content-Type': 'application/json' };
+    if (authToken) base['Authorization'] = `Bearer ${authToken}`;
+    return { ...base, ...(extra || {}) };
+  }
 
   function fetchWithTimeout(url, opts = {}, timeoutMs = API_TIMEOUT_MS) {
     return new Promise((resolve, reject) => {
@@ -617,7 +630,8 @@
   async function apiGetResponsesAll() {
     const healthy = await apiHealthCheck();
     if (!healthy) throw new Error('API offline');
-    const r = await fetchWithTimeout(`${API_BASE}/responses`);
+    const r = await fetchWithTimeout(`${API_BASE}/responses`, { headers: apiHeaders() });
+ategory=user`, { headers: apiHeaders() });
     if (!r.ok) throw new Error(`GET failed ${r.status}`);
     const list = await r.json();
     return Array.isArray(list) ? list : [];
@@ -628,7 +642,7 @@
     if (!healthy) throw new Error('API offline');
     const r = await fetchWithTimeout(`${API_BASE}/responses`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: apiHeaders(),
       body: JSON.stringify(resp)
     });
     if (!r.ok) throw new Error(`POST failed ${r.status}`);
@@ -640,7 +654,7 @@
     if (!healthy) throw new Error('API offline');
     const r = await fetchWithTimeout(`${API_BASE}/responses/${encodeURIComponent(resp.id)}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: apiHeaders(),
       body: JSON.stringify(resp)
     });
     if (!r.ok) throw new Error(`PUT failed ${r.status}`);
@@ -651,7 +665,8 @@
     const healthy = await apiHealthCheck();
     if (!healthy) throw new Error('API offline');
     const r = await fetchWithTimeout(`${API_BASE}/responses/${encodeURIComponent(id)}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: apiHeaders()
     });
     if (!r.ok) throw new Error(`DELETE failed ${r.status}`);
     return true;
@@ -679,6 +694,25 @@
       badge.classList.add('offline');
       badge.classList.remove('online');
     }
+  }
+
+  async function apiRegister(username, password) {
+    const r = await fetchWithTimeout(`${API_BASE}/auth/register`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password })
+    });
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  }
+  async function apiLogin(username, password) {
+    const r = await fetchWithTimeout(`${API_BASE}/auth/login`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password })
+    });
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  }
+  async function apiLogout() {
+    if (!authToken) return;
+    try { await fetchWithTimeout(`${API_BASE}/auth/logout`, { method: 'POST', headers: apiHeaders() }); } catch {}
   }
 
   async function syncResponsesFromDb() {
@@ -1598,6 +1632,7 @@
     
     saveAppState();
     renderResponses();
+    updateAuthUI();
   }
 
   function showResumeStatus(file) {
@@ -2729,6 +2764,12 @@
     if (DOM.themeToggleBtn) DOM.themeToggleBtn.addEventListener('click', toggleTheme);
     if (DOM.syncResponsesBtn) DOM.syncResponsesBtn.addEventListener('click', syncResponsesFromDb);
 
+    // Auth controls
+    if (DOM.authBtn) DOM.authBtn.addEventListener('click', () => { showAuthModal(); });
+    if (DOM.logoutBtn) DOM.logoutBtn.addEventListener('click', async () => { await handleLogout(); });
+    if (DOM.authCancelBtn) DOM.authCancelBtn.addEventListener('click', hideAuthModal);
+    if (DOM.authSubmitBtn) DOM.authSubmitBtn.addEventListener('click', handleAuthSubmit);
+
     // Theme selection
     if (DOM.themeSelect) {
       if (appState.settings && appState.settings.theme) {
@@ -2819,9 +2860,78 @@
     DOM.dbStatusBadge = document.getElementById('dbStatusBadge');
     DOM.syncResponsesBtn = document.getElementById('syncResponsesBtn');
     DOM.themeToggleBtn = document.getElementById('themeToggleBtn');
+    DOM.authBtn = document.getElementById('authBtn');
+    DOM.logoutBtn = document.getElementById('logoutBtn');
+    DOM.userBadge = document.getElementById('userBadge');
+
+    // Auth modal
+    DOM.authModal = document.getElementById('authModal');
+    DOM.authUsername = document.getElementById('authUsername');
+    DOM.authPassword = document.getElementById('authPassword');
+    DOM.authCreate = document.getElementById('authCreate');
+    DOM.authCancelBtn = document.getElementById('authCancelBtn');
+    DOM.authSubmitBtn = document.getElementById('authSubmitBtn');
+    DOM.authError = document.getElementById('authError');
   }
 
   // Application Initialization
+  function updateAuthUI() {
+    const username = appState.authUser?.username;
+    if (username && DOM.userBadge && DOM.logoutBtn && DOM.authBtn) {
+      DOM.userBadge.style.display = '';
+      DOM.userBadge.textContent = username;
+      DOM.logoutBtn.style.display = '';
+      DOM.authBtn.style.display = 'none';
+    } else {
+      if (DOM.userBadge) DOM.userBadge.style.display = 'none';
+      if (DOM.logoutBtn) DOM.logoutBtn.style.display = 'none';
+      if (DOM.authBtn) DOM.authBtn.style.display = '';
+    }
+  }
+
+  function showAuthModal() {
+    if (!DOM.authModal) return;
+    DOM.authError.textContent = '';
+    DOM.authUsername.value = '';
+    DOM.authPassword.value = '';
+    DOM.authCreate.checked = false;
+    DOM.authModal.classList.remove('hidden');
+  }
+  function hideAuthModal() { if (DOM.authModal) DOM.authModal.classList.add('hidden'); }
+
+  async function handleAuthSubmit() {
+    try {
+      const u = (DOM.authUsername.value || '').trim();
+      const p = (DOM.authPassword.value || '').trim();
+      const create = !!DOM.authCreate.checked;
+      DOM.authError.textContent = '';
+      if (u.length < 3 || p.length < 6) {
+        DOM.authError.textContent = 'Username min 3 chars, Password min 6 chars';
+        return;
+      }
+      const res = create ? await apiRegister(u, p) : await apiLogin(u, p);
+      authToken = res.token;
+      appState.authUser = res.user;
+      localStorage.setItem('authToken', authToken);
+      localStorage.setItem('authUser', JSON.stringify(res.user));
+      updateAuthUI();
+      hideAuthModal();
+      // Load user responses
+      await syncResponsesFromDb();
+    } catch (e) {
+      DOM.authError.textContent = 'Authentication failed. Ensure server is running.';
+    }
+  }
+
+  async function handleLogout() {
+    try { await apiLogout(); } catch {}
+    authToken = null;
+    appState.authUser = null;
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('authUser');
+    updateAuthUI();
+  }
+
   async function initializeApp() {
     initializeDOM();
     await loadAppState();

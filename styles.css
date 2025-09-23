@@ -158,6 +158,17 @@ body {
   cursor: pointer;
 }
 
+/* Modal */
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+.modal.hidden { display: none; }
+.modal-content { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 12px; padding: 18px; width: 320px; box-shadow: var(--shadow); }
+.modal-content h3 { margin-top: 0; }
+.modal-content label { display: block; margin: 8px 0; font-size: 0.95rem; }
+.modal-content input[type="text"], .modal-content input[type="password"] { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; }
+.modal-content .inline { display: flex; align-items: center; gap: 8px; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+.modal-error { margin-top: 6px; color: #e74c3c; font-size: 0.9rem; }
+
 /* Header nav */
 .app-nav { margin-top: 6px; display: flex; align-items: center; gap: 10px; justify-content: center; }
 .app-nav a { color: #fff; text-decoration: none; margin: 0 8px; opacity: 0.9; padding-bottom: 2px; }
@@ -411,6 +422,7 @@ body.theme-dark .letter-drop-area, body.theme-dark .resume-upload-area { backgro
 body.theme-dark .response { background: #161d2e; border-color: #22304c; }
 body.theme-dark .job-ad-status { background: #101623; border-color: #22304c; color: #dbe6ff; }
 body.theme-dark .nav-btn, body.theme-dark .db-badge { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
+body.theme-dark .modal-content { background: #141a2a; color: #e8edf7; border-color: #22304c; }
 
 /* Resume Upload Section */
 .resume-upload-section {
