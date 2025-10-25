@@ -482,6 +482,13 @@
         appState.settings.pageSize = appState.settings.pageSize || 'letter';
       }
 
+      // Load auth from storage early (for gating)
+      try {
+        authToken = localStorage.getItem('authToken') || null;
+        const rawUser = localStorage.getItem('authUser');
+        if (rawUser) appState.authUser = JSON.parse(rawUser);
+      } catch {}
+
       // Sync with backend: try to load all responses from DB.
       try {
         const dbResponses = await apiGetResponsesAll();
@@ -631,7 +638,6 @@
     const healthy = await apiHealthCheck();
     if (!healthy) throw new Error('API offline');
     const r = await fetchWithTimeout(`${API_BASE}/responses`, { headers: apiHeaders() });
-ategory=user`, { headers: apiHeaders() });
     if (!r.ok) throw new Error(`GET failed ${r.status}`);
     const list = await r.json();
     return Array.isArray(list) ? list : [];
@@ -1916,9 +1922,13 @@ ategory=user`, { headers: apiHeaders() });
     // Skip if response columns not present (e.g., on profile page)
     if (!DOM.categoryUser || !DOM.categoryCrowd || !DOM.categoryAi) return;
     // Clear existing responses
-    DOM.categoryUser.innerHTML = '<h3>User Created</h3>';
+    DOM.categoryUser.innerHTML = '<h3>User Created <button type="button" id="addUserResponseBtn" class="add-category-btn" title="Add new response">+</button></h3>';
     DOM.categoryCrowd.innerHTML = '<h3>Crowd Sourced</h3>';
     DOM.categoryAi.innerHTML = '<h3>AI Generated</h3>';
+    
+    // Re-attach event listener for the + button
+    const addBtn = document.getElementById('addUserResponseBtn');
+    if (addBtn) addBtn.addEventListener('click', showCreateResponseModal);
 
     appState.responses.forEach(response => {
       const responseEl = createResponseElement(response);
@@ -1953,7 +1963,7 @@ ategory=user`, { headers: apiHeaders() });
       editBtn.title = 'Edit';
       editBtn.onclick = (e) => {
         e.stopPropagation();
-        editResponse(response.id, responseEl);
+        editResponse(response.id);
       };
       
       const deleteBtn = document.createElement('button');
@@ -1978,10 +1988,22 @@ ategory=user`, { headers: apiHeaders() });
     return responseEl;
   }
 
+  function showCreateResponseModal() {
+    if (!DOM.createResponseModal) return;
+    if (DOM.modalResponseText) DOM.modalResponseText.value = '';
+    if (DOM.modalError) DOM.modalError.textContent = '';
+    DOM.createResponseModal.classList.remove('hidden');
+    setTimeout(() => DOM.modalResponseText?.focus(), 100);
+  }
+
+  function hideCreateResponseModal() {
+    if (DOM.createResponseModal) DOM.createResponseModal.classList.add('hidden');
+  }
+
   async function addResponse() {
-    const text = sanitizeText(DOM.newResponseText.value);
+    const text = sanitizeText(DOM.modalResponseText?.value || '');
     if (!text) {
-      alert('Please enter some response text.');
+      if (DOM.modalError) DOM.modalError.textContent = 'Please enter some response text.';
       return;
     }
     
@@ -2003,41 +2025,51 @@ ategory=user`, { headers: apiHeaders() });
     saveAppState();
     renderResponses();
     
-    DOM.newResponseText.value = '';
+    hideCreateResponseModal();
   }
 
-  function editResponse(responseId, responseEl) {
+  let currentEditingResponseId = null;
+
+  function showEditResponseModal(responseId) {
+    if (!DOM.editResponseModal) return;
     const response = appState.responses.find(r => r.id === responseId);
     if (!response) return;
     
-    responseEl.classList.add('editing');
+    currentEditingResponseId = responseId;
+    if (DOM.editModalResponseText) DOM.editModalResponseText.value = response.text;
+    if (DOM.editModalError) DOM.editModalError.textContent = '';
+    DOM.editResponseModal.classList.remove('hidden');
+    setTimeout(() => DOM.editModalResponseText?.focus(), 100);
+  }
+
+  function hideEditResponseModal() {
+    if (DOM.editResponseModal) DOM.editResponseModal.classList.add('hidden');
+    currentEditingResponseId = null;
+  }
+
+  function editResponse(responseId) {
+    showEditResponseModal(responseId);
+  }
+
+  async function saveEditResponse() {
+    if (!currentEditingResponseId) return;
     
-    const textEl = responseEl.querySelector('p');
-    const currentText = textEl.textContent;
+    const text = sanitizeText(DOM.editModalResponseText?.value || '');
+    if (!text) {
+      if (DOM.editModalError) DOM.editModalError.textContent = 'Please enter some response text.';
+      return;
+    }
     
-    const textarea = document.createElement('textarea');
-    textarea.value = currentText;
+    const response = appState.responses.find(r => r.id === currentEditingResponseId);
+    if (response) {
+      response.text = text;
+      // Persist any category to backend
+      try { await apiUpdateResponse(response); } catch (e) { console.warn('Backend update failed:', e.message || e); }
+      saveAppState();
+      renderResponses();
+    }
     
-    const saveBtn = document.createElement('button');
-    saveBtn.textContent = 'Save';
-    saveBtn.className = 'save-edit-btn';
-    saveBtn.onclick = async () => {
-      const newText = sanitizeText(textarea.value);
-      if (newText) {
-        response.text = newText;
-        // Persist any category to backend
-        try { await apiUpdateResponse(response); } catch (e) { console.warn('Backend update failed:', e.message || e); }
-        saveAppState();
-        renderResponses();
-      }
-    };
-    
-    textEl.style.display = 'none';
-    responseEl.appendChild(textarea);
-    responseEl.appendChild(saveBtn);
-    
-    textarea.focus();
-    textarea.select();
+    hideEditResponseModal();
   }
 
   async function deleteResponse(responseId) {
@@ -2174,6 +2206,63 @@ ategory=user`, { headers: apiHeaders() });
     
     // Update salutation preview
     updateSalutationPreview();
+    
+    // Persist current letter state to localStorage
+    saveCurrentLetter();
+  }
+  
+  function saveCurrentLetter() {
+    try {
+      const letterState = {
+        paragraphs: appState.currentLetter.paragraphs,
+        jobInfo: {
+          roleTitle: DOM.roleTitle?.value || '',
+          companyName: DOM.companyName?.value || '',
+          contactPerson: DOM.contactPerson?.value || '',
+          businessAddress: DOM.businessAddress?.value || '',
+          refNumber: DOM.refNumber?.value || ''
+        }
+      };
+      localStorage.setItem('currentLetter', JSON.stringify(letterState));
+    } catch (e) {
+      console.error('Failed to save current letter:', e);
+    }
+  }
+  
+  function restoreCurrentLetter() {
+    if (!DOM.letterArea) return;
+    
+    try {
+      const savedLetter = localStorage.getItem('currentLetter');
+      if (!savedLetter) return;
+      
+      const letterState = JSON.parse(savedLetter);
+      
+      // Restore job information
+      if (letterState.jobInfo) {
+        if (DOM.roleTitle) DOM.roleTitle.value = letterState.jobInfo.roleTitle || '';
+        if (DOM.companyName) DOM.companyName.value = letterState.jobInfo.companyName || '';
+        if (DOM.contactPerson) DOM.contactPerson.value = letterState.jobInfo.contactPerson || '';
+        if (DOM.businessAddress) DOM.businessAddress.value = letterState.jobInfo.businessAddress || '';
+        if (DOM.refNumber) DOM.refNumber.value = letterState.jobInfo.refNumber || '';
+      }
+      
+      // Restore letter paragraphs
+      if (letterState.paragraphs && letterState.paragraphs.length > 0) {
+        // Clear placeholder
+        const placeholder = DOM.letterArea.querySelector('.placeholder');
+        if (placeholder) placeholder.remove();
+        
+        // Add each paragraph back
+        letterState.paragraphs.forEach(responseId => {
+          addParagraphToLetter(responseId);
+        });
+        
+        console.log('Restored letter with', letterState.paragraphs.length, 'paragraphs');
+      }
+    } catch (e) {
+      console.error('Failed to restore current letter:', e);
+    }
   }
 
   function newLetter() {
@@ -2190,6 +2279,9 @@ ategory=user`, { headers: apiHeaders() });
       
       // Clear salutation preview
       updateSalutationPreview();
+      
+      // Clear saved letter state
+      localStorage.removeItem('currentLetter');
     }
   }
 
@@ -2698,6 +2790,217 @@ ategory=user`, { headers: apiHeaders() });
     DOM.letterPreview.appendChild(wrapper);
   }
 
+  // AI Functions
+  async function checkAiStatus() {
+    try {
+      const response = await fetch('/api/ai-status');
+      const status = await response.json();
+      return status;
+    } catch (e) {
+      return { available: false, quotaExceeded: false };
+    }
+  }
+
+  async function handleAiExtract() {
+    const jobAdText = DOM.jobAdText?.value?.trim();
+    if (!jobAdText) {
+      showJobAdStatus('Please paste a job ad first', 'error');
+      return;
+    }
+
+    if (!authToken) {
+      showJobAdStatus('Please sign in to use AI features', 'error');
+      return;
+    }
+
+    // Check AI availability
+    const aiStatus = await checkAiStatus();
+    if (aiStatus.quotaExceeded) {
+      showJobAdStatus('⚠️ AI features are temporarily unavailable (quota exceeded)', 'error');
+      disableAiButtons();
+      return;
+    }
+
+    showJobAdStatus('🤖 Extracting job information with AI...', 'loading');
+    
+    try {
+      const response = await fetch('/api/extract-job-ad', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify({ jobAdText })
+      });
+
+      if (!response.ok) {
+      const err = await response.json();
+        if (err.quotaExceeded) {
+          disableAiButtons();
+          throw new Error('⚠️ AI quota exceeded - features disabled');
+        }
+        throw new Error(err.error || 'Failed to extract');
+      }
+
+      const extracted = await response.json();
+      
+      // Update fields
+      const overwrite = DOM.overwriteJobFields?.checked;
+      if (extracted.roleTitle && (overwrite || !DOM.roleTitle.value)) {
+        DOM.roleTitle.value = extracted.roleTitle;
+      }
+      if (extracted.companyName && (overwrite || !DOM.companyName.value)) {
+        DOM.companyName.value = extracted.companyName;
+      }
+      if (extracted.contactPerson && (overwrite || !DOM.contactPerson.value)) {
+        DOM.contactPerson.value = extracted.contactPerson;
+      }
+      if (extracted.businessAddress && (overwrite || !DOM.businessAddress.value)) {
+        DOM.businessAddress.value = extracted.businessAddress;
+      }
+      if (extracted.reference && (overwrite || !DOM.refNumber.value)) {
+        DOM.refNumber.value = extracted.reference;
+      }
+
+      showJobAdStatus('✅ Job information extracted successfully!', 'success');
+      updateSalutationPreview();
+    } catch (error) {
+      console.error('AI extraction error:', error);
+      showJobAdStatus(`❌ ${error.message}`, 'error');
+    }
+  }
+
+  async function handleAiGenerate() {
+    const jobAdText = DOM.jobAdText?.value?.trim();
+    if (!jobAdText) {
+      showJobAdStatus('Please paste a job ad first', 'error');
+      return;
+    }
+
+    if (!authToken) {
+      showJobAdStatus('Please sign in to use AI features', 'error');
+      return;
+    }
+
+    // Check AI availability
+    const aiStatus = await checkAiStatus();
+    if (aiStatus.quotaExceeded) {
+      showJobAdStatus('⚠️ AI features are temporarily unavailable (quota exceeded)', 'error');
+      disableAiButtons();
+      return;
+    }
+
+    showJobAdStatus('✨ Generating cover letter paragraphs with AI...', 'loading');
+    
+    try {
+      const response = await fetch('/api/generate-paragraphs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify({
+          jobAdText,
+          roleTitle: DOM.roleTitle?.value,
+          companyName: DOM.companyName?.value
+        })
+      });
+
+      if (!response.ok) {
+      const err = await response.json();
+        if (err.quotaExceeded) {
+          disableAiButtons();
+          throw new Error('⚠️ AI quota exceeded - features disabled');
+        }
+        throw new Error(err.error || 'Failed to generate');
+      }
+
+      const paragraphs = await response.json();
+      
+      // Add generated paragraphs as AI responses
+      if (paragraphs.opening) {
+        await addResponseToLibrary(paragraphs.opening, 'ai', 'AI Opening');
+      }
+      if (paragraphs.body) {
+        await addResponseToLibrary(paragraphs.body, 'ai', 'AI Body');
+      }
+      if (paragraphs.closing) {
+        await addResponseToLibrary(paragraphs.closing, 'ai', 'AI Closing');
+      }
+
+      showJobAdStatus('✅ AI paragraphs generated and added to library!', 'success');
+      await syncResponsesFromDb();
+    } catch (error) {
+      console.error('AI generation error:', error);
+      showJobAdStatus(`❌ ${error.message}`, 'error');
+    }
+  }
+
+  async function addResponseToLibrary(text, category, source) {
+    if (!authToken) return;
+    
+    const newResponse = {
+      id: generateId(),
+      text: sanitizeText(text),
+      category: category,
+      userCreated: false,
+      source: source || null
+    };
+
+    try {
+      const response = await fetch('/responses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify(newResponse)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save response');
+      }
+    } catch (error) {
+      console.error('Error adding response:', error);
+    }
+  }
+
+  function showJobAdStatus(message, type) {
+    if (!DOM.jobAdParseStatus) return;
+    DOM.jobAdParseStatus.textContent = message;
+    DOM.jobAdParseStatus.className = `job-ad-status ${type}`;
+  }
+
+  function disableAiButtons() {
+    if (DOM.aiExtractBtn) {
+      DOM.aiExtractBtn.disabled = true;
+      DOM.aiExtractBtn.title = 'AI quota exceeded - temporarily unavailable';
+      DOM.aiExtractBtn.style.opacity = '0.5';
+      DOM.aiExtractBtn.style.cursor = 'not-allowed';
+    }
+    if (DOM.aiGenerateBtn) {
+      DOM.aiGenerateBtn.disabled = true;
+      DOM.aiGenerateBtn.title = 'AI quota exceeded - temporarily unavailable';
+      DOM.aiGenerateBtn.style.opacity = '0.5';
+      DOM.aiGenerateBtn.style.cursor = 'not-allowed';
+    }
+  }
+
+  function enableAiButtons() {
+    if (DOM.aiExtractBtn) {
+      DOM.aiExtractBtn.disabled = false;
+      DOM.aiExtractBtn.title = 'Use AI to extract job info';
+      DOM.aiExtractBtn.style.opacity = '1';
+      DOM.aiExtractBtn.style.cursor = 'pointer';
+    }
+    if (DOM.aiGenerateBtn) {
+      DOM.aiGenerateBtn.disabled = false;
+      DOM.aiGenerateBtn.title = 'Generate cover letter paragraphs with AI';
+      DOM.aiGenerateBtn.style.opacity = '1';
+      DOM.aiGenerateBtn.style.cursor = 'pointer';
+    }
+  }
+
   // PDF Export (Enhanced)
   function downloadPdf() {
     const profile = appState.profile;
@@ -2738,27 +3041,54 @@ ategory=user`, { headers: apiHeaders() });
     
     // Job info changes - update salutation preview and refresh placeholders
     [DOM.contactPerson, DOM.companyName, DOM.roleTitle, DOM.businessAddress, DOM.refNumber].forEach(input => {
-      input.addEventListener('input', updateSalutationPreview);
-      input.addEventListener('blur', updateSalutationPreview);
+      input.addEventListener('input', () => {
+        updateSalutationPreview();
+        saveCurrentLetter(); // Save job info changes
+      });
+      input.addEventListener('blur', () => {
+        updateSalutationPreview();
+        saveCurrentLetter(); // Save job info changes
+      });
     });
     
-    // Response management
-    DOM.addResponseBtn.addEventListener('click', addResponse);
-    DOM.newResponseText.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter' && e.ctrlKey) {
-        addResponse();
-      }
-    });
+    // Response management - create modal
+    if (DOM.addUserResponseBtn) DOM.addUserResponseBtn.addEventListener('click', showCreateResponseModal);
+    if (DOM.modalSaveBtn) DOM.modalSaveBtn.addEventListener('click', addResponse);
+    if (DOM.modalCancelBtn) DOM.modalCancelBtn.addEventListener('click', hideCreateResponseModal);
+    if (DOM.modalResponseText) {
+      DOM.modalResponseText.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && e.ctrlKey) {
+          addResponse();
+        }
+      });
+    }
+
+    // Response management - edit modal
+    if (DOM.editModalSaveBtn) DOM.editModalSaveBtn.addEventListener('click', saveEditResponse);
+    if (DOM.editModalCancelBtn) DOM.editModalCancelBtn.addEventListener('click', hideEditResponseModal);
+    if (DOM.editModalResponseText) {
+      DOM.editModalResponseText.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && e.ctrlKey) {
+          saveEditResponse();
+        }
+      });
+    }
     
     // Letter actions
-    DOM.newLetterBtn.addEventListener('click', newLetter);
-    DOM.saveLetterBtn.addEventListener('click', saveLetterLocally);
-    DOM.downloadPdfBtn.addEventListener('click', downloadPdf);
+    if (DOM.newLetterBtn) DOM.newLetterBtn.addEventListener('click', newLetter);
+    if (DOM.saveLetterBtn) DOM.saveLetterBtn.addEventListener('click', saveLetterLocally);
+    if (DOM.downloadPdfBtn) DOM.downloadPdfBtn.addEventListener('click', downloadPdf);
 
     // Job ad parsing
     if (DOM.parseJobAdBtn) DOM.parseJobAdBtn.addEventListener('click', handleParseJobAd);
     if (DOM.fetchJobAdBtn) DOM.fetchJobAdBtn.addEventListener('click', handleFetchJobAdUrl);
     if (DOM.jobAdUrl) DOM.jobAdUrl.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); handleFetchJobAdUrl(); }});
+    
+    // AI features
+    DOM.aiExtractBtn = document.getElementById('aiExtractBtn');
+    DOM.aiGenerateBtn = document.getElementById('aiGenerateBtn');
+    if (DOM.aiExtractBtn) DOM.aiExtractBtn.addEventListener('click', handleAiExtract);
+    if (DOM.aiGenerateBtn) DOM.aiGenerateBtn.addEventListener('click', handleAiGenerate);
 
     // Header/Nav events
     if (DOM.themeToggleBtn) DOM.themeToggleBtn.addEventListener('click', toggleTheme);
@@ -2769,6 +3099,9 @@ ategory=user`, { headers: apiHeaders() });
     if (DOM.logoutBtn) DOM.logoutBtn.addEventListener('click', async () => { await handleLogout(); });
     if (DOM.authCancelBtn) DOM.authCancelBtn.addEventListener('click', hideAuthModal);
     if (DOM.authSubmitBtn) DOM.authSubmitBtn.addEventListener('click', handleAuthSubmit);
+    if (DOM.forgotPasswordBtn) DOM.forgotPasswordBtn.addEventListener('click', showResetPasswordModal);
+    if (DOM.resetSubmitBtn) DOM.resetSubmitBtn.addEventListener('click', handlePasswordReset);
+    if (DOM.resetCancelBtn) DOM.resetCancelBtn.addEventListener('click', hideResetPasswordModal);
 
     // Theme selection
     if (DOM.themeSelect) {
@@ -2838,12 +3171,27 @@ ategory=user`, { headers: apiHeaders() });
     DOM.overwriteJobFields = document.getElementById('overwriteJobFields');
     DOM.jobAdUrl = document.getElementById('jobAdUrl');
     DOM.fetchJobAdBtn = document.getElementById('fetchJobAdBtn');
+    DOM.aiExtractBtn = document.getElementById('aiExtractBtn');
+    DOM.aiGenerateBtn = document.getElementById('aiGenerateBtn');
     
     DOM.categoryUser = document.getElementById('category-user');
     DOM.categoryCrowd = document.getElementById('category-crowd');
     DOM.categoryAi = document.getElementById('category-ai');
-    DOM.newResponseText = document.getElementById('newResponseText');
-    DOM.addResponseBtn = document.getElementById('addResponseBtn');
+    
+    // Create response modal
+    DOM.createResponseModal = document.getElementById('createResponseModal');
+    DOM.modalResponseText = document.getElementById('modalResponseText');
+    DOM.modalSaveBtn = document.getElementById('modalSaveBtn');
+    DOM.modalCancelBtn = document.getElementById('modalCancelBtn');
+    DOM.modalError = document.getElementById('modalError');
+    DOM.addUserResponseBtn = document.getElementById('addUserResponseBtn');
+    
+    // Edit response modal
+    DOM.editResponseModal = document.getElementById('editResponseModal');
+    DOM.editModalResponseText = document.getElementById('editModalResponseText');
+    DOM.editModalSaveBtn = document.getElementById('editModalSaveBtn');
+    DOM.editModalCancelBtn = document.getElementById('editModalCancelBtn');
+    DOM.editModalError = document.getElementById('editModalError');
     
     DOM.letterArea = document.getElementById('letterArea');
     DOM.newLetterBtn = document.getElementById('newLetterBtn');
@@ -2864,20 +3212,31 @@ ategory=user`, { headers: apiHeaders() });
     DOM.logoutBtn = document.getElementById('logoutBtn');
     DOM.userBadge = document.getElementById('userBadge');
 
-    // Auth modal
-    DOM.authModal = document.getElementById('authModal');
+    // Auth landing (full-screen)
+    DOM.authModal = document.getElementById('authLanding') || document.getElementById('authModal');
     DOM.authUsername = document.getElementById('authUsername');
     DOM.authPassword = document.getElementById('authPassword');
     DOM.authCreate = document.getElementById('authCreate');
     DOM.authCancelBtn = document.getElementById('authCancelBtn');
     DOM.authSubmitBtn = document.getElementById('authSubmitBtn');
     DOM.authError = document.getElementById('authError');
+    DOM.forgotPasswordBtn = document.getElementById('forgotPasswordBtn');
+    
+    // Password reset modal
+    DOM.resetPasswordModal = document.getElementById('resetPasswordModal');
+    DOM.resetUsername = document.getElementById('resetUsername');
+    DOM.resetNewPassword = document.getElementById('resetNewPassword');
+    DOM.resetConfirmPassword = document.getElementById('resetConfirmPassword');
+    DOM.resetSubmitBtn = document.getElementById('resetSubmitBtn');
+    DOM.resetCancelBtn = document.getElementById('resetCancelBtn');
+    DOM.resetError = document.getElementById('resetError');
   }
 
   // Application Initialization
   function updateAuthUI() {
     const username = appState.authUser?.username;
-    if (username && DOM.userBadge && DOM.logoutBtn && DOM.authBtn) {
+    const signedIn = !!username;
+    if (signedIn && DOM.userBadge && DOM.logoutBtn && DOM.authBtn) {
       DOM.userBadge.style.display = '';
       DOM.userBadge.textContent = username;
       DOM.logoutBtn.style.display = '';
@@ -2887,26 +3246,38 @@ ategory=user`, { headers: apiHeaders() });
       if (DOM.logoutBtn) DOM.logoutBtn.style.display = 'none';
       if (DOM.authBtn) DOM.authBtn.style.display = '';
     }
+    // Gate the app with the auth landing overlay
+    if (DOM.authModal) {
+      if (signedIn) {
+        DOM.authModal.classList.add('hidden');
+      } else {
+        DOM.authError && (DOM.authError.textContent = '');
+        DOM.authUsername && (DOM.authUsername.value = '');
+        DOM.authPassword && (DOM.authPassword.value = '');
+        DOM.authCreate && (DOM.authCreate.checked = false);
+        DOM.authModal.classList.remove('hidden');
+      }
+    }
   }
 
   function showAuthModal() {
     if (!DOM.authModal) return;
-    DOM.authError.textContent = '';
-    DOM.authUsername.value = '';
-    DOM.authPassword.value = '';
-    DOM.authCreate.checked = false;
+    if (DOM.authError) DOM.authError.textContent = '';
+    if (DOM.authUsername) DOM.authUsername.value = '';
+    if (DOM.authPassword) DOM.authPassword.value = '';
+    if (DOM.authCreate) DOM.authCreate.checked = false;
     DOM.authModal.classList.remove('hidden');
   }
   function hideAuthModal() { if (DOM.authModal) DOM.authModal.classList.add('hidden'); }
 
   async function handleAuthSubmit() {
     try {
-      const u = (DOM.authUsername.value || '').trim();
-      const p = (DOM.authPassword.value || '').trim();
-      const create = !!DOM.authCreate.checked;
-      DOM.authError.textContent = '';
+      const u = (DOM.authUsername?.value || '').trim();
+      const p = (DOM.authPassword?.value || '').trim();
+      const create = !!(DOM.authCreate && DOM.authCreate.checked);
+      if (DOM.authError) DOM.authError.textContent = '';
       if (u.length < 3 || p.length < 6) {
-        DOM.authError.textContent = 'Username min 3 chars, Password min 6 chars';
+        if (DOM.authError) DOM.authError.textContent = 'Username min 3 chars, Password min 6 chars';
         return;
       }
       const res = create ? await apiRegister(u, p) : await apiLogin(u, p);
@@ -2919,7 +3290,79 @@ ategory=user`, { headers: apiHeaders() });
       // Load user responses
       await syncResponsesFromDb();
     } catch (e) {
-      DOM.authError.textContent = 'Authentication failed. Ensure server is running.';
+      console.error('Auth error:', e);
+      let errorMsg = 'Authentication failed.';
+      if (e.message) {
+        if (e.message.includes('Invalid credentials')) errorMsg = 'Invalid username or password.';
+        else if (e.message.includes('already exists')) errorMsg = 'Username already exists.';
+        else if (e.message.includes('fetch')) errorMsg = 'Cannot connect to server. Ensure it is running.';
+      }
+      if (DOM.authError) DOM.authError.textContent = errorMsg;
+    }
+  }
+
+  function showResetPasswordModal() {
+    if (!DOM.resetPasswordModal) return;
+    if (DOM.authModal) DOM.authModal.classList.add('hidden');
+    if (DOM.resetError) DOM.resetError.textContent = '';
+    if (DOM.resetUsername) DOM.resetUsername.value = '';
+    if (DOM.resetNewPassword) DOM.resetNewPassword.value = '';
+    if (DOM.resetConfirmPassword) DOM.resetConfirmPassword.value = '';
+    DOM.resetPasswordModal.classList.remove('hidden');
+  }
+
+  function hideResetPasswordModal() {
+    if (DOM.resetPasswordModal) DOM.resetPasswordModal.classList.add('hidden');
+    if (DOM.authModal) DOM.authModal.classList.remove('hidden');
+  }
+
+  async function handlePasswordReset() {
+    try {
+      const u = (DOM.resetUsername?.value || '').trim();
+      const p1 = (DOM.resetNewPassword?.value || '').trim();
+      const p2 = (DOM.resetConfirmPassword?.value || '').trim();
+      
+      if (DOM.resetError) DOM.resetError.textContent = '';
+      
+      if (!u || u.length < 3) {
+        if (DOM.resetError) DOM.resetError.textContent = 'Please enter your username';
+        return;
+      }
+      
+      if (p1.length < 6) {
+        if (DOM.resetError) DOM.resetError.textContent = 'Password must be at least 6 characters';
+        return;
+      }
+      
+      if (p1 !== p2) {
+        if (DOM.resetError) DOM.resetError.textContent = 'Passwords do not match';
+        return;
+      }
+      
+      const response = await fetch(`${API_BASE}/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: u, newPassword: p1 })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to reset password');
+      }
+      
+      // Success
+      alert('Password reset successfully! Please sign in with your new password.');
+      hideResetPasswordModal();
+    } catch (e) {
+      console.error('Password reset error:', e);
+      let errorMsg = 'Failed to reset password.';
+      if (e.message) {
+        if (e.message.includes('not found')) errorMsg = 'Username not found.';
+        else if (e.message.includes('fetch')) errorMsg = 'Cannot connect to server.';
+        else errorMsg = e.message;
+      }
+      if (DOM.resetError) DOM.resetError.textContent = errorMsg;
     }
   }
 
@@ -2943,8 +3386,22 @@ ategory=user`, { headers: apiHeaders() });
     loadResumeStatus();
     renderResponses();
     setupLetterBuilder();
+    restoreCurrentLetter(); // Restore in-progress letter
     setupResumeUpload();
     setupEventListeners();
+
+    // Auth UI gate
+    updateAuthUI();
+
+    // Check AI status and disable buttons if quota exceeded
+    const aiStatus = await checkAiStatus();
+    if (aiStatus.quotaExceeded) {
+      disableAiButtons();
+      if (DOM.jobAdParseStatus) {
+        DOM.jobAdParseStatus.textContent = '⚠️ AI features currently unavailable (quota exceeded)';
+        DOM.jobAdParseStatus.className = 'job-ad-status error';
+      }
+    }
 
     // Update DB status badge initially and periodically
     updateDbStatusBadge();

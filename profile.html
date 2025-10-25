@@ -62,10 +62,11 @@
     </main>
   </div>
 
-  <!-- Auth Modal -->
-  <div id="authModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="authTitle">
-    <div class="modal-content">
-      <h3 id="authTitle">Sign In</h3>
+  <!-- Auth Landing (full-screen) -->
+  <div id="authLanding" class="auth-landing hidden" aria-live="polite">
+    <div class="auth-card">
+      <h1>Welcome to Click Cover Letter Creator</h1>
+      <p class="subtle">Sign in or create an account to continue</p>
       <label>Username
         <input type="text" id="authUsername" autocomplete="username" />
       </label>
@@ -73,11 +74,33 @@
         <input type="password" id="authPassword" autocomplete="current-password" />
       </label>
       <label class="inline"><input type="checkbox" id="authCreate" /> Create new account</label>
-      <div class="modal-actions">
-        <button id="authCancelBtn">Cancel</button>
+      <div class="auth-actions">
         <button id="authSubmitBtn">Continue</button>
+        <button type="button" id="forgotPasswordBtn" class="link-btn">Forgot Password?</button>
       </div>
-      <div id="authError" class="modal-error" aria-live="polite"></div>
+      <div id="authError" class="auth-error" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <!-- Password Reset Modal -->
+  <div id="resetPasswordModal" class="auth-landing hidden" aria-live="polite">
+    <div class="auth-card">
+      <h1>Reset Password</h1>
+      <p class="subtle">Enter your username to reset your password</p>
+      <label>Username
+        <input type="text" id="resetUsername" autocomplete="username" />
+      </label>
+      <label>New Password
+        <input type="password" id="resetNewPassword" autocomplete="new-password" />
+      </label>
+      <label>Confirm Password
+        <input type="password" id="resetConfirmPassword" autocomplete="new-password" />
+      </label>
+      <div class="auth-actions">
+        <button id="resetSubmitBtn">Reset Password</button>
+        <button type="button" id="resetCancelBtn" class="link-btn">Back to Sign In</button>
+      </div>
+      <div id="resetError" class="auth-error" aria-live="polite"></div>
     </div>
   </div>
 
