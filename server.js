@@ -2,6 +2,8 @@
 // Run with: node server.js
 // Requires: npm i express cors better-sqlite3
 
+require('dotenv').config();
+
 const path = require('path');
 const fs = require('fs');
 const express = require('express');
