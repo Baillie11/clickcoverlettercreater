@@ -2282,6 +2282,12 @@
     const tagsStr = tagsInput ? tagsInput.value.trim() : '';
     const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(t => t.length > 0) : [];
     
+    // Validate at least one tag is present
+    if (tags.length === 0) {
+      if (DOM.modalError) DOM.modalError.textContent = 'Please add at least one tag to organize your response.';
+      return;
+    }
+    
     const newResponse = {
       id: generateId(),
       text: text,
@@ -2361,6 +2367,12 @@
     const tagsInput = document.getElementById('editModalResponseTags');
     const tagsStr = tagsInput ? tagsInput.value.trim() : '';
     const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(t => t.length > 0) : [];
+    
+    // Validate at least one tag is present
+    if (tags.length === 0) {
+      if (DOM.editModalError) DOM.editModalError.textContent = 'Please add at least one tag to organize your response.';
+      return;
+    }
     
     const response = appState.responses.find(r => r.id === currentEditingResponseId);
     if (response) {
