@@ -245,9 +245,9 @@ body {
 }
 
 /* Modal */
-.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 2000; backdrop-filter: blur(2px); }
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 2000; backdrop-filter: blur(2px); padding: 20px; overflow-y: auto; }
 .modal.hidden { display: none; }
-.modal-content { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 14px; padding: 24px; width: 90%; max-width: 520px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+.modal-content { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 14px; padding: 24px; width: 90%; max-width: 520px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); margin: auto; }
 .modal-content h3 { margin-top: 0; margin-bottom: 16px; font-size: 1.4rem; }
 .modal-content textarea { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 10px; font-family: inherit; font-size: 1rem; margin-top: 12px; resize: vertical; min-height: 120px; }
 .modal-content textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.2); }
