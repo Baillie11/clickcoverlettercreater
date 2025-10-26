@@ -3399,7 +3399,12 @@
 
     // Auth controls
     if (DOM.authBtn) DOM.authBtn.addEventListener('click', () => { showAuthModal(); });
-    if (DOM.logoutBtn) DOM.logoutBtn.addEventListener('click', async () => { await handleLogout(); });
+    if (DOM.logoutLink) {
+      DOM.logoutLink.addEventListener('click', async (e) => { 
+        e.preventDefault(); 
+        await handleLogout(); 
+      });
+    }
     if (DOM.authCancelBtn) DOM.authCancelBtn.addEventListener('click', hideAuthModal);
     if (DOM.authSubmitBtn) DOM.authSubmitBtn.addEventListener('click', handleAuthSubmit);
     if (DOM.forgotPasswordBtn) DOM.forgotPasswordBtn.addEventListener('click', showResetPasswordModal);
@@ -3529,8 +3534,8 @@
     DOM.syncResponsesBtn = document.getElementById('syncResponsesBtn');
     DOM.themeToggleBtn = document.getElementById('themeToggleBtn');
     DOM.authBtn = document.getElementById('authBtn');
-    DOM.logoutBtn = document.getElementById('logoutBtn');
-    DOM.userBadge = document.getElementById('userBadge');
+    DOM.logoutLink = document.getElementById('logoutLink');
+    DOM.userSection = document.getElementById('userSection');
     DOM.welcomeMessage = document.getElementById('welcomeMessage');
 
     // Auth landing (full-screen)
@@ -3559,22 +3564,16 @@
     const signedIn = !!username;
     
     if (signedIn) {
-      // Show welcome message with first name if available
+      // Show user section with welcome message
+      if (DOM.userSection) DOM.userSection.style.display = 'flex';
       if (DOM.welcomeMessage) {
         const firstName = appState.profile?.firstName || username;
         DOM.welcomeMessage.textContent = `Welcome back, ${firstName}`;
-        DOM.welcomeMessage.style.display = '';
       }
-      
-      // Hide old user badge
-      if (DOM.userBadge) DOM.userBadge.style.display = 'none';
-      
-      if (DOM.logoutBtn) DOM.logoutBtn.style.display = '';
       if (DOM.authBtn) DOM.authBtn.style.display = 'none';
     } else {
-      if (DOM.welcomeMessage) DOM.welcomeMessage.style.display = 'none';
-      if (DOM.userBadge) DOM.userBadge.style.display = 'none';
-      if (DOM.logoutBtn) DOM.logoutBtn.style.display = 'none';
+      // Show auth button, hide user section
+      if (DOM.userSection) DOM.userSection.style.display = 'none';
       if (DOM.authBtn) DOM.authBtn.style.display = '';
     }
     // Gate the app with the auth landing overlay

@@ -439,20 +439,78 @@ body.theme-dark .auth-card { background: #141a2a; color: #e8edf7; border-color: 
 body.theme-dark .auth-card .field-hint { color: #999; }
 
 /* Header nav */
-.app-nav { margin-top: 6px; display: flex; align-items: center; gap: 10px; justify-content: center; }
-.app-nav a { color: #fff; text-decoration: none; margin: 0 8px; opacity: 0.9; padding-bottom: 2px; }
-.app-nav a.active { font-weight: 600; opacity: 1; border-bottom: 2px solid #fff; }
+.app-nav { 
+  margin-top: 6px; 
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between;
+  gap: 20px;
+  width: 100%;
+}
+
+.nav-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.app-nav a { 
+  color: #fff; 
+  text-decoration: none; 
+  opacity: 0.9; 
+  padding-bottom: 2px; 
+}
+
+.app-nav a.active { 
+  font-weight: 600; 
+  opacity: 1; 
+  border-bottom: 2px solid #fff; 
+}
+
 .app-nav a:hover { opacity: 1; }
-.nav-btn { background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.25); border-radius: 20px; padding: 6px 10px; cursor: pointer; box-shadow: none; }
+
+.nav-btn { 
+  background: rgba(255,255,255,0.15); 
+  color: #fff; 
+  border: 1px solid rgba(255,255,255,0.25); 
+  border-radius: 20px; 
+  padding: 6px 10px; 
+  cursor: pointer; 
+  box-shadow: none; 
+}
+
 .nav-btn:hover { background: rgba(255,255,255,0.25); }
-.welcome-message {
-  color: #fff;
-  font-weight: 500;
-  padding: 6px 12px;
-  background: rgba(255,255,255,0.12);
-  border-radius: 20px;
+
+.user-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.welcome-text {
+  color: rgba(255,255,255,0.95);
   font-size: 0.95rem;
-  white-space: nowrap;
+  font-weight: 400;
+}
+
+.logout-link {
+  color: rgba(255,255,255,0.85);
+  text-decoration: none;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.logout-link:hover {
+  color: #fff;
+  text-decoration: underline;
 }
 
 .db-badge { display: inline-flex; align-items: center; gap: 6px; color: #fff; font-weight: 500; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); padding: 4px 10px; border-radius: 14px; }
