@@ -256,6 +256,25 @@ body {
 .modal-content .inline { display: flex; align-items: center; gap: 8px; }
 
 /* Preset Tags */
+.tag-help-text {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 5px 0;
+  padding: 8px 10px;
+  background: rgba(255, 193, 7, 0.1);
+  border-left: 3px solid #ffc107;
+  border-radius: 4px;
+}
+
+.tag-help-text strong {
+  color: var(--text);
+}
+
+body.theme-dark .tag-help-text {
+  background: rgba(255, 193, 7, 0.15);
+  color: #d4d9e3;
+}
+
 .preset-tags {
   display: flex;
   flex-wrap: wrap;

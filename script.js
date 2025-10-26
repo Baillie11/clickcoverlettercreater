@@ -2034,7 +2034,20 @@
     const addBtn = document.getElementById('addUserResponseBtn');
     if (addBtn) addBtn.addEventListener('click', showCreateResponseModal);
 
-    appState.responses.forEach(response => {
+    // Sort responses by first tag, then by creation date
+    const sortedResponses = [...appState.responses].sort((a, b) => {
+      const aFirstTag = (a.tags && a.tags.length > 0) ? a.tags[0].toLowerCase() : 'zzz';
+      const bFirstTag = (b.tags && b.tags.length > 0) ? b.tags[0].toLowerCase() : 'zzz';
+      
+      if (aFirstTag !== bFirstTag) {
+        return aFirstTag.localeCompare(bFirstTag);
+      }
+      
+      // If same first tag (or both have no tags), maintain original order
+      return 0;
+    });
+
+    sortedResponses.forEach(response => {
       // Apply search filter
       if (!matchesSearch(response, currentSearchQuery)) return;
       
