@@ -28,7 +28,7 @@ body {
   width: 100%;
   background: linear-gradient(120deg, #151a6a 0%, #6c63ff 50%, #18c4a5 100%);
   color: #fff;
-  padding: 16px 30px 20px;
+  padding: 16px 40px 20px;
   box-shadow: 0 12px 28px rgba(108, 99, 255, 0.32);
   position: fixed;
   top: 0;
@@ -491,8 +491,7 @@ body.theme-dark .auth-card .field-hint { color: #999; }
 .user-section {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-right: 16px;
+  gap: 20px;
 }
 
 .welcome-text {
@@ -500,9 +499,6 @@ body.theme-dark .auth-card .field-hint { color: #999; }
   font-size: 0.95rem;
   font-weight: 400;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 200px;
 }
 
 .logout-link {
