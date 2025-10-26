@@ -498,7 +498,8 @@
             text: r.text,
             category: r.category || 'user',
             userCreated: !!r.userCreated,
-            source: r.source || null
+            source: r.source || null,
+            tags: r.tags || []
           }));
           // Cache to localStorage as well
           localStorage.setItem('responses', JSON.stringify(appState.responses));
