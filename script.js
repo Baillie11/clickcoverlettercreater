@@ -3375,6 +3375,47 @@
     updateAuthUI();
   }
 
+  // Company Names Management
+  function loadCompanyNames() {
+    const saved = localStorage.getItem('companyNames');
+    return saved ? JSON.parse(saved) : [];
+  }
+
+  function saveCompanyName(companyName) {
+    if (!companyName || companyName.trim().length === 0) return;
+    const normalized = companyName.trim();
+    let companies = loadCompanyNames();
+    
+    // Add if not already in list (case-insensitive check)
+    if (!companies.some(c => c.toLowerCase() === normalized.toLowerCase())) {
+      companies.push(normalized);
+      companies.sort(); // Keep alphabetically sorted
+      localStorage.setItem('companyNames', JSON.stringify(companies));
+      updateCompanyDatalist();
+    }
+  }
+
+  function updateCompanyDatalist() {
+    const datalist = document.getElementById('companyNameList');
+    if (!datalist) return;
+    
+    const companies = loadCompanyNames();
+    datalist.innerHTML = companies.map(name => `<option value="${name}"></option>`).join('');
+  }
+
+  function setupCompanyNameWatcher() {
+    const companyInput = document.getElementById('companyName');
+    if (!companyInput) return;
+    
+    // Save company name when user moves away from the field (blur event)
+    companyInput.addEventListener('blur', () => {
+      const value = companyInput.value.trim();
+      if (value) {
+        saveCompanyName(value);
+      }
+    });
+  }
+
   async function initializeApp() {
     initializeDOM();
     await loadAppState();
@@ -3389,6 +3430,10 @@
     restoreCurrentLetter(); // Restore in-progress letter
     setupResumeUpload();
     setupEventListeners();
+    
+    // Initialize company names dropdown
+    updateCompanyDatalist();
+    setupCompanyNameWatcher();
 
     // Auth UI gate
     updateAuthUI();
