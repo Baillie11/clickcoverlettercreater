@@ -24,8 +24,23 @@ let aiQuotaExceededAt = null;
 const app = express();
 const PORT = process.env.PORT || 5050;
 
-app.use(cors({ origin: true }));
+// Production-ready CORS configuration
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production' 
+    ? [process.env.FRONTEND_URL, 'https://your-domain.com'] // Update with your domain
+    : true,
+  credentials: true
+};
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '1mb' }));
+
+// Disable caching for development
+app.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
 
 // Serve static files
 app.use(express.static(__dirname));
@@ -91,6 +106,14 @@ if (db) {
     // Ensure tags column exists (migration)
     if (!cols.some(c => c.name === 'tags')) {
       db.prepare('ALTER TABLE responses ADD COLUMN tags TEXT').run();
+    }
+  } catch {}
+
+  // Ensure shareResponses column exists in users (migration)
+  try {
+    const userCols = db.prepare("PRAGMA table_info('users')").all();
+    if (!userCols.some(c => c.name === 'shareResponses')) {
+      db.prepare('ALTER TABLE users ADD COLUMN shareResponses INTEGER DEFAULT 1').run();
     }
   } catch {}
 }
@@ -271,6 +294,42 @@ app.post('/auth/reset-password', (req, res) => {
   }
 });
 
+// Get/update user preferences
+app.get('/user/preferences', (req, res) => {
+  const auth = getUserFromAuth(req);
+  if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+  try {
+    let user;
+    if (db) user = db.prepare('SELECT shareResponses FROM users WHERE id = ?').get(auth.user.id);
+    else user = store.users.find(u => u.id === auth.user.id);
+    res.json({ shareResponses: user?.shareResponses ?? 1 });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to fetch preferences' });
+  }
+});
+
+app.put('/user/preferences', (req, res) => {
+  const auth = getUserFromAuth(req);
+  if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+  const { shareResponses } = req.body || {};
+  try {
+    if (db) {
+      db.prepare('UPDATE users SET shareResponses = ? WHERE id = ?').run(shareResponses ? 1 : 0, auth.user.id);
+    } else {
+      const user = store.users.find(u => u.id === auth.user.id);
+      if (user) {
+        user.shareResponses = shareResponses ? 1 : 0;
+        saveStore();
+      }
+    }
+    res.json({ success: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to update preferences' });
+  }
+});
+
 // List responses (optionally filter by category) — requires auth
 app.get('/responses', (req, res) => {
   const auth = getUserFromAuth(req);
@@ -288,6 +347,33 @@ app.get('/responses', (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Failed to fetch responses' });
+  }
+});
+
+// Get crowd-sourced responses (other users' shared responses) — requires auth
+app.get('/responses/crowd', (req, res) => {
+  const auth = getUserFromAuth(req);
+  if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+  try {
+    let rows;
+    if (db) {
+      // Get responses from users who have shareResponses enabled, excluding current user
+      rows = db.prepare(`
+        SELECT r.* FROM responses r
+        INNER JOIN users u ON r.userId = u.id
+        WHERE u.shareResponses = 1 AND r.userId != ? AND r.userCreated = 1
+        ORDER BY r.createdAt DESC
+        LIMIT 100
+      `).all(auth.user.id);
+    } else {
+      // JSON store fallback
+      const sharingUsers = store.users.filter(u => (u.shareResponses ?? 1) === 1 && u.id !== auth.user.id).map(u => u.id);
+      rows = store.responses.filter(r => r.userCreated && sharingUsers.includes(r.userId));
+    }
+    res.json(rows.map(rowToResponse));
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to fetch crowd-sourced responses' });
   }
 });
 

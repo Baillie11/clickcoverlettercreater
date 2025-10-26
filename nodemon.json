@@ -1,0 +1,13 @@
+{
+  "watch": ["server.js"],
+  "ext": "js,json",
+  "ignore": [
+    "node_modules",
+    "index.html",
+    "profile.html",
+    "styles.css",
+    "script.js",
+    "data.db",
+    "data.json"
+  ]
+}

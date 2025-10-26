@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Click Cover Letter Creator</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=2" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.11.2/html2pdf.bundle.min.js"></script>
@@ -122,10 +122,12 @@
       <h1>Welcome to Click Cover Letter Creator</h1>
       <p class="subtle">Sign in or create an account to continue</p>
       <label>Username
-        <input type="text" id="authUsername" autocomplete="username" />
+        <input type="text" id="authUsername" autocomplete="username" placeholder="e.g. john.doe or email@example.com" />
+        <small class="field-hint">Minimum 3 characters. Can be alphanumeric, email, or any format you prefer.</small>
       </label>
       <label>Password
         <input type="password" id="authPassword" autocomplete="current-password" />
+        <small class="field-hint">Minimum 6 characters required.</small>
       </label>
       <label class="inline"><input type="checkbox" id="authCreate" /> Create new account</label>
       <div class="auth-actions">

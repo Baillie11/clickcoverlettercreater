@@ -600,7 +600,10 @@
   }
 
   // Backend API (local) for persisting user responses
-  const API_BASE = 'http://localhost:5050';
+  // Use environment variable or fallback to localhost
+  const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:5050'
+    : (window.ENV_API_BASE || 'https://your-backend.herokuapp.com'); // Deploy backend and update this
   let authToken = null;
   const API_TIMEOUT_MS = 3000;
   let apiHealthy = null; // null=unknown, true=ok, false=down
@@ -694,14 +697,16 @@
         badge.classList.add('online');
         badge.classList.remove('offline');
       } else {
-        badge.textContent = 'DB Offline';
+        badge.textContent = 'Local Only';
         badge.classList.add('offline');
         badge.classList.remove('online');
+        badge.title = 'Using browser storage only. Backend server not available.';
       }
     } catch {
-      badge.textContent = 'DB Offline';
+      badge.textContent = 'Local Only';
       badge.classList.add('offline');
       badge.classList.remove('online');
+      badge.title = 'Using browser storage only. Backend server not available.';
     }
   }
 
@@ -724,20 +729,73 @@
     try { await fetchWithTimeout(`${API_BASE}/auth/logout`, { method: 'POST', headers: apiHeaders() }); } catch {}
   }
 
+  async function apiGetCrowdResponses() {
+    const healthy = await apiHealthCheck();
+    if (!healthy) throw new Error('API offline');
+    const r = await fetchWithTimeout(`${API_BASE}/responses/crowd`, { headers: apiHeaders() });
+    if (!r.ok) throw new Error(`GET crowd failed ${r.status}`);
+    const list = await r.json();
+    return Array.isArray(list) ? list : [];
+  }
+
+  async function apiGetUserPreferences() {
+    const healthy = await apiHealthCheck();
+    if (!healthy) throw new Error('API offline');
+    const r = await fetchWithTimeout(`${API_BASE}/user/preferences`, { headers: apiHeaders() });
+    if (!r.ok) throw new Error(`GET preferences failed ${r.status}`);
+    return await r.json();
+  }
+
+  async function apiUpdateUserPreferences(preferences) {
+    const healthy = await apiHealthCheck();
+    if (!healthy) throw new Error('API offline');
+    const r = await fetchWithTimeout(`${API_BASE}/user/preferences`, {
+      method: 'PUT',
+      headers: apiHeaders(),
+      body: JSON.stringify(preferences)
+    });
+    if (!r.ok) throw new Error(`PUT preferences failed ${r.status}`);
+    return await r.json();
+  }
+
   async function syncResponsesFromDb() {
     try {
+      // Get user's own responses
       const list = await apiGetResponsesAll();
+      let allResponses = [];
+      
       if (Array.isArray(list)) {
-        appState.responses = list.map(r => ({
+        allResponses = list.map(r => ({
           id: r.id,
           text: r.text,
           category: r.category || 'user',
           userCreated: !!r.userCreated,
-          source: r.source || null
+          source: r.source || null,
+          tags: r.tags || []
         }));
-        localStorage.setItem('responses', JSON.stringify(appState.responses));
-        renderResponses();
       }
+      
+      // Get crowd-sourced responses from other users
+      try {
+        const crowdList = await apiGetCrowdResponses();
+        if (Array.isArray(crowdList)) {
+          const crowdResponses = crowdList.map(r => ({
+            id: r.id,
+            text: r.text,
+            category: 'crowd', // Force crowd category
+            userCreated: false, // Not editable by current user
+            source: r.source || 'crowd',
+            tags: r.tags || []
+          }));
+          allResponses = allResponses.concat(crowdResponses);
+        }
+      } catch (e) {
+        console.warn('Unable to fetch crowd-sourced responses:', e.message || e);
+      }
+      
+      appState.responses = allResponses;
+      localStorage.setItem('responses', JSON.stringify(appState.responses));
+      renderResponses();
     } catch (e) {
       alert('Unable to sync from database. Is the server running?');
     }
@@ -3676,6 +3734,38 @@
     });
   }
 
+  async function loadUserPreferences() {
+    const checkbox = document.getElementById('shareResponsesCheckbox');
+    if (!checkbox) return; // Not on profile page
+    
+    try {
+      const prefs = await apiGetUserPreferences();
+      checkbox.checked = prefs.shareResponses !== 0; // Default to true (1)
+    } catch (e) {
+      console.warn('Could not load preferences:', e.message || e);
+      checkbox.checked = true; // Default to sharing enabled
+    }
+  }
+
+  async function saveUserPreferences() {
+    const checkbox = document.getElementById('shareResponsesCheckbox');
+    if (!checkbox) return;
+    
+    try {
+      await apiUpdateUserPreferences({ shareResponses: checkbox.checked });
+      console.log('Preferences saved');
+    } catch (e) {
+      console.warn('Could not save preferences:', e.message || e);
+    }
+  }
+
+  function setupSharingPreferenceListener() {
+    const checkbox = document.getElementById('shareResponsesCheckbox');
+    if (!checkbox) return;
+    
+    checkbox.addEventListener('change', saveUserPreferences);
+  }
+
   async function initializeApp() {
     initializeDOM();
     await loadAppState();
@@ -3690,6 +3780,10 @@
     restoreCurrentLetter(); // Restore in-progress letter
     setupResumeUpload();
     setupEventListeners();
+    
+    // Load and setup sharing preferences (profile page only)
+    await loadUserPreferences();
+    setupSharingPreferenceListener();
     
     // Initialize company names dropdown
     updateCompanyDatalist();

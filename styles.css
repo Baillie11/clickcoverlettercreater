@@ -425,6 +425,7 @@ body.theme-dark .modal-actions button.secondary-btn:hover { background: rgba(255
 .auth-card .subtle { margin: 0 0 12px; color: var(--muted); }
 .auth-card label { display: block; margin: 10px 0; font-size: 0.95rem; }
 .auth-card input[type="text"], .auth-card input[type="password"] { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
+.auth-card .field-hint { display: block; margin-top: 4px; font-size: 0.85rem; color: #666; line-height: 1.4; }
 .auth-card .inline { display: flex; align-items: center; gap: 8px; }
 .auth-actions { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 12px; }
 .auth-actions button { padding: 10px 16px; border: none; background: var(--primary); color: #fff; border-radius: 10px; cursor: pointer; box-shadow: var(--shadow); }
@@ -435,6 +436,7 @@ body.theme-dark .modal-actions button.secondary-btn:hover { background: rgba(255
 
 /* Dark theme overrides for auth landing */
 body.theme-dark .auth-card { background: #141a2a; color: #e8edf7; border-color: #22304c; }
+body.theme-dark .auth-card .field-hint { color: #999; }
 
 /* Header nav */
 .app-nav { margin-top: 6px; display: flex; align-items: center; gap: 10px; justify-content: center; }
@@ -638,11 +640,32 @@ body.theme-dark .placeholder-guide code {
 }
 #jobAdText {
   width: 100%;
-  min-height: 120px;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  min-height: 200px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
   resize: vertical;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  background: #fff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#jobAdText:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.2);
+}
+
+body.theme-dark #jobAdText {
+  background: #0e111a;
+  color: #e8edf7;
+  border-color: #22304c;
+}
+
+body.theme-dark #jobAdText:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(139, 132, 255, 0.3);
 }
 .job-ad-url {
   margin-top: 8px;
@@ -743,6 +766,77 @@ body.theme-dark .response { background: #161d2e; border-color: #22304c; }
 body.theme-dark .job-ad-status { background: #101623; border-color: #22304c; color: #dbe6ff; }
 body.theme-dark .nav-btn, body.theme-dark .db-badge { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
 body.theme-dark .modal-content { background: #141a2a; color: #e8edf7; border-color: #22304c; }
+
+/* Sharing Preferences Section */
+.sharing-preferences-section {
+  margin-top: 25px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.sharing-preferences-section h4 {
+  margin-bottom: 12px;
+  color: var(--text);
+  font-size: 1.1rem;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 12px;
+  background: rgba(108, 99, 255, 0.05);
+  border: 1px solid rgba(108, 99, 255, 0.2);
+  border-radius: 10px;
+  transition: all 0.2s ease;
+}
+
+.checkbox-label:hover {
+  background: rgba(108, 99, 255, 0.1);
+  border-color: rgba(108, 99, 255, 0.3);
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  margin: 0;
+}
+
+.checkbox-label span {
+  font-size: 0.95rem;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.preference-hint {
+  margin-top: 10px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.5;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.02);
+  border-left: 3px solid var(--primary);
+  border-radius: 4px;
+}
+
+body.theme-dark .sharing-preferences-section {
+  border-top-color: #22304c;
+}
+
+body.theme-dark .checkbox-label {
+  background: rgba(108, 99, 255, 0.1);
+  border-color: rgba(108, 99, 255, 0.25);
+}
+
+body.theme-dark .checkbox-label:hover {
+  background: rgba(108, 99, 255, 0.15);
+}
+
+body.theme-dark .preference-hint {
+  background: rgba(255, 255, 255, 0.03);
+}
 
 /* Resume Upload Section */
 .resume-upload-section {
