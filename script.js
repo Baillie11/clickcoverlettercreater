@@ -1923,6 +1923,9 @@
   // Response Management
   let currentSearchQuery = '';
   
+  // Common tags that should be highlighted
+  const COMMON_TAGS = ['Introduction', 'Closing', 'Skills', 'Experience', 'Education / Qualifications'];
+  
   // Preset tags for quick selection (alphabetically sorted)
   const PRESET_TAGS = [
     'Achievements / Awards',
@@ -1967,6 +1970,12 @@
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'preset-tag-btn';
+      
+      // Add 'common' class to frequently used tags
+      if (COMMON_TAGS.includes(tag)) {
+        btn.classList.add('common');
+      }
+      
       btn.textContent = tag;
       btn.onclick = () => togglePresetTag(tag, input, btn);
       container.appendChild(btn);

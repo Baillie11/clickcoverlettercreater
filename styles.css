@@ -349,6 +349,25 @@ body.theme-dark .tag-help-text {
   border-color: var(--primary);
 }
 
+/* Common/Highlighted tags */
+.preset-tag-btn.common {
+  background: rgba(46, 204, 113, 0.15);
+  color: #27ae60;
+  border-color: rgba(46, 204, 113, 0.4);
+  font-weight: 600;
+}
+
+.preset-tag-btn.common:hover {
+  background: rgba(46, 204, 113, 0.25);
+  box-shadow: 0 2px 6px rgba(46, 204, 113, 0.3);
+}
+
+.preset-tag-btn.common.active {
+  background: #27ae60;
+  color: white;
+  border-color: #27ae60;
+}
+
 body.theme-dark .preset-tags {
   background: rgba(108, 99, 255, 0.08);
   border-color: #22304c;
@@ -357,6 +376,12 @@ body.theme-dark .preset-tags {
 body.theme-dark .preset-tag-btn {
   background: rgba(108, 99, 255, 0.15);
   border-color: rgba(108, 99, 255, 0.3);
+}
+
+body.theme-dark .preset-tag-btn.common {
+  background: rgba(46, 204, 113, 0.2);
+  color: #2ecc71;
+  border-color: rgba(46, 204, 113, 0.5);
 }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
 .modal-actions button { padding: 10px 20px; border: none; border-radius: 10px; cursor: pointer; font-size: 0.95rem; transition: all 0.2s ease; }
