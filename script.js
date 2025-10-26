@@ -3343,7 +3343,33 @@
       jsPDF: { unit: 'in', format: pageSize === 'a4' ? 'a4' : 'letter', orientation: 'portrait' }
     };
 
-    html2pdf().set(opt).from(el).save();
+    // Generate and save PDF, then auto-save letter and clear for next one
+    html2pdf().set(opt).from(el).save().then(() => {
+      // Auto-save the letter locally
+      saveLetterLocally();
+      
+      // Clear the letter area for next letter
+      DOM.letterArea.innerHTML = '<p class="placeholder">Drag responses here to build your letter</p>';
+      appState.currentLetter.paragraphs = [];
+      
+      // Clear job form
+      DOM.roleTitle.value = '';
+      DOM.companyName.value = '';
+      DOM.contactPerson.value = '';
+      DOM.businessAddress.value = '';
+      DOM.refNumber.value = '';
+      
+      // Clear salutation preview
+      updateSalutationPreview();
+      
+      // Clear saved letter state
+      localStorage.removeItem('currentLetter');
+      
+      console.log('PDF downloaded, letter saved, and form cleared for next letter');
+    }).catch((error) => {
+      console.error('PDF generation failed:', error);
+      alert('Failed to generate PDF. Please try again.');
+    });
   }
 
   // Event Listeners Setup
