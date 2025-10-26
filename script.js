@@ -1919,6 +1919,91 @@
 
   // Response Management
   let currentSearchQuery = '';
+  
+  // Preset tags for quick selection
+  const PRESET_TAGS = [
+    'Introduction',
+    'Closing',
+    'Skills',
+    'Experience',
+    'Availability',
+    'Education / Qualifications',
+    'Motivation / Why this role',
+    'Why this company',
+    'Career Goals / Aspirations',
+    'Achievements / Awards',
+    'Volunteering / Community',
+    'Languages',
+    'References / Endorsements',
+    'Professional Memberships',
+    'Start Date',
+    'Work Preferences',
+    'Location / Relocation',
+    'Travel Availability',
+    'Remote / Hybrid',
+    'Technical Skills',
+    'Soft Skills',
+    'Leadership',
+    'Teamwork',
+    'Problem Solving',
+    'Communication',
+    'Industry Knowledge',
+    'Certifications',
+    'Projects',
+    'Publications'
+  ];
+  
+  function renderPresetTags(containerId, targetInputId) {
+    const container = document.getElementById(containerId);
+    const input = document.getElementById(targetInputId);
+    if (!container || !input) return;
+    
+    container.innerHTML = '';
+    
+    PRESET_TAGS.forEach(tag => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'preset-tag-btn';
+      btn.textContent = tag;
+      btn.onclick = () => togglePresetTag(tag, input, btn);
+      container.appendChild(btn);
+    });
+  }
+  
+  function togglePresetTag(tag, input, btn) {
+    const currentTags = input.value.split(',').map(t => t.trim()).filter(t => t.length > 0);
+    const tagIndex = currentTags.findIndex(t => t.toLowerCase() === tag.toLowerCase());
+    
+    if (tagIndex > -1) {
+      // Remove tag
+      currentTags.splice(tagIndex, 1);
+      btn.classList.remove('active');
+    } else {
+      // Add tag
+      currentTags.push(tag);
+      btn.classList.add('active');
+    }
+    
+    input.value = currentTags.join(', ');
+  }
+  
+  function updatePresetTagsState(containerId, targetInputId) {
+    const container = document.getElementById(containerId);
+    const input = document.getElementById(targetInputId);
+    if (!container || !input) return;
+    
+    const currentTags = input.value.split(',').map(t => t.trim().toLowerCase()).filter(t => t.length > 0);
+    const buttons = container.querySelectorAll('.preset-tag-btn');
+    
+    buttons.forEach(btn => {
+      const tagName = btn.textContent.toLowerCase();
+      if (currentTags.includes(tagName)) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+  }
 
   function filterResponses(searchQuery) {
     currentSearchQuery = searchQuery.toLowerCase().trim();
@@ -2029,6 +2114,10 @@
     const tagsInput = document.getElementById('modalResponseTags');
     if (tagsInput) tagsInput.value = '';
     if (DOM.modalError) DOM.modalError.textContent = '';
+    
+    // Render preset tags
+    renderPresetTags('createPresetTags', 'modalResponseTags');
+    
     DOM.createResponseModal.classList.remove('hidden');
     setTimeout(() => DOM.modalResponseText?.focus(), 100);
   }
@@ -2086,6 +2175,10 @@
     if (tagsInput) {
       tagsInput.value = response.tags ? response.tags.join(', ') : '';
     }
+    
+    // Render preset tags and update their state
+    renderPresetTags('editPresetTags', 'editModalResponseTags');
+    setTimeout(() => updatePresetTagsState('editPresetTags', 'editModalResponseTags'), 10);
     
     if (DOM.editModalError) DOM.editModalError.textContent = '';
     DOM.editResponseModal.classList.remove('hidden');
