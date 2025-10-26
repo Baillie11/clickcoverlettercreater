@@ -583,6 +583,8 @@
       // Address
       'business address': val(DOM.businessAddress?.value),
       'address':          val(DOM.businessAddress?.value),
+      // Industry (extracted from job ad or manually entered)
+      'industry':         '',  // Can be populated from job ad parsing
       // User contact details
       'phone':            val(DOM.phoneNumber?.value),
       'phone number':     val(DOM.phoneNumber?.value),
@@ -2121,6 +2123,37 @@
     return responseEl;
   }
 
+  function insertPlaceholderAtCursor(textarea, placeholder) {
+    if (!textarea) return;
+    
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    
+    // Insert placeholder at cursor position
+    textarea.value = text.substring(0, start) + placeholder + text.substring(end);
+    
+    // Move cursor to end of inserted placeholder
+    const newPos = start + placeholder.length;
+    textarea.setSelectionRange(newPos, newPos);
+    textarea.focus();
+  }
+  
+  function setupPlaceholderButtons(modalSelector, textareaId) {
+    const modal = document.querySelector(modalSelector);
+    if (!modal) return;
+    
+    const placeholderBtns = modal.querySelectorAll('.placeholder-btn');
+    const textarea = document.getElementById(textareaId);
+    
+    placeholderBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const placeholder = btn.getAttribute('data-placeholder');
+        insertPlaceholderAtCursor(textarea, placeholder);
+      });
+    });
+  }
+
   function showCreateResponseModal() {
     if (!DOM.createResponseModal) return;
     if (DOM.modalResponseText) DOM.modalResponseText.value = '';
@@ -2130,6 +2163,9 @@
     
     // Render preset tags
     renderPresetTags('createPresetTags', 'modalResponseTags');
+    
+    // Setup placeholder buttons
+    setupPlaceholderButtons('#createResponseModal', 'modalResponseText');
     
     DOM.createResponseModal.classList.remove('hidden');
     setTimeout(() => DOM.modalResponseText?.focus(), 100);
@@ -2192,6 +2228,9 @@
     // Render preset tags and update their state
     renderPresetTags('editPresetTags', 'editModalResponseTags');
     setTimeout(() => updatePresetTagsState('editPresetTags', 'editModalResponseTags'), 10);
+    
+    // Setup placeholder buttons
+    setupPlaceholderButtons('#editResponseModal', 'editModalResponseText');
     
     if (DOM.editModalError) DOM.editModalError.textContent = '';
     DOM.editResponseModal.classList.remove('hidden');
