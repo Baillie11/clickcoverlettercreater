@@ -492,12 +492,17 @@ body.theme-dark .auth-card .field-hint { color: #999; }
   display: flex;
   align-items: center;
   gap: 16px;
+  margin-right: 16px;
 }
 
 .welcome-text {
   color: rgba(255,255,255,0.95);
   font-size: 0.95rem;
   font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
 }
 
 .logout-link {
