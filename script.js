@@ -3391,6 +3391,11 @@
     
     // Letter actions
     if (DOM.newLetterBtn) DOM.newLetterBtn.addEventListener('click', newLetter);
+    
+    // New letter button at top (same function)
+    const newLetterBtnTop = document.getElementById('newLetterBtnTop');
+    if (newLetterBtnTop) newLetterBtnTop.addEventListener('click', newLetter);
+    
     if (DOM.saveLetterBtn) DOM.saveLetterBtn.addEventListener('click', saveLetterLocally);
     if (DOM.downloadPdfBtn) DOM.downloadPdfBtn.addEventListener('click', downloadPdf);
 

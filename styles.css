@@ -538,6 +538,39 @@ body.theme-dark .auth-card .field-hint { color: #999; }
   margin-bottom: 30px;
 }
 
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 6px;
+}
+
+.section-header h3 {
+  margin: 0;
+  border: none;
+  padding: 0;
+}
+
+.new-letter-btn-top {
+  padding: 8px 14px;
+  background: linear-gradient(135deg, #2ecc71, #27ae60);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  box-shadow: var(--shadow);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.new-letter-btn-top:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(46, 204, 113, 0.3);
+  filter: brightness(1.05);
+}
+
 .user-info h3,
 .job-info h3,
 .letter-builder h3 {
