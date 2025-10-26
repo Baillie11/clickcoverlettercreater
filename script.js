@@ -856,6 +856,8 @@
       emailAddress: sanitizeText(DOM.emailAddress?.value || '')
     };
     saveAppState();
+    // Update welcome message if name changed
+    updateAuthUI();
   }
 
   // Resume Management Functions
@@ -3529,6 +3531,7 @@
     DOM.authBtn = document.getElementById('authBtn');
     DOM.logoutBtn = document.getElementById('logoutBtn');
     DOM.userBadge = document.getElementById('userBadge');
+    DOM.welcomeMessage = document.getElementById('welcomeMessage');
 
     // Auth landing (full-screen)
     DOM.authModal = document.getElementById('authLanding') || document.getElementById('authModal');
@@ -3554,12 +3557,22 @@
   function updateAuthUI() {
     const username = appState.authUser?.username;
     const signedIn = !!username;
-    if (signedIn && DOM.userBadge && DOM.logoutBtn && DOM.authBtn) {
-      DOM.userBadge.style.display = '';
-      DOM.userBadge.textContent = username;
-      DOM.logoutBtn.style.display = '';
-      DOM.authBtn.style.display = 'none';
+    
+    if (signedIn) {
+      // Show welcome message with first name if available
+      if (DOM.welcomeMessage) {
+        const firstName = appState.profile?.firstName || username;
+        DOM.welcomeMessage.textContent = `Welcome back, ${firstName}`;
+        DOM.welcomeMessage.style.display = '';
+      }
+      
+      // Hide old user badge
+      if (DOM.userBadge) DOM.userBadge.style.display = 'none';
+      
+      if (DOM.logoutBtn) DOM.logoutBtn.style.display = '';
+      if (DOM.authBtn) DOM.authBtn.style.display = 'none';
     } else {
+      if (DOM.welcomeMessage) DOM.welcomeMessage.style.display = 'none';
       if (DOM.userBadge) DOM.userBadge.style.display = 'none';
       if (DOM.logoutBtn) DOM.logoutBtn.style.display = 'none';
       if (DOM.authBtn) DOM.authBtn.style.display = '';

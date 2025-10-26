@@ -445,6 +445,16 @@ body.theme-dark .auth-card .field-hint { color: #999; }
 .app-nav a:hover { opacity: 1; }
 .nav-btn { background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.25); border-radius: 20px; padding: 6px 10px; cursor: pointer; box-shadow: none; }
 .nav-btn:hover { background: rgba(255,255,255,0.25); }
+.welcome-message {
+  color: #fff;
+  font-weight: 500;
+  padding: 6px 12px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 20px;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
 .db-badge { display: inline-flex; align-items: center; gap: 6px; color: #fff; font-weight: 500; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); padding: 4px 10px; border-radius: 14px; }
 .db-badge::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #ffd166; display: inline-block; }
 .db-badge.online::before { background: #2ecc71; }
