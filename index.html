@@ -30,6 +30,11 @@
   <div class="app-container">
     <aside class="response-panel">
       <h2>Response Library</h2>
+      
+      <div class="search-container">
+        <input type="text" id="responseSearchInput" placeholder="🔍 Search responses by keyword or tag..." />
+        <button type="button" id="clearSearchBtn" class="clear-search-btn" title="Clear search">✕</button>
+      </div>
 
       <div class="category-section" id="category-user">
         <h3>User Created <button type="button" id="addUserResponseBtn" class="add-category-btn" title="Add new response">+</button></h3>
@@ -139,6 +144,8 @@
         <strong>💡 Tip:</strong> Use placeholders like <code>[Company Name]</code>, <code>[Role Title]</code>, <code>[Contact]</code>, <code>[Reference]</code>, <code>[Business Address]</code>
       </div>
       <textarea id="modalResponseText" placeholder="Write your response here..." rows="6"></textarea>
+      <label for="modalResponseTags">Tags (comma separated):</label>
+      <input type="text" id="modalResponseTags" placeholder="e.g. healthcare, opening, teamwork" />
       <div class="modal-actions">
         <button type="button" id="modalCancelBtn" class="secondary-btn">Cancel</button>
         <button type="button" id="modalSaveBtn">Save Response</button>
@@ -155,6 +162,8 @@
         <strong>💡 Tip:</strong> Use placeholders like <code>[Company Name]</code>, <code>[Role Title]</code>, <code>[Contact]</code>, <code>[Reference]</code>, <code>[Business Address]</code>
       </div>
       <textarea id="editModalResponseText" placeholder="Edit your response here..." rows="6"></textarea>
+      <label for="editModalResponseTags">Tags (comma separated):</label>
+      <input type="text" id="editModalResponseTags" placeholder="e.g. healthcare, opening, teamwork" />
       <div class="modal-actions">
         <button type="button" id="editModalCancelBtn" class="secondary-btn">Cancel</button>
         <button type="button" id="editModalSaveBtn">Save Changes</button>

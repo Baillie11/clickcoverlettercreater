@@ -1918,6 +1918,25 @@
   }
 
   // Response Management
+  let currentSearchQuery = '';
+
+  function filterResponses(searchQuery) {
+    currentSearchQuery = searchQuery.toLowerCase().trim();
+    renderResponses();
+  }
+
+  function matchesSearch(response, query) {
+    if (!query) return true;
+    
+    // Search in text
+    if (response.text.toLowerCase().includes(query)) return true;
+    
+    // Search in tags
+    if (response.tags && response.tags.some(tag => tag.toLowerCase().includes(query))) return true;
+    
+    return false;
+  }
+
   function renderResponses() {
     // Skip if response columns not present (e.g., on profile page)
     if (!DOM.categoryUser || !DOM.categoryCrowd || !DOM.categoryAi) return;
@@ -1931,6 +1950,9 @@
     if (addBtn) addBtn.addEventListener('click', showCreateResponseModal);
 
     appState.responses.forEach(response => {
+      // Apply search filter
+      if (!matchesSearch(response, currentSearchQuery)) return;
+      
       const responseEl = createResponseElement(response);
       
       if (response.category === 'user') {
@@ -1952,6 +1974,19 @@
     const textEl = document.createElement('p');
     textEl.textContent = response.text;
     responseEl.appendChild(textEl);
+    
+    // Add tags if present
+    if (response.tags && response.tags.length > 0) {
+      const tagsContainer = document.createElement('div');
+      tagsContainer.className = 'response-tags';
+      response.tags.forEach(tag => {
+        const tagEl = document.createElement('span');
+        tagEl.className = 'response-tag';
+        tagEl.textContent = tag;
+        tagsContainer.appendChild(tagEl);
+      });
+      responseEl.appendChild(tagsContainer);
+    }
     
     // Add edit/delete controls for user-created responses
     if (response.userCreated) {
@@ -1991,6 +2026,8 @@
   function showCreateResponseModal() {
     if (!DOM.createResponseModal) return;
     if (DOM.modalResponseText) DOM.modalResponseText.value = '';
+    const tagsInput = document.getElementById('modalResponseTags');
+    if (tagsInput) tagsInput.value = '';
     if (DOM.modalError) DOM.modalError.textContent = '';
     DOM.createResponseModal.classList.remove('hidden');
     setTimeout(() => DOM.modalResponseText?.focus(), 100);
@@ -2007,11 +2044,17 @@
       return;
     }
     
+    // Parse tags
+    const tagsInput = document.getElementById('modalResponseTags');
+    const tagsStr = tagsInput ? tagsInput.value.trim() : '';
+    const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(t => t.length > 0) : [];
+    
     const newResponse = {
       id: generateId(),
       text: text,
       category: 'user',
-      userCreated: true
+      userCreated: true,
+      tags: tags
     };
 
     // Try to persist to backend; fallback to local only
@@ -2037,6 +2080,13 @@
     
     currentEditingResponseId = responseId;
     if (DOM.editModalResponseText) DOM.editModalResponseText.value = response.text;
+    
+    // Populate tags
+    const tagsInput = document.getElementById('editModalResponseTags');
+    if (tagsInput) {
+      tagsInput.value = response.tags ? response.tags.join(', ') : '';
+    }
+    
     if (DOM.editModalError) DOM.editModalError.textContent = '';
     DOM.editResponseModal.classList.remove('hidden');
     setTimeout(() => DOM.editModalResponseText?.focus(), 100);
@@ -2060,9 +2110,15 @@
       return;
     }
     
+    // Parse tags
+    const tagsInput = document.getElementById('editModalResponseTags');
+    const tagsStr = tagsInput ? tagsInput.value.trim() : '';
+    const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(t => t.length > 0) : [];
+    
     const response = appState.responses.find(r => r.id === currentEditingResponseId);
     if (response) {
       response.text = text;
+      response.tags = tags;
       // Persist any category to backend
       try { await apiUpdateResponse(response); } catch (e) { console.warn('Backend update failed:', e.message || e); }
       saveAppState();
@@ -3136,6 +3192,23 @@
     // Preview button
     if (DOM.previewLetterBtn) {
       DOM.previewLetterBtn.addEventListener('click', renderLetterPreview);
+    }
+    
+    // Search functionality
+    const searchInput = document.getElementById('responseSearchInput');
+    const clearSearchBtn = document.getElementById('clearSearchBtn');
+    
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        filterResponses(e.target.value);
+      });
+    }
+    
+    if (clearSearchBtn) {
+      clearSearchBtn.addEventListener('click', () => {
+        if (searchInput) searchInput.value = '';
+        filterResponses('');
+      });
     }
   }
 
