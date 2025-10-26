@@ -88,18 +88,31 @@ if (db) {
     if (!cols.some(c => c.name === 'userId')) {
       db.prepare('ALTER TABLE responses ADD COLUMN userId TEXT').run();
     }
+    // Ensure tags column exists (migration)
+    if (!cols.some(c => c.name === 'tags')) {
+      db.prepare('ALTER TABLE responses ADD COLUMN tags TEXT').run();
+    }
   } catch {}
 }
 
 // Helpers
 function rowToResponse(row) {
+  let tags = [];
+  if (row.tags) {
+    try {
+      tags = JSON.parse(row.tags);
+    } catch {
+      tags = [];
+    }
+  }
   return {
     id: row.id,
     text: row.text,
     category: row.category,
     userCreated: !!row.userCreated,
     source: row.source || null,
-    createdAt: row.createdAt
+    createdAt: row.createdAt,
+    tags: tags
   };
 }
 
@@ -282,17 +295,18 @@ app.get('/responses', (req, res) => {
 app.post('/responses', (req, res) => {
   const auth = getUserFromAuth(req);
   if (!auth) return res.status(401).json({ error: 'Unauthorized' });
-  const { id, text, category, userCreated, source } = req.body || {};
+  const { id, text, category, userCreated, source, tags } = req.body || {};
   if (!id || !text || !category) return res.status(400).json({ error: 'Missing id, text, or category' });
   try {
     const createdAt = new Date().toISOString();
+    const tagsJson = tags ? JSON.stringify(tags) : null;
     if (db) {
-      db.prepare('INSERT INTO responses (id, text, category, userCreated, source, createdAt, userId) VALUES (?, ?, ?, ?, ?, ?, ?)')
-        .run(id, text, category, userCreated ? 1 : 0, source || null, createdAt, auth.user.id);
+      db.prepare('INSERT INTO responses (id, text, category, userCreated, source, createdAt, userId, tags) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+        .run(id, text, category, userCreated ? 1 : 0, source || null, createdAt, auth.user.id, tagsJson);
       const row = db.prepare('SELECT * FROM responses WHERE id = ?').get(id);
       res.status(201).json(rowToResponse(row));
     } else {
-      const row = { id, text, category, userCreated: !!userCreated, source: source || null, createdAt, userId: auth.user.id };
+      const row = { id, text, category, userCreated: !!userCreated, source: source || null, createdAt, userId: auth.user.id, tags: tagsJson };
       store.responses.push(row); saveStore();
       res.status(201).json(rowToResponse(row));
     }
@@ -310,20 +324,22 @@ app.put('/responses/:id', (req, res) => {
   const auth = getUserFromAuth(req);
   if (!auth) return res.status(401).json({ error: 'Unauthorized' });
   const { id } = req.params;
-  const { text, category, userCreated, source } = req.body || {};
+  const { text, category, userCreated, source, tags } = req.body || {};
   try {
     if (db) {
       const existing = db.prepare('SELECT * FROM responses WHERE id = ? AND userId = ?').get(id, auth.user.id);
       if (!existing) return res.status(404).json({ error: 'Not found' });
-      db.prepare('UPDATE responses SET text = ?, category = ?, userCreated = ?, source = ? WHERE id = ?')
-        .run(text ?? existing.text, category ?? existing.category, (userCreated ? 1 : 0), source ?? existing.source, id);
+      const tagsJson = tags !== undefined ? JSON.stringify(tags) : existing.tags;
+      db.prepare('UPDATE responses SET text = ?, category = ?, userCreated = ?, source = ?, tags = ? WHERE id = ?')
+        .run(text ?? existing.text, category ?? existing.category, (userCreated ? 1 : 0), source ?? existing.source, tagsJson, id);
       const updated = db.prepare('SELECT * FROM responses WHERE id = ?').get(id);
       res.json(rowToResponse(updated));
     } else {
       const idx = store.responses.findIndex(r => r.id === id && r.userId === auth.user.id);
       if (idx === -1) return res.status(404).json({ error: 'Not found' });
       const existing = store.responses[idx];
-      const updated = { ...existing, text: text ?? existing.text, category: category ?? existing.category, userCreated: userCreated ?? existing.userCreated, source: source ?? existing.source };
+      const tagsJson = tags !== undefined ? JSON.stringify(tags) : existing.tags;
+      const updated = { ...existing, text: text ?? existing.text, category: category ?? existing.category, userCreated: userCreated ?? existing.userCreated, source: source ?? existing.source, tags: tagsJson };
       store.responses[idx] = updated; saveStore();
       res.json(rowToResponse(updated));
     }
