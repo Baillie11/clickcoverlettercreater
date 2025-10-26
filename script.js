@@ -2234,8 +2234,13 @@
     const textarea = document.getElementById(textareaId);
     
     placeholderBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const placeholder = btn.getAttribute('data-placeholder');
+      // Remove any existing listeners by cloning and replacing the button
+      const newBtn = btn.cloneNode(true);
+      btn.parentNode.replaceChild(newBtn, btn);
+      
+      // Add fresh event listener
+      newBtn.addEventListener('click', () => {
+        const placeholder = newBtn.getAttribute('data-placeholder');
         insertPlaceholderAtCursor(textarea, placeholder);
       });
     });
