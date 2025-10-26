@@ -1959,14 +1959,20 @@
     'Work Preferences'
   ];
   
-  function renderPresetTags(containerId, targetInputId) {
+  function renderPresetTags(containerId, targetInputId, searchQuery = '') {
     const container = document.getElementById(containerId);
     const input = document.getElementById(targetInputId);
     if (!container || !input) return;
     
     container.innerHTML = '';
+    const query = searchQuery.toLowerCase().trim();
     
     PRESET_TAGS.forEach(tag => {
+      // Filter tags based on search query
+      if (query && !tag.toLowerCase().includes(query)) {
+        return; // Skip tags that don't match search
+      }
+      
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'preset-tag-btn';
@@ -1979,6 +1985,17 @@
       btn.textContent = tag;
       btn.onclick = () => togglePresetTag(tag, input, btn);
       container.appendChild(btn);
+    });
+  }
+  
+  function setupTagSearch(searchInputId, containerId, targetInputId) {
+    const searchInput = document.getElementById(searchInputId);
+    if (!searchInput) return;
+    
+    searchInput.addEventListener('input', (e) => {
+      renderPresetTags(containerId, targetInputId, e.target.value);
+      // Re-apply active state after filtering
+      setTimeout(() => updatePresetTagsState(containerId, targetInputId), 10);
     });
   }
   
@@ -2169,10 +2186,18 @@
     if (DOM.modalResponseText) DOM.modalResponseText.value = '';
     const tagsInput = document.getElementById('modalResponseTags');
     if (tagsInput) tagsInput.value = '';
+    
+    // Clear tag search
+    const tagSearchInput = document.getElementById('createTagSearch');
+    if (tagSearchInput) tagSearchInput.value = '';
+    
     if (DOM.modalError) DOM.modalError.textContent = '';
     
     // Render preset tags
     renderPresetTags('createPresetTags', 'modalResponseTags');
+    
+    // Setup tag search
+    setupTagSearch('createTagSearch', 'createPresetTags', 'modalResponseTags');
     
     // Setup placeholder buttons
     setupPlaceholderButtons('#createResponseModal', 'modalResponseText');
@@ -2235,9 +2260,16 @@
       tagsInput.value = response.tags ? response.tags.join(', ') : '';
     }
     
+    // Clear tag search
+    const tagSearchInput = document.getElementById('editTagSearch');
+    if (tagSearchInput) tagSearchInput.value = '';
+    
     // Render preset tags and update their state
     renderPresetTags('editPresetTags', 'editModalResponseTags');
     setTimeout(() => updatePresetTagsState('editPresetTags', 'editModalResponseTags'), 10);
+    
+    // Setup tag search
+    setupTagSearch('editTagSearch', 'editPresetTags', 'editModalResponseTags');
     
     // Setup placeholder buttons
     setupPlaceholderButtons('#editResponseModal', 'editModalResponseText');

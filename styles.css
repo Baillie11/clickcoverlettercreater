@@ -312,6 +312,30 @@ body.theme-dark .tag-help-text {
   color: #d4d9e3;
 }
 
+/* Tag Search Input */
+.tag-search-input {
+  width: 100%;
+  padding: 8px 12px;
+  margin: 8px 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tag-search-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.15);
+}
+
+body.theme-dark .tag-search-input {
+  background: #1a2332;
+  color: #e8edf7;
+  border-color: #22304c;
+}
+
 .preset-tags {
   display: flex;
   flex-wrap: wrap;
