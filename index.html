@@ -19,6 +19,7 @@
       <div class="nav-left">
         <a href="index.html" class="active">Create Letter</a>
         <a href="profile.html">Profile</a>
+        <a href="dashboard.html">Dashboard</a>
       </div>
       <div class="nav-right">
         <button type="button" id="authBtn" class="nav-btn" title="Sign In">🔐 Sign In</button>
@@ -35,7 +36,7 @@
       <h2>Response Library</h2>
       
       <div class="search-container">
-        <input type="text" id="responseSearchInput" placeholder="🔍 Search responses by keyword or tag..." />
+        <input type="text" id="responseSearchInput" placeholder="Search responses by keyword or tag..." />
         <button type="button" id="clearSearchBtn" class="clear-search-btn" title="Clear search">✕</button>
       </div>
 
@@ -55,49 +56,35 @@
 
     <main class="builder-panel">
       <section class="job-info">
-        <div class="section-header">
+        <div class="section-header collapsible-header" id="jobInfoHeader">
           <h3>Job Information</h3>
-          <button type="button" id="newLetterBtnTop" class="new-letter-btn-top">🆕 New Cover Letter</button>
+          <button type="button" id="toggleJobInfoBtn" class="toggle-btn" title="Collapse/Expand">▼</button>
         </div>
-        <form id="jobForm">
-          <input type="text" id="roleTitle" placeholder="Role Title" />
-          <input type="text" id="companyName" list="companyNameList" placeholder="Company Name" />
-          <datalist id="companyNameList"></datalist>
-          <input type="text" id="contactPerson" placeholder="Contact Person" />
-          <input type="text" id="businessAddress" placeholder="Business Address" />
-          <input type="text" id="refNumber" placeholder="Reference Number" />
-        </form>
-
-        <div class="job-ad-section">
-          <h4>Paste Job Ad</h4>
-          <textarea id="jobAdText" placeholder="Paste the job ad text here..."></textarea>
-          <div class="job-ad-url">
-            <input type="url" id="jobAdUrl" placeholder="Or paste a job ad URL (https://...)" />
-            <button type="button" id="fetchJobAdBtn" title="Fetch via readable proxy">Fetch & Parse</button>
-          </div>
-          <div class="job-ad-controls">
-            <div class="job-ad-controls-left">
-              <label class="overwrite-toggle"><input type="checkbox" id="overwriteJobFields" /> Overwrite existing fields</label>
-            </div>
-            <div class="job-ad-controls-right">
-              <button type="button" id="parseJobAdBtn">Parse Job Ad</button>
-              <button type="button" id="aiExtractBtn" title="Use AI to extract job info">🤖 AI Extract</button>
-              <button type="button" id="aiGenerateBtn" title="Generate cover letter paragraphs with AI">✨ AI Generate</button>
-            </div>
-          </div>
-          <div id="jobAdParseStatus" class="job-ad-status" aria-live="polite"></div>
+        <div id="jobInfoContent" class="collapsible-content">
+          <form id="jobForm">
+            <input type="text" id="roleTitle" placeholder="Role Title" />
+            <input type="text" id="companyName" list="companyNameList" placeholder="Company Name" />
+            <datalist id="companyNameList"></datalist>
+            <input type="text" id="contactPerson" placeholder="Contact Person" />
+            <input type="text" id="businessAddress" placeholder="Business Address" />
+            <input type="text" id="refNumber" placeholder="Reference Number" />
+          </form>
         </div>
       </section>
 
       <section class="letter-builder">
-        <h3>Your Cover Letter</h3>
+        <div class="section-header">
+          <h3>Your Cover Letter</h3>
+          <button type="button" id="newLetterBtnTop" class="new-letter-btn-top">🆕 New Cover Letter</button>
+        </div>
         <div class="letter-drop-area" id="letterArea">
           <p class="placeholder">Drag responses here to build your letter</p>
         </div>
         <div class="letter-actions">
           <div class="left-actions">
             <button id="newLetterBtn">New Cover Letter</button>
-            <button id="saveLetterBtn">Save Letter (locally)</button>
+            <button id="saveDraftBtn">💾 Save Draft</button>
+            <button id="loadDraftBtn">📂 Load Draft</button>
             <button id="previewLetterBtn">Preview</button>
             <button id="downloadPdfBtn">Download as PDF</button>
           </div>
@@ -109,15 +96,36 @@
               <option value="formal-classic">Formal Classic (Sender Right + Date)</option>
               <option value="sidebar-profile">Sidebar Profile (Left)</option>
               <option value="letterhead-accent">Letterhead Accent Bar</option>
+              <option value="teal-sidebar">Teal Sidebar (Professional)</option>
             </select>
             <label for="pageSizeSelect">Page:</label>
             <select id="pageSizeSelect">
               <option value="letter">Letter</option>
-              <option value="a4">A4</option>
+              <option value="a4" selected>A4</option>
             </select>
           </div>
         </div>
         <div id="letterPreview" class="letter-preview" aria-live="polite"></div>
+      </section>
+
+      <section class="job-ad-section">
+        <h3>Paste Job Ad</h3>
+        <textarea id="jobAdText" placeholder="Paste the job ad text here..."></textarea>
+        <div class="job-ad-url">
+          <input type="url" id="jobAdUrl" placeholder="Or paste a job ad URL (https://...)" />
+          <button type="button" id="fetchJobAdBtn" title="Fetch via readable proxy">Fetch & Parse</button>
+        </div>
+        <div class="job-ad-controls">
+          <div class="job-ad-controls-left">
+            <label class="overwrite-toggle"><input type="checkbox" id="overwriteJobFields" /> Overwrite existing fields</label>
+          </div>
+          <div class="job-ad-controls-right">
+            <button type="button" id="parseJobAdBtn">Parse Job Ad</button>
+            <button type="button" id="aiExtractBtn" title="Use AI to extract job info">🤖 AI Extract</button>
+            <button type="button" id="aiGenerateBtn" title="Generate cover letter paragraphs with AI">✨ AI Generate</button>
+          </div>
+        </div>
+        <div id="jobAdParseStatus" class="job-ad-status" aria-live="polite"></div>
       </section>
     </main>
   </div>
@@ -195,6 +203,19 @@
         <button type="button" id="editModalSaveBtn">Save Changes</button>
       </div>
       <div id="editModalError" class="modal-error"></div>
+    </div>
+  </div>
+
+  <!-- Load Draft Modal -->
+  <div id="loadDraftModal" class="modal hidden" aria-live="polite">
+    <div class="modal-content load-draft-modal">
+      <h3>Load Draft</h3>
+      <div id="draftsList" class="drafts-list">
+        <p class="no-data">No drafts saved yet.</p>
+      </div>
+      <div class="modal-actions">
+        <button type="button" id="loadDraftCancelBtn" class="secondary-btn">Cancel</button>
+      </div>
     </div>
   </div>
 

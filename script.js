@@ -1,4 +1,4 @@
-// Click Cover Letter Creator - Complete Application Logic
+﻿// Click Cover Letter Creator - Complete Application Logic
 (function() {
   'use strict';
 
@@ -499,7 +499,8 @@
             category: r.category || 'user',
             userCreated: !!r.userCreated,
             source: r.source || null,
-            tags: r.tags || []
+            tags: r.tags || [],
+            createdAt: r.createdAt || null
           }));
           // Cache to localStorage as well
           localStorage.setItem('responses', JSON.stringify(appState.responses));
@@ -584,8 +585,8 @@
       // Address
       'business address': val(DOM.businessAddress?.value),
       'address':          val(DOM.businessAddress?.value),
-      // Industry (extracted from job ad or manually entered)
-      'industry':         '',  // Can be populated from job ad parsing
+      // Industry (from user profile)
+      'industry':         val(appState.profile?.industry),
       // User contact details
       'phone':            val(DOM.phoneNumber?.value),
       'phone number':     val(DOM.phoneNumber?.value),
@@ -603,7 +604,7 @@
   // Use environment variable or fallback to localhost
   const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:5050'
-    : (window.ENV_API_BASE || 'https://your-backend.herokuapp.com'); // Deploy backend and update this
+    : (window.ENV_API_BASE || 'https://your-backend.herokuapp.com');
   let authToken = null;
   const API_TIMEOUT_MS = 3000;
   let apiHealthy = null; // null=unknown, true=ok, false=down
@@ -688,7 +689,7 @@
   async function updateDbStatusBadge() {
     if (!DOM.dbStatusBadge) return;
     const badge = DOM.dbStatusBadge;
-    badge.textContent = 'Checking…';
+    badge.textContent = 'Checkingâ€¦';
     badge.classList.remove('online','offline');
     try {
       const ok = await apiHealthCheck();
@@ -771,7 +772,8 @@
           category: r.category || 'user',
           userCreated: !!r.userCreated,
           source: r.source || null,
-          tags: r.tags || []
+          tags: r.tags || [],
+          createdAt: r.createdAt || null
         }));
       }
       
@@ -785,7 +787,8 @@
             category: 'crowd', // Force crowd category
             userCreated: false, // Not editable by current user
             source: r.source || 'crowd',
-            tags: r.tags || []
+            tags: r.tags || [],
+            createdAt: r.createdAt || null
           }));
           allResponses = allResponses.concat(crowdResponses);
         }
@@ -807,7 +810,7 @@
       const pref = localStorage.getItem('theme');
       if (pref === 'dark') {
         document.body.classList.add('theme-dark');
-        if (DOM.themeToggleBtn) DOM.themeToggleBtn.textContent = '☀️';
+        if (DOM.themeToggleBtn) DOM.themeToggleBtn.textContent = 'â˜€ï¸';
       }
     } catch {}
   }
@@ -815,7 +818,7 @@
   function toggleTheme() {
     const dark = document.body.classList.toggle('theme-dark');
     try { localStorage.setItem('theme', dark ? 'dark' : 'light'); } catch {}
-    if (DOM.themeToggleBtn) DOM.themeToggleBtn.textContent = dark ? '☀️' : '🌙';
+    if (DOM.themeToggleBtn) DOM.themeToggleBtn.textContent = dark ? 'â˜€ï¸' : 'ðŸŒ™';
   }
 
   async function persistAllResponsesToDb(responses) {
@@ -844,6 +847,7 @@
     if (DOM.addressLine2) DOM.addressLine2.value = appState.profile.addressLine2 || '';
     if (DOM.phoneNumber) DOM.phoneNumber.value = appState.profile.phoneNumber || '';
     if (DOM.emailAddress) DOM.emailAddress.value = appState.profile.emailAddress || '';
+    if (DOM.industry) DOM.industry.value = appState.profile.industry || '';
   }
 
   function saveUserProfile() {
@@ -853,7 +857,8 @@
       addressLine1: sanitizeText(DOM.addressLine1?.value || ''),
       addressLine2: sanitizeText(DOM.addressLine2?.value || ''),
       phoneNumber: sanitizeText(DOM.phoneNumber?.value || ''),
-      emailAddress: sanitizeText(DOM.emailAddress?.value || '')
+      emailAddress: sanitizeText(DOM.emailAddress?.value || ''),
+      industry: sanitizeText(DOM.industry?.value || '')
     };
     saveAppState();
     // Update welcome message if name changed
@@ -2094,6 +2099,9 @@
     });
   }
 
+  // Track sort order for user responses
+  let userResponsesSortOrder = 'tag'; // 'tag' or 'date-asc' or 'date-desc'
+
   function filterResponses(searchQuery) {
     currentSearchQuery = searchQuery.toLowerCase().trim();
     renderResponses();
@@ -2115,16 +2123,45 @@
     // Skip if response columns not present (e.g., on profile page)
     if (!DOM.categoryUser || !DOM.categoryCrowd || !DOM.categoryAi) return;
     // Clear existing responses
-    DOM.categoryUser.innerHTML = '<h3>User Created <button type="button" id="addUserResponseBtn" class="add-category-btn" title="Add new response">+</button></h3>';
+    DOM.categoryUser.innerHTML = `<h3>User Created 
+      <button type="button" id="addUserResponseBtn" class="add-category-btn" title="Add new response">+</button>
+      <select id="userSortSelect" class="sort-select" title="Sort by">
+        <option value="tag">Sort by Tag</option>
+        <option value="date-desc">Newest First</option>
+        <option value="date-asc">Oldest First</option>
+      </select>
+    </h3>`;
     DOM.categoryCrowd.innerHTML = '<h3>Crowd Sourced</h3>';
     DOM.categoryAi.innerHTML = '<h3>AI Generated</h3>';
     
     // Re-attach event listener for the + button
     const addBtn = document.getElementById('addUserResponseBtn');
     if (addBtn) addBtn.addEventListener('click', showCreateResponseModal);
+    
+    // Re-attach event listener for the sort dropdown
+    const sortSelect = document.getElementById('userSortSelect');
+    if (sortSelect) {
+      sortSelect.value = userResponsesSortOrder;
+      sortSelect.addEventListener('change', (e) => {
+        userResponsesSortOrder = e.target.value;
+        renderResponses();
+      });
+    }
 
-    // Sort responses by first tag, then by creation date
+    // Sort responses based on current sort order
     const sortedResponses = [...appState.responses].sort((a, b) => {
+      // Only apply date sorting to user-created responses
+      const aIsUser = a.category === 'user';
+      const bIsUser = b.category === 'user';
+      
+      if (aIsUser && bIsUser && userResponsesSortOrder.startsWith('date-')) {
+        // Date sorting for user responses
+        const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return userResponsesSortOrder === 'date-asc' ? aDate - bDate : bDate - aDate;
+      }
+      
+      // Default: sort by first tag
       const aFirstTag = (a.tags && a.tags.length > 0) ? a.tags[0].toLowerCase() : 'zzz';
       const bFirstTag = (b.tags && b.tags.length > 0) ? b.tags[0].toLowerCase() : 'zzz';
       
@@ -2293,12 +2330,18 @@
       return;
     }
     
+    // Automatically add creation date as a tag
+    const createdAt = new Date();
+    const dateTag = createdAt.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    tags.push(dateTag);
+    
     const newResponse = {
       id: generateId(),
       text: text,
       category: 'user',
       userCreated: true,
-      tags: tags
+      tags: tags,
+      createdAt: createdAt.toISOString()
     };
 
     // Try to persist to backend; fallback to local only
@@ -2325,7 +2368,7 @@
     currentEditingResponseId = responseId;
     if (DOM.editModalResponseText) DOM.editModalResponseText.value = response.text;
     
-    // Populate tags
+    // Populate tags (date tag will be at the end)
     const tagsInput = document.getElementById('editModalResponseTags');
     if (tagsInput) {
       tagsInput.value = response.tags ? response.tags.join(', ') : '';
@@ -2436,12 +2479,14 @@
     const paragraphEl = document.createElement('div');
     paragraphEl.className = 'letter-paragraph';
     paragraphEl.dataset.responseId = responseId;
-    paragraphEl.textContent = replacePlaceholders(response.text);
+    // Use a text node to preserve newlines
+    const textNode = document.createTextNode(replacePlaceholders(response.text));
+    paragraphEl.appendChild(textNode);
     
     // Add remove button
     const removeBtn = document.createElement('button');
-    removeBtn.textContent = '×';
-    removeBtn.style.cssText = 'position: absolute; top: 5px; right: 5px; background: #ff4757; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-size: 12px;';
+    removeBtn.textContent = 'Ã—';
+    removeBtn.style.cssText = 'position: absolute; top: 5px; right: 5px; background: #ff4757; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-size: 12px; z-index: 10;';
     removeBtn.onclick = () => {
       paragraphEl.remove();
       updateLetterState();
@@ -2504,9 +2549,11 @@
       if (first && first.nodeType === Node.TEXT_NODE) {
         first.nodeValue = replacePlaceholders(resp.text);
       } else {
-        // Fallback: reset text content then re-append the remove button if present
+        // Fallback: reset with text node then re-append the remove button if present
         const removeBtn = p.querySelector('button');
-        p.textContent = replacePlaceholders(resp.text);
+        p.innerHTML = ''; // Clear content
+        const textNode = document.createTextNode(replacePlaceholders(resp.text));
+        p.appendChild(textNode);
         if (removeBtn) p.appendChild(removeBtn);
       }
     });
@@ -2586,55 +2633,93 @@
   }
 
   function newLetter() {
+    if (!DOM.letterArea) {
+      console.error('Letter area not found');
+      return;
+    }
+    
     if (confirm('Are you sure you want to start a new letter? This will clear the current letter.')) {
       DOM.letterArea.innerHTML = '<p class="placeholder">Drag responses here to build your letter</p>';
       appState.currentLetter.paragraphs = [];
       
       // Clear job form
-      DOM.roleTitle.value = '';
-      DOM.companyName.value = '';
-      DOM.contactPerson.value = '';
-      DOM.businessAddress.value = '';
-      DOM.refNumber.value = '';
+      if (DOM.roleTitle) DOM.roleTitle.value = '';
+      if (DOM.companyName) DOM.companyName.value = '';
+      if (DOM.contactPerson) DOM.contactPerson.value = '';
+      if (DOM.businessAddress) DOM.businessAddress.value = '';
+      if (DOM.refNumber) DOM.refNumber.value = '';
       
       // Clear salutation preview
       updateSalutationPreview();
       
       // Clear saved letter state
       localStorage.removeItem('currentLetter');
+      
+      console.log('New letter started');
     }
   }
 
-  function saveLetterLocally() {
+  async function saveDraft() {
     if (appState.currentLetter.paragraphs.length === 0) {
       alert('Please add some content to your letter before saving.');
       return;
     }
     
+    if (!authToken) {
+      alert('Please sign in to save drafts.');
+      return;
+    }
+    
     const jobTitle = sanitizeText(DOM.roleTitle.value);
     const company = sanitizeText(DOM.companyName.value);
-    const timestamp = new Date().toLocaleString();
     
-    const letterName = `${jobTitle || 'Letter'} - ${company || 'Company'} - ${timestamp}`;
+    if (!company || !jobTitle) {
+      alert('Please enter at least a company name and role title.');
+      return;
+    }
     
-    const letterData = {
-      name: letterName,
-      jobInfo: {
-        roleTitle: DOM.roleTitle.value,
-        companyName: DOM.companyName.value,
-        contactPerson: DOM.contactPerson.value,
-        businessAddress: DOM.businessAddress.value,
-        refNumber: DOM.refNumber.value
-      },
-      paragraphs: [...appState.currentLetter.paragraphs],
-      savedAt: Date.now()
-    };
-    
-    const savedLetters = JSON.parse(localStorage.getItem('savedLetters') || '[]');
-    savedLetters.push(letterData);
-    localStorage.setItem('savedLetters', JSON.stringify(savedLetters));
-    
-    alert(`Letter saved as: ${letterName}`);
+    try {
+      const draftData = {
+        id: generateId(),
+        company: company,
+        role: jobTitle,
+        status: 'Draft',
+        notes: '',
+        date: new Date().toISOString().split('T')[0],
+        paragraphs: appState.currentLetter.paragraphs.map(pId => {
+          const resp = appState.responses.find(r => r.id === pId);
+          return resp ? { id: pId, text: resp.text } : null;
+        }).filter(p => p !== null),
+        timeSpent: 0
+      };
+      
+      // Also store job info in notes for now
+      const jobInfo = {
+        contactPerson: DOM.contactPerson?.value || '',
+        businessAddress: DOM.businessAddress?.value || '',
+        refNumber: DOM.refNumber?.value || ''
+      };
+      draftData.notes = JSON.stringify(jobInfo);
+      
+      const response = await fetch('/applications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify(draftData)
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to save draft');
+      }
+      
+      alert(`✅ Draft saved: ${company} - ${jobTitle}`);
+    } catch (error) {
+      console.error('Error saving draft:', error);
+      alert(`Failed to save draft: ${error.message}`);
+    }
   }
 
   // Build a letter DOM element for preview/PDF based on selected theme
@@ -2730,7 +2815,7 @@
       const paras = DOM.letterArea.querySelectorAll('.letter-paragraph');
       paras.forEach(para => {
         const p = document.createElement('p');
-        p.innerText = para.textContent.replace('×', '');
+        p.innerText = para.textContent.replace('Ã—', '');
         p.style.marginBottom = '12px';
         p.style.pageBreakInside = 'avoid';
         p.style.breakInside = 'avoid-page';
@@ -2809,7 +2894,7 @@
       const parasFC = DOM.letterArea.querySelectorAll('.letter-paragraph');
       parasFC.forEach(para => {
         const p = document.createElement('p');
-        p.innerText = para.textContent.replace('×', '');
+        p.innerText = para.textContent.replace('Ã—', '');
         p.style.marginBottom = '12px';
         p.style.pageBreakInside = 'avoid';
         p.style.breakInside = 'avoid-page';
@@ -2888,7 +2973,7 @@
       const parasSB = DOM.letterArea.querySelectorAll('.letter-paragraph');
       parasSB.forEach(para => {
         const p = document.createElement('p');
-        p.innerText = para.textContent.replace('×', '');
+        p.innerText = para.textContent.replace('Ã—', '');
         p.style.marginBottom = '12px';
         p.style.wordBreak = 'break-word';
         p.style.overflowWrap = 'anywhere';
@@ -2964,7 +3049,7 @@
       const parasLH = DOM.letterArea.querySelectorAll('.letter-paragraph');
       parasLH.forEach(para => {
         const p = document.createElement('p');
-        p.innerText = para.textContent.replace('×', '');
+        p.innerText = para.textContent.replace('Ã—', '');
         p.style.marginBottom = '12px';
         printEl.appendChild(p);
       });
@@ -2980,6 +3065,163 @@
         printEl.appendChild(signatureP);
       }
 
+      return printEl;
+    }
+
+    // Teal Sidebar theme (inspired by Elena Rodriguez template)
+    if (selectedTheme === 'teal-sidebar') {
+      const container = document.createElement('div');
+      container.style.display = 'flex';
+      container.style.minHeight = '100%';
+
+      // Left teal sidebar
+      const sidebar = document.createElement('div');
+      sidebar.style.flex = '0 0 35%';
+      sidebar.style.background = '#1e6b6b';
+      sidebar.style.color = '#ffffff';
+      sidebar.style.padding = '40px 24px';
+      sidebar.style.display = 'flex';
+      sidebar.style.flexDirection = 'column';
+      sidebar.style.gap = '24px';
+
+      // Name in sidebar
+      if (fullName) {
+        const nameEl = document.createElement('div');
+        nameEl.innerText = fullName;
+        nameEl.style.fontSize = '32pt';
+        nameEl.style.fontWeight = '700';
+        nameEl.style.lineHeight = '1.2';
+        nameEl.style.fontFamily = 'Georgia, serif';
+        nameEl.style.marginBottom = '8px';
+        sidebar.appendChild(nameEl);
+      }
+
+      // Job title/tagline
+      const taglineEl = document.createElement('div');
+      const defaultTagline = profile.industry || 'Professional';
+      taglineEl.innerText = defaultTagline;
+      taglineEl.style.fontSize = '12pt';
+      taglineEl.style.fontWeight = '400';
+      taglineEl.style.marginBottom = '20px';
+      taglineEl.style.opacity = '0.95';
+      sidebar.appendChild(taglineEl);
+
+      // Contact information
+      const contactSection = document.createElement('div');
+      contactSection.style.display = 'flex';
+      contactSection.style.flexDirection = 'column';
+      contactSection.style.gap = '8px';
+      contactSection.style.fontSize = '10pt';
+      contactSection.style.lineHeight = '1.6';
+
+      if (profile.addressLine1) {
+        const addr1 = document.createElement('div');
+        addr1.innerText = profile.addressLine1;
+        contactSection.appendChild(addr1);
+      }
+      if (profile.addressLine2) {
+        const addr2 = document.createElement('div');
+        addr2.innerText = profile.addressLine2;
+        contactSection.appendChild(addr2);
+      }
+      if (profile.phoneNumber) {
+        const phone = document.createElement('div');
+        phone.innerText = profile.phoneNumber;
+        phone.style.marginTop = '8px';
+        contactSection.appendChild(phone);
+      }
+      if (profile.emailAddress) {
+        const email = document.createElement('div');
+        email.innerText = profile.emailAddress;
+        contactSection.appendChild(email);
+      }
+
+      sidebar.appendChild(contactSection);
+
+      // Right content area
+      const content = document.createElement('div');
+      content.style.flex = '1';
+      content.style.padding = '40px 50px';
+      content.style.background = '#ffffff';
+      content.style.color = '#000000';
+
+      // Recipient address and date
+      const headerBlock = document.createElement('div');
+      headerBlock.style.marginBottom = '32px';
+
+      // Location and date on same line
+      const locationDateEl = document.createElement('div');
+      const location = businessAddress ? businessAddress.split(',')[0] : 'Los Angeles';
+      locationDateEl.innerText = `${location}, ${todayLong}`;
+      locationDateEl.style.marginBottom = '24px';
+      headerBlock.appendChild(locationDateEl);
+
+      // Recipient details
+      if (contactPerson) {
+        const contactEl = document.createElement('div');
+        contactEl.innerText = `Mr. ${contactPerson}`;
+        contactEl.style.marginBottom = '4px';
+        headerBlock.appendChild(contactEl);
+      }
+      if (jobTitle) {
+        const titleEl = document.createElement('div');
+        titleEl.innerText = 'Casting Director';
+        titleEl.style.marginBottom = '4px';
+        headerBlock.appendChild(titleEl);
+      }
+      if (companyName) {
+        const companyEl = document.createElement('div');
+        companyEl.innerText = companyName;
+        companyEl.style.marginBottom = '4px';
+        headerBlock.appendChild(companyEl);
+      }
+      if (businessAddress) {
+        const addressEl = document.createElement('div');
+        addressEl.innerText = businessAddress;
+        headerBlock.appendChild(addressEl);
+      }
+
+      content.appendChild(headerBlock);
+
+      // Salutation
+      const salutationP = document.createElement('p');
+      if (contactPerson && contactPerson.trim()) {
+        salutationP.innerText = `Dear Mr. ${contactPerson.trim()},`;
+      } else {
+        salutationP.innerText = 'Dear Hiring Manager,';
+      }
+      salutationP.style.marginBottom = '16px';
+      salutationP.style.pageBreakInside = 'avoid';
+      salutationP.style.breakInside = 'avoid-page';
+      content.appendChild(salutationP);
+
+      // Body paragraphs
+      const parasTeal = DOM.letterArea.querySelectorAll('.letter-paragraph');
+      parasTeal.forEach(para => {
+        const p = document.createElement('p');
+        p.innerText = para.textContent.replace('×', '');
+        p.style.marginBottom = '16px';
+        p.style.textAlign = 'justify';
+        p.style.lineHeight = '1.6';
+        p.style.pageBreakInside = 'avoid';
+        p.style.breakInside = 'avoid-page';
+        p.style.wordBreak = 'break-word';
+        p.style.overflowWrap = 'anywhere';
+        p.style.whiteSpace = 'pre-wrap';
+        content.appendChild(p);
+      });
+
+      // Signature
+      const signatureP = document.createElement('p');
+      signatureP.style.marginTop = '32px';
+      signatureP.style.pageBreakInside = 'avoid';
+      signatureP.style.breakInside = 'avoid-page';
+      signatureP.innerText = 'Sincerely,';
+      content.appendChild(signatureP);
+
+      container.appendChild(sidebar);
+      container.appendChild(content);
+      printEl.appendChild(container);
       return printEl;
     }
 
@@ -3070,7 +3312,7 @@
     const paras = DOM.letterArea.querySelectorAll('.letter-paragraph');
     paras.forEach(para => {
       const p = document.createElement('p');
-      p.innerText = para.textContent.replace('×', '');
+      p.innerText = para.textContent.replace('Ã—', '');
       p.style.marginBottom = '12px';
       p.style.pageBreakInside = 'avoid';
       p.style.breakInside = 'avoid-page';
@@ -3136,12 +3378,12 @@
     // Check AI availability
     const aiStatus = await checkAiStatus();
     if (aiStatus.quotaExceeded) {
-      showJobAdStatus('⚠️ AI features are temporarily unavailable (quota exceeded)', 'error');
+      showJobAdStatus('âš ï¸ AI features are temporarily unavailable (quota exceeded)', 'error');
       disableAiButtons();
       return;
     }
 
-    showJobAdStatus('🤖 Extracting job information with AI...', 'loading');
+    showJobAdStatus('ðŸ¤– Extracting job information with AI...', 'loading');
     
     try {
       const response = await fetch('/api/extract-job-ad', {
@@ -3157,7 +3399,7 @@
       const err = await response.json();
         if (err.quotaExceeded) {
           disableAiButtons();
-          throw new Error('⚠️ AI quota exceeded - features disabled');
+          throw new Error('âš ï¸ AI quota exceeded - features disabled');
         }
         throw new Error(err.error || 'Failed to extract');
       }
@@ -3182,11 +3424,11 @@
         DOM.refNumber.value = extracted.reference;
       }
 
-      showJobAdStatus('✅ Job information extracted successfully!', 'success');
+      showJobAdStatus('âœ… Job information extracted successfully!', 'success');
       updateSalutationPreview();
     } catch (error) {
       console.error('AI extraction error:', error);
-      showJobAdStatus(`❌ ${error.message}`, 'error');
+      showJobAdStatus(`âŒ ${error.message}`, 'error');
     }
   }
 
@@ -3205,12 +3447,12 @@
     // Check AI availability
     const aiStatus = await checkAiStatus();
     if (aiStatus.quotaExceeded) {
-      showJobAdStatus('⚠️ AI features are temporarily unavailable (quota exceeded)', 'error');
+      showJobAdStatus('âš ï¸ AI features are temporarily unavailable (quota exceeded)', 'error');
       disableAiButtons();
       return;
     }
 
-    showJobAdStatus('✨ Generating cover letter paragraphs with AI...', 'loading');
+    showJobAdStatus('âœ¨ Generating cover letter paragraphs with AI...', 'loading');
     
     try {
       const response = await fetch('/api/generate-paragraphs', {
@@ -3230,7 +3472,7 @@
       const err = await response.json();
         if (err.quotaExceeded) {
           disableAiButtons();
-          throw new Error('⚠️ AI quota exceeded - features disabled');
+          throw new Error('âš ï¸ AI quota exceeded - features disabled');
         }
         throw new Error(err.error || 'Failed to generate');
       }
@@ -3248,11 +3490,11 @@
         await addResponseToLibrary(paragraphs.closing, 'ai', 'AI Closing');
       }
 
-      showJobAdStatus('✅ AI paragraphs generated and added to library!', 'success');
+      showJobAdStatus('âœ… AI paragraphs generated and added to library!', 'success');
       await syncResponsesFromDb();
     } catch (error) {
       console.error('AI generation error:', error);
-      showJobAdStatus(`❌ ${error.message}`, 'error');
+      showJobAdStatus(`âŒ ${error.message}`, 'error');
     }
   }
 
@@ -3321,6 +3563,144 @@
     }
   }
 
+  // Load Draft functionality
+  async function showLoadDraftModal() {
+    if (!authToken) {
+      alert('Please sign in to load drafts.');
+      return;
+    }
+    
+    const modal = document.getElementById('loadDraftModal');
+    const draftsList = document.getElementById('draftsList');
+    
+    if (!modal || !draftsList) return;
+    
+    try {
+      // Fetch all applications with Draft status
+      const response = await fetch('/applications', {
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+      
+      if (!response.ok) throw new Error('Failed to fetch drafts');
+      
+      const applications = await response.json();
+      const drafts = applications.filter(app => app.status === 'Draft');
+      
+      if (drafts.length === 0) {
+        draftsList.innerHTML = '<p class="no-data">No drafts saved yet.</p>';
+      } else {
+        draftsList.innerHTML = drafts.map(draft => `
+          <div class="draft-item" data-draft-id="${draft.id}">
+            <div class="draft-header">
+              <strong>${draft.company}</strong> - ${draft.role}
+            </div>
+            <div class="draft-date">${new Date(draft.date).toLocaleDateString()}</div>
+            <div class="draft-actions">
+              <button class="load-draft-btn" data-draft-id="${draft.id}">Load</button>
+              <button class="delete-draft-btn" data-draft-id="${draft.id}">Delete</button>
+            </div>
+          </div>
+        `).join('');
+        
+        // Attach event listeners to load buttons
+        draftsList.querySelectorAll('.load-draft-btn').forEach(btn => {
+          btn.addEventListener('click', () => loadDraft(btn.dataset.draftId));
+        });
+        
+        // Attach event listeners to delete buttons
+        draftsList.querySelectorAll('.delete-draft-btn').forEach(btn => {
+          btn.addEventListener('click', () => deleteDraft(btn.dataset.draftId));
+        });
+      }
+      
+      modal.classList.remove('hidden');
+    } catch (error) {
+      console.error('Error loading drafts:', error);
+      alert('Failed to load drafts: ' + error.message);
+    }
+  }
+  
+  function hideLoadDraftModal() {
+    const modal = document.getElementById('loadDraftModal');
+    if (modal) modal.classList.add('hidden');
+  }
+  
+  async function loadDraft(draftId) {
+    try {
+      const response = await fetch('/applications', {
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+      
+      if (!response.ok) throw new Error('Failed to fetch draft');
+      
+      const applications = await response.json();
+      const draft = applications.find(app => app.id === draftId);
+      
+      if (!draft) {
+        alert('Draft not found');
+        return;
+      }
+      
+      // Load job information
+      if (DOM.roleTitle) DOM.roleTitle.value = draft.role || '';
+      if (DOM.companyName) DOM.companyName.value = draft.company || '';
+      
+      // Parse job info from notes if available
+      try {
+        const jobInfo = JSON.parse(draft.notes || '{}');
+        if (DOM.contactPerson) DOM.contactPerson.value = jobInfo.contactPerson || '';
+        if (DOM.businessAddress) DOM.businessAddress.value = jobInfo.businessAddress || '';
+        if (DOM.refNumber) DOM.refNumber.value = jobInfo.refNumber || '';
+      } catch {}
+      
+      // Clear existing letter
+      DOM.letterArea.innerHTML = '';
+      const placeholder = DOM.letterArea.querySelector('.placeholder');
+      if (placeholder) placeholder.remove();
+      
+      // Load paragraphs
+      if (draft.paragraphs && Array.isArray(draft.paragraphs)) {
+        draft.paragraphs.forEach(paragraph => {
+          if (paragraph.id) {
+            addParagraphToLetter(paragraph.id);
+          }
+        });
+      }
+      
+      updateSalutationPreview();
+      hideLoadDraftModal();
+      alert(`✅ Draft loaded: ${draft.company} - ${draft.role}`);
+    } catch (error) {
+      console.error('Error loading draft:', error);
+      alert('Failed to load draft: ' + error.message);
+    }
+  }
+  
+  async function deleteDraft(draftId) {
+    if (!confirm('Are you sure you want to delete this draft?')) return;
+    
+    try {
+      const response = await fetch(`/applications/${draftId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+      
+      if (!response.ok) throw new Error('Failed to delete draft');
+      
+      // Refresh the drafts list
+      showLoadDraftModal();
+    } catch (error) {
+      console.error('Error deleting draft:', error);
+      alert('Failed to delete draft: ' + error.message);
+    }
+  }
+
   // PDF Export (Enhanced)
   function downloadPdf() {
     const profile = appState.profile;
@@ -3349,9 +3729,9 @@
     };
 
     // Generate and save PDF, then auto-save letter and clear for next one
-    html2pdf().set(opt).from(el).save().then(() => {
-      // Auto-save the letter locally
-      saveLetterLocally();
+    html2pdf().set(opt).from(el).save().then(async () => {
+      // Auto-save the letter as draft
+      await saveDraft();
       
       // Clear the letter area for next letter
       DOM.letterArea.innerHTML = '<p class="placeholder">Drag responses here to build your letter</p>';
@@ -3380,7 +3760,7 @@
   // Event Listeners Setup
   function setupEventListeners() {
     // Profile auto-save on input
-    [DOM.firstName, DOM.lastName, DOM.addressLine1, DOM.addressLine2, DOM.phoneNumber, DOM.emailAddress].forEach(input => {
+    [DOM.firstName, DOM.lastName, DOM.addressLine1, DOM.addressLine2, DOM.phoneNumber, DOM.emailAddress, DOM.industry].forEach(input => {
       if (!input) return;
       input.addEventListener('blur', saveUserProfile);
     });
@@ -3421,15 +3801,54 @@
     }
     
     // Letter actions
-    if (DOM.newLetterBtn) DOM.newLetterBtn.addEventListener('click', newLetter);
+    if (DOM.newLetterBtn) {
+      console.log('Bottom new letter button found and event listener attached');
+      DOM.newLetterBtn.addEventListener('click', newLetter);
+    } else {
+      console.warn('Bottom new letter button not found');
+    }
     
     // New letter button at top (same function)
     const newLetterBtnTop = document.getElementById('newLetterBtnTop');
-    if (newLetterBtnTop) newLetterBtnTop.addEventListener('click', newLetter);
+    if (newLetterBtnTop) {
+      console.log('Top new letter button found and event listener attached');
+      newLetterBtnTop.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('Top new letter button clicked', e);
+        newLetter();
+      });
+    } else {
+      console.warn('Top new letter button (newLetterBtnTop) not found in DOM');
+    }
     
-    if (DOM.saveLetterBtn) DOM.saveLetterBtn.addEventListener('click', saveLetterLocally);
+    // Draft buttons
+    const saveDraftBtn = document.getElementById('saveDraftBtn');
+    const loadDraftBtn = document.getElementById('loadDraftBtn');
+    const loadDraftCancelBtn = document.getElementById('loadDraftCancelBtn');
+    
+    if (saveDraftBtn) saveDraftBtn.addEventListener('click', saveDraft);
+    if (loadDraftBtn) loadDraftBtn.addEventListener('click', showLoadDraftModal);
+    if (loadDraftCancelBtn) loadDraftCancelBtn.addEventListener('click', hideLoadDraftModal);
     if (DOM.downloadPdfBtn) DOM.downloadPdfBtn.addEventListener('click', downloadPdf);
 
+    // Prevent job ad textarea from accepting response drags
+    if (DOM.jobAdText) {
+      DOM.jobAdText.addEventListener('dragover', (e) => {
+        // Only prevent if dragging a response (has responseId data)
+        const types = e.dataTransfer.types;
+        if (types.includes('text/plain')) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'none';
+        }
+      });
+      DOM.jobAdText.addEventListener('drop', (e) => {
+        // Prevent responses from being dropped into job ad textarea
+        e.preventDefault();
+        e.stopPropagation();
+      });
+    }
+    
     // Job ad parsing
     if (DOM.parseJobAdBtn) DOM.parseJobAdBtn.addEventListener('click', handleParseJobAd);
     if (DOM.fetchJobAdBtn) DOM.fetchJobAdBtn.addEventListener('click', handleFetchJobAdUrl);
@@ -3510,6 +3929,16 @@
         filterResponses('');
       });
     }
+    
+    // Collapsible job info section
+    const toggleJobInfoBtn = document.getElementById('toggleJobInfoBtn');
+    const jobInfoContent = document.getElementById('jobInfoContent');
+    if (toggleJobInfoBtn && jobInfoContent) {
+      toggleJobInfoBtn.addEventListener('click', () => {
+        jobInfoContent.classList.toggle('collapsed');
+        toggleJobInfoBtn.classList.toggle('collapsed');
+      });
+    }
   }
 
   // Initialize DOM Elements
@@ -3520,6 +3949,7 @@
     DOM.addressLine2 = document.getElementById('addressLine2');
     DOM.phoneNumber = document.getElementById('phoneNumber');
     DOM.emailAddress = document.getElementById('emailAddress');
+    DOM.industry = document.getElementById('industry');
     
     // Resume upload elements
     DOM.resumeUploadArea = document.getElementById('resumeUploadArea');
@@ -3857,7 +4287,7 @@
     if (aiStatus.quotaExceeded) {
       disableAiButtons();
       if (DOM.jobAdParseStatus) {
-        DOM.jobAdParseStatus.textContent = '⚠️ AI features currently unavailable (quota exceeded)';
+        DOM.jobAdParseStatus.textContent = 'âš ï¸ AI features currently unavailable (quota exceeded)';
         DOM.jobAdParseStatus.className = 'job-ad-status error';
       }
     }

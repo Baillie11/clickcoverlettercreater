@@ -22,7 +22,7 @@ let aiQuotaExceeded = false;
 let aiQuotaExceededAt = null;
 
 const app = express();
-const PORT = process.env.PORT || 5050;
+const PORT = process.env.PORT || 3050;
 
 // Production-ready CORS configuration
 const corsOptions = {
@@ -115,6 +115,29 @@ if (db) {
     if (!userCols.some(c => c.name === 'shareResponses')) {
       db.prepare('ALTER TABLE users ADD COLUMN shareResponses INTEGER DEFAULT 1').run();
     }
+  } catch {}
+
+  // Applications table for dashboard tracking
+  db.prepare(`CREATE TABLE IF NOT EXISTS applications (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    company TEXT,
+    role TEXT,
+    status TEXT,
+    notes TEXT,
+    date TEXT,
+    paragraphs TEXT,
+    timeSpent INTEGER DEFAULT 0,
+    createdAt TEXT NOT NULL,
+    updatedAt TEXT NOT NULL,
+    FOREIGN KEY(userId) REFERENCES users(id) ON DELETE CASCADE
+  )`).run();
+
+  // Create indexes for better performance
+  try {
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_applications_userId ON applications(userId)').run();
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_applications_date ON applications(date)').run();
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_applications_status ON applications(status)').run();
   } catch {}
 }
 
@@ -457,7 +480,210 @@ app.delete('/responses/:id', (req, res) => {
   }
 });
 
-// AI endpoints
+// ===== APPLICATIONS ENDPOINTS =====
+
+// Get all applications for the authenticated user
+app.get('/applications', (req, res) => {
+  const auth = getUserFromAuth(req);
+  if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+  
+  try {
+    if (db) {
+      const rows = db.prepare('SELECT * FROM applications WHERE userId = ? ORDER BY date DESC').all(auth.user.id);
+      // Parse paragraphs JSON
+      const parsed = rows.map(app => ({
+        ...app,
+        paragraphs: app.paragraphs ? JSON.parse(app.paragraphs) : [],
+        timeSpent: app.timeSpent || 0
+      }));
+      res.json(parsed);
+    } else {
+      // JSON store fallback
+      const apps = store.applications ? store.applications.filter(a => a.userId === auth.user.id) : [];
+      res.json(apps);
+    }
+  } catch (e) {
+    console.error('Error fetching applications:', e);
+    res.status(500).json({ error: 'Failed to fetch applications' });
+  }
+});
+
+// Create new application
+app.post('/applications', (req, res) => {
+  const auth = getUserFromAuth(req);
+  if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+  
+  const { id, company, role, status, notes, date, paragraphs, timeSpent } = req.body || {};
+  
+  if (!id || !company || !role) {
+    return res.status(400).json({ error: 'Missing required fields: id, company, role' });
+  }
+  
+  try {
+    const now = nowIso();
+    const paragraphsJson = JSON.stringify(paragraphs || []);
+    
+    if (db) {
+      db.prepare(`INSERT INTO applications 
+        (id, userId, company, role, status, notes, date, paragraphs, timeSpent, createdAt, updatedAt) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        .run(
+          id,
+          auth.user.id,
+          company,
+          role,
+          status || 'Draft',
+          notes || '',
+          date || now,
+          paragraphsJson,
+          timeSpent || 0,
+          now,
+          now
+        );
+      res.status(201).json({ id, message: 'Application created successfully' });
+    } else {
+      // JSON store fallback
+      if (!store.applications) store.applications = [];
+      store.applications.push({
+        id,
+        userId: auth.user.id,
+        company,
+        role,
+        status: status || 'Draft',
+        notes: notes || '',
+        date: date || now,
+        paragraphs: paragraphs || [],
+        timeSpent: timeSpent || 0,
+        createdAt: now,
+        updatedAt: now
+      });
+      saveStore();
+      res.status(201).json({ id, message: 'Application created successfully' });
+    }
+  } catch (e) {
+    console.error('Error creating application:', e);
+    if (String(e.message || '').includes('UNIQUE')) {
+      res.status(409).json({ error: 'Application with this ID already exists' });
+    } else {
+      res.status(500).json({ error: 'Failed to create application' });
+    }
+  }
+});
+
+// Update application
+app.put('/applications/:id', (req, res) => {
+  const auth = getUserFromAuth(req);
+  if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+  
+  const { id } = req.params;
+  const updates = req.body || {};
+  
+  try {
+    if (db) {
+      // Verify ownership
+      const existing = db.prepare('SELECT * FROM applications WHERE id = ? AND userId = ?').get(id, auth.user.id);
+      if (!existing) {
+        return res.status(404).json({ error: 'Application not found' });
+      }
+      
+      // Build dynamic update query
+      const fields = [];
+      const values = [];
+      
+      if (updates.company !== undefined) {
+        fields.push('company = ?');
+        values.push(updates.company);
+      }
+      if (updates.role !== undefined) {
+        fields.push('role = ?');
+        values.push(updates.role);
+      }
+      if (updates.status !== undefined) {
+        fields.push('status = ?');
+        values.push(updates.status);
+      }
+      if (updates.notes !== undefined) {
+        fields.push('notes = ?');
+        values.push(updates.notes);
+      }
+      if (updates.date !== undefined) {
+        fields.push('date = ?');
+        values.push(updates.date);
+      }
+      if (updates.paragraphs !== undefined) {
+        fields.push('paragraphs = ?');
+        values.push(JSON.stringify(updates.paragraphs));
+      }
+      if (updates.timeSpent !== undefined) {
+        fields.push('timeSpent = ?');
+        values.push(updates.timeSpent);
+      }
+      
+      fields.push('updatedAt = ?');
+      values.push(nowIso());
+      
+      // Add id and userId for WHERE clause
+      values.push(id, auth.user.id);
+      
+      db.prepare(`UPDATE applications SET ${fields.join(', ')} WHERE id = ? AND userId = ?`).run(...values);
+      res.json({ id, message: 'Application updated successfully' });
+    } else {
+      // JSON store fallback
+      if (!store.applications) store.applications = [];
+      const index = store.applications.findIndex(a => a.id === id && a.userId === auth.user.id);
+      if (index === -1) {
+        return res.status(404).json({ error: 'Application not found' });
+      }
+      
+      store.applications[index] = {
+        ...store.applications[index],
+        ...updates,
+        updatedAt: nowIso()
+      };
+      saveStore();
+      res.json({ id, message: 'Application updated successfully' });
+    }
+  } catch (e) {
+    console.error('Error updating application:', e);
+    res.status(500).json({ error: 'Failed to update application' });
+  }
+});
+
+// Delete application
+app.delete('/applications/:id', (req, res) => {
+  const auth = getUserFromAuth(req);
+  if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+  
+  const { id } = req.params;
+  
+  try {
+    if (db) {
+      const result = db.prepare('DELETE FROM applications WHERE id = ? AND userId = ?').run(id, auth.user.id);
+      if (result.changes === 0) {
+        return res.status(404).json({ error: 'Application not found' });
+      }
+      res.json({ id, message: 'Application deleted successfully' });
+    } else {
+      // JSON store fallback
+      if (!store.applications) store.applications = [];
+      const initialLength = store.applications.length;
+      store.applications = store.applications.filter(a => !(a.id === id && a.userId === auth.user.id));
+      
+      if (store.applications.length === initialLength) {
+        return res.status(404).json({ error: 'Application not found' });
+      }
+      
+      saveStore();
+      res.json({ id, message: 'Application deleted successfully' });
+    }
+  } catch (e) {
+    console.error('Error deleting application:', e);
+    res.status(500).json({ error: 'Failed to delete application' });
+  }
+});
+
+// ===== AI ENDPOINTS =====
+
 app.post('/api/extract-job-ad', async (req, res) => {
   const auth = getUserFromAuth(req);
   if (!auth) return res.status(401).json({ error: 'Unauthorized' });

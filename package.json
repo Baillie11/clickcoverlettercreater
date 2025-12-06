@@ -1,12 +1,12 @@
 {
   "name": "click-cover-letter-creator",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "Cover letter builder with themes, preview, and local DB persistence.",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "dev:browsersync": "concurrently -k -n server,browser -c magenta,cyan \"nodemon server.js\" \"browser-sync start --proxy http://localhost:5050 --files index.html,profile.html,styles.css,script.js --port 3000 --no-notify\""
+    "dev:browsersync": "concurrently -k -n server,browser -c magenta,cyan \"nodemon server.js\" \"browser-sync start --proxy http://localhost:3050 --files index.html,profile.html,styles.css,script.js --port 3000 --no-notify\""
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

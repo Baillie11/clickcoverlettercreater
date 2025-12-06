@@ -4,7 +4,7 @@
   
 [build.environment]
   # Node.js version (not needed but good to specify)
-  NODE_VERSION = "18"
+  NODE_VERSION = "20"
 
 [[headers]]
   # Apply to all files

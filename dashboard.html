@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard • Click Cover Letter Creator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+</head>
+<body class="dashboard-page">
+  <header class="app-header">
+    <h1>Click Cover Letter Creator</h1>
+    <nav class="app-nav">
+      <div class="nav-left">
+        <a href="index.html">Create Letter</a>
+        <a href="profile.html">Profile</a>
+        <a href="dashboard.html" class="active">Dashboard</a>
+      </div>
+      <div class="nav-right">
+        <button type="button" id="authBtn" class="nav-btn" title="Sign In">🔐 Sign In</button>
+        <div id="userSection" class="user-section" style="display:none;">
+          <span id="welcomeMessage" class="welcome-text"></span>
+          <a href="#" id="logoutLink" class="logout-link">Sign Out</a>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <div class="app-container dashboard-container">
+    <main class="dashboard-panel">
+      <h2>Application Dashboard</h2>
+      
+      <!-- Stats Cards -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">📝</div>
+          <div class="stat-content">
+            <h3 id="totalApplications">0</h3>
+            <p>Total Applications</p>
+          </div>
+        </div>
+        
+        <div class="stat-card">
+          <div class="stat-icon">📅</div>
+          <div class="stat-content">
+            <h3 id="applicationsThisWeek">0</h3>
+            <p>This Week</p>
+          </div>
+        </div>
+        
+        <div class="stat-card">
+          <div class="stat-icon">🗓️</div>
+          <div class="stat-content">
+            <h3 id="applicationsThisMonth">0</h3>
+            <p>This Month</p>
+          </div>
+        </div>
+        
+        <div class="stat-card">
+          <div class="stat-icon">🎯</div>
+          <div class="stat-content">
+            <h3 id="interviewCount">0</h3>
+            <p>Interviews</p>
+          </div>
+        </div>
+        
+        <div class="stat-card">
+          <div class="stat-icon">💾</div>
+          <div class="stat-content">
+            <h3 id="draftCount">0</h3>
+            <p>Saved Drafts</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Status Breakdown -->
+      <section class="dashboard-section">
+        <h3>Application Status Breakdown</h3>
+        <div class="status-breakdown" id="statusBreakdown">
+          <div class="status-item">
+            <span class="status-label">📄 Draft</span>
+            <span class="status-count" id="statusDraft">0</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">✉️ Applied</span>
+            <span class="status-count" id="statusApplied">0</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">📞 Interview Scheduled</span>
+            <span class="status-count" id="statusInterviewScheduled">0</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">✅ Interview Complete</span>
+            <span class="status-count" id="statusInterviewComplete">0</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">📋 Assessment Pending</span>
+            <span class="status-count" id="statusAssessmentPending">0</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">🎉 Offer Made</span>
+            <span class="status-count" id="statusOfferMade">0</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">🏆 Offer Accepted</span>
+            <span class="status-count" id="statusOfferAccepted">0</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">❌ Rejected</span>
+            <span class="status-count" id="statusRejected">0</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Most Used Paragraphs -->
+      <section class="dashboard-section">
+        <h3>Most Used Cover Letter Paragraphs</h3>
+        <div id="topParagraphs" class="top-paragraphs">
+          <p class="no-data">No paragraph usage data yet. Start creating cover letters to see statistics.</p>
+        </div>
+      </section>
+
+      <!-- Applications List -->
+      <section class="dashboard-section">
+        <div class="section-header">
+          <h3>All Applications</h3>
+          <div class="section-actions">
+            <button type="button" id="reimportLettersBtn" class="reimport-btn" title="Re-import saved letters">📥 Re-import</button>
+            <button type="button" id="exportApplicationsBtn" class="export-btn">📊 Export CSV</button>
+          </div>
+        </div>
+        
+        <div class="filter-controls">
+          <input type="text" id="searchApplications" placeholder="🔍 Search by company or role..." />
+          <select id="filterStatus">
+            <option value="">All Statuses</option>
+            <option value="Draft">Draft</option>
+            <option value="Applied">Applied</option>
+            <option value="Interview Scheduled">Interview Scheduled</option>
+            <option value="Interview Complete">Interview Complete</option>
+            <option value="Assessment Pending">Assessment Pending</option>
+            <option value="Offer Made">Offer Made</option>
+            <option value="Offer Accepted">Offer Accepted</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+          <select id="sortApplications">
+            <option value="date-desc">Newest First</option>
+            <option value="date-asc">Oldest First</option>
+            <option value="company">Company A-Z</option>
+            <option value="status">Status</option>
+          </select>
+        </div>
+
+        <div class="applications-table-container">
+          <table class="applications-table" id="applicationsTable">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Company</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Notes</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="applicationsTableBody">
+              <tr class="no-data-row">
+                <td colspan="6">No applications yet. Create and save a cover letter to start tracking!</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Edit Application Modal -->
+  <div id="editApplicationModal" class="modal hidden" aria-live="polite">
+    <div class="modal-content">
+      <h3>Edit Application</h3>
+      <label>Company: <strong id="editAppCompany"></strong></label>
+      <label>Role: <strong id="editAppRole"></strong></label>
+      
+      <label for="editAppStatus">Status</label>
+      <select id="editAppStatus">
+        <option value="Draft">📄 Draft</option>
+        <option value="Applied">✉️ Applied</option>
+        <option value="Interview Scheduled">📞 Interview Scheduled</option>
+        <option value="Interview Complete">✅ Interview Complete</option>
+        <option value="Assessment Pending">📋 Assessment Pending</option>
+        <option value="Offer Made">🎉 Offer Made</option>
+        <option value="Offer Accepted">🏆 Offer Accepted</option>
+        <option value="Rejected">❌ Rejected</option>
+      </select>
+      
+      <label for="editAppNotes">Notes</label>
+      <textarea id="editAppNotes" rows="4" placeholder="Add notes about this application..."></textarea>
+      
+      <div class="modal-actions">
+        <button type="button" id="editAppCancelBtn" class="secondary-btn">Cancel</button>
+        <button type="button" id="editAppSaveBtn">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auth Landing (full-screen) -->
+  <div id="authLanding" class="auth-landing hidden" aria-live="polite">
+    <div class="auth-card">
+      <h1>Welcome to Click Cover Letter Creator</h1>
+      <p class="subtle">Sign in or create an account to continue</p>
+      <label>Username
+        <input type="text" id="authUsername" autocomplete="username" />
+      </label>
+      <label>Password
+        <input type="password" id="authPassword" autocomplete="current-password" />
+      </label>
+      <label class="inline"><input type="checkbox" id="authCreate" /> Create new account</label>
+      <div class="auth-actions">
+        <button id="authSubmitBtn">Continue</button>
+        <button type="button" id="forgotPasswordBtn" class="link-btn">Forgot Password?</button>
+      </div>
+      <div id="authError" class="auth-error" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+  <script src="dashboard.js"></script>
+</body>
+</html>
