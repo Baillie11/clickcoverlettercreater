@@ -14,7 +14,7 @@
   // API Configuration (from main app)
   const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:3050'
-    : (window.ENV_API_BASE || 'https://your-backend.herokuapp.com');
+    : (window.ENV_API_BASE !== undefined ? window.ENV_API_BASE : '');
   const API_TIMEOUT_MS = 3000;
   let authToken = null;
   let apiHealthy = null;
@@ -148,7 +148,21 @@
       if (authToken) {
         try {
           const dbApps = await apiGetApplications();
-          applications = dbApps;
+          // Parse paragraphs if they're stored as JSON strings
+          applications = dbApps.map(app => {
+            if (app.paragraphs && typeof app.paragraphs === 'string') {
+              try {
+                app.paragraphs = JSON.parse(app.paragraphs);
+              } catch (e) {
+                console.warn('Could not parse paragraphs for app:', app.id);
+                app.paragraphs = [];
+              }
+            }
+            if (!Array.isArray(app.paragraphs)) {
+              app.paragraphs = [];
+            }
+            return app;
+          });
           // Sync to localStorage as backup
           localStorage.setItem(STORAGE_KEY, JSON.stringify(applications));
           console.log('✅ Loaded applications from database:', applications.length);
@@ -161,6 +175,13 @@
       // Fallback to localStorage
       const data = localStorage.getItem(STORAGE_KEY);
       applications = data ? JSON.parse(data) : [];
+      // Ensure paragraphs is always an array
+      applications = applications.map(app => {
+        if (!Array.isArray(app.paragraphs)) {
+          app.paragraphs = [];
+        }
+        return app;
+      });
       console.log('Loaded applications from localStorage:', applications.length);
     } catch (e) {
       console.error('Error loading applications:', e);
@@ -682,7 +703,9 @@
 
   // Initialization
   async function initDashboard() {
+    console.log('📈 Initializing dashboard...');
     await loadApplications();
+    console.log('📉 Applications loaded:', applications.length);
     
     // Migrate previously saved letters
     const migratedCount = migrateSavedLetters();
@@ -692,6 +715,7 @@
     }
     
     refreshDashboard();
+    console.log('✅ Dashboard statistics updated');
     setupEventListeners();
     
     // Show connection status
@@ -804,7 +828,16 @@
         app.status = status;
         saveApplications();
       }
+    },
+    
+    refresh: async function() {
+      console.log('🔄 Dashboard refresh requested');
+      await loadApplications();
+      refreshDashboard();
+      console.log('✅ Dashboard refreshed with', applications.length, 'applications');
     }
   };
+  
+  console.log('🎯 Dashboard API exposed and ready');
 
 })();

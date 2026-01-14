@@ -11,6 +11,7 @@
     addressLine2: null,
     phoneNumber: null,
     emailAddress: null,
+    signature: null,
     
     // Resume Upload Elements
     resumeUploadArea: null,
@@ -592,6 +593,10 @@
       'phone number':     val(DOM.phoneNumber?.value),
       'email':            val(DOM.emailAddress?.value),
       'email address':    val(DOM.emailAddress?.value)
+      ,
+      // Signature / sign-off (from profile)
+      'signature':        val(DOM.signature?.value),
+      'sign off':         val(DOM.signature?.value)
     };
     return (text || '').replace(/[\[{]([^}\]]+)[}\]]/g, (m, rawKey) => {
       const k = rawKey.trim().toLowerCase();
@@ -601,10 +606,10 @@
   }
 
   // Backend API (local) for persisting user responses
-  // Use environment variable or fallback to localhost
+  // Use environment variable or fallback to same-origin (empty string)
   const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? 'http://localhost:5050'
-    : (window.ENV_API_BASE || 'https://your-backend.herokuapp.com');
+    ? 'http://localhost:3050'
+    : (window.ENV_API_BASE !== undefined ? window.ENV_API_BASE : '');
   let authToken = null;
   const API_TIMEOUT_MS = 3000;
   let apiHealthy = null; // null=unknown, true=ok, false=down
@@ -847,6 +852,10 @@
     if (DOM.addressLine2) DOM.addressLine2.value = appState.profile.addressLine2 || '';
     if (DOM.phoneNumber) DOM.phoneNumber.value = appState.profile.phoneNumber || '';
     if (DOM.emailAddress) DOM.emailAddress.value = appState.profile.emailAddress || '';
+    if (DOM.signature) DOM.signature.value = appState.profile.signature || '';
+    if (DOM.keyword1) DOM.keyword1.value = (appState.profile.keywords && appState.profile.keywords[0]) || '';
+    if (DOM.keyword2) DOM.keyword2.value = (appState.profile.keywords && appState.profile.keywords[1]) || '';
+    if (DOM.keyword3) DOM.keyword3.value = (appState.profile.keywords && appState.profile.keywords[2]) || '';
     if (DOM.industry) DOM.industry.value = appState.profile.industry || '';
   }
 
@@ -858,6 +867,8 @@
       addressLine2: sanitizeText(DOM.addressLine2?.value || ''),
       phoneNumber: sanitizeText(DOM.phoneNumber?.value || ''),
       emailAddress: sanitizeText(DOM.emailAddress?.value || ''),
+      signature: sanitizeText(DOM.signature?.value || ''),
+      keywords: [sanitizeText(DOM.keyword1?.value || ''), sanitizeText(DOM.keyword2?.value || ''), sanitizeText(DOM.keyword3?.value || '')].filter(k => k && k.length),
       industry: sanitizeText(DOM.industry?.value || '')
     };
     saveAppState();
@@ -2244,6 +2255,19 @@
       e.dataTransfer.effectAllowed = 'copy';
     });
     
+    // Add double-click to add response to letter
+    responseEl.addEventListener('dblclick', (e) => {
+      e.preventDefault();
+      if (DOM.letterArea) {
+        // Remove placeholder if present
+        const placeholder = DOM.letterArea.querySelector('.placeholder');
+        if (placeholder) placeholder.remove();
+        
+        // Add the response to the letter
+        addParagraphToLetter(response.id);
+      }
+    });
+    
     return responseEl;
   }
 
@@ -2466,7 +2490,24 @@
     });
   }
 
-  function addParagraphToLetter(responseId) {
+  // Helper to get paragraph text excluding control buttons; prefers edited/custom text
+  function getParagraphText(paragraphEl) {
+    if (!paragraphEl) return '';
+    // If stored custom text, use it
+    if (paragraphEl.dataset.customText) return paragraphEl.dataset.customText;
+    // Otherwise look for editable child
+    const editable = paragraphEl.querySelector('.editable-paragraph');
+    if (editable) return editable.innerText || '';
+    // Fallback: collect text nodes only
+    let txt = '';
+    paragraphEl.childNodes.forEach(n => {
+      if (n.nodeType === Node.TEXT_NODE) txt += n.nodeValue;
+      else if (n.nodeType === Node.ELEMENT_NODE && n.tagName !== 'BUTTON') txt += n.textContent;
+    });
+    return txt;
+  }
+
+  function addParagraphToLetter(responseId, customText) {
     const response = appState.responses.find(r => r.id === responseId);
     if (!response) return;
     
@@ -2479,13 +2520,20 @@
     const paragraphEl = document.createElement('div');
     paragraphEl.className = 'letter-paragraph';
     paragraphEl.dataset.responseId = responseId;
-    // Use a text node to preserve newlines
-    const textNode = document.createTextNode(replacePlaceholders(response.text));
-    paragraphEl.appendChild(textNode);
+    if (customText) paragraphEl.dataset.customText = customText;
+    // Create an editable container so users can edit text in-situ
+    const editable = document.createElement('div');
+    editable.className = 'editable-paragraph';
+    editable.contentEditable = true;
+    editable.spellcheck = true;
+    const initialText = customText || replacePlaceholders(response.text);
+    editable.innerText = initialText;
+    paragraphEl.appendChild(editable);
     
     // Add remove button
     const removeBtn = document.createElement('button');
-    removeBtn.textContent = 'Ã—';
+    removeBtn.textContent = '\u00D7';
+    removeBtn.setAttribute('aria-label', 'Remove paragraph');
     removeBtn.style.cssText = 'position: absolute; top: 5px; right: 5px; background: #ff4757; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-size: 12px; z-index: 10;';
     removeBtn.onclick = () => {
       paragraphEl.remove();
@@ -2494,6 +2542,12 @@
     
     paragraphEl.style.position = 'relative';
     paragraphEl.appendChild(removeBtn);
+
+    // When editable content changes, store as custom text for this paragraph
+    editable.addEventListener('input', () => {
+      paragraphEl.dataset.customText = editable.innerText;
+      updateLetterState();
+    });
     
     DOM.letterArea.appendChild(paragraphEl);
     updateLetterState();
@@ -2504,23 +2558,56 @@
   }
 
   function updateSalutationPreview() {
-    // Remove existing salutation
+    // Remove existing header elements
+    const existingHeader = DOM.letterArea.querySelector('.letter-header-preview');
+    if (existingHeader) {
+      existingHeader.remove();
+    }
     const existingSalutation = DOM.letterArea.querySelector('.letter-salutation');
     if (existingSalutation) {
       existingSalutation.remove();
     }
+    const existingSignature = DOM.letterArea.querySelector('.letter-signature-preview');
+    if (existingSignature) {
+      existingSignature.remove();
+    }
     
-    // Don't add salutation if only placeholder exists
+    // Don't add elements if only placeholder exists
     const hasContent = DOM.letterArea.querySelectorAll('.letter-paragraph').length > 0;
     if (!hasContent) return;
+    
+    const contactPerson = sanitizeText(DOM.contactPerson.value);
+    const companyName = sanitizeText(DOM.companyName.value);
+    const businessAddress = sanitizeText(DOM.businessAddress.value);
+    const refNumber = sanitizeText(DOM.refNumber.value);
+    
+    // Create company header (if any company details exist)
+    if (companyName || contactPerson || businessAddress || refNumber) {
+      const headerEl = document.createElement('div');
+      headerEl.className = 'letter-header-preview';
+      headerEl.style.cssText = 'margin-bottom: 12px; padding: 10px; background: #f8f9fa; border-radius: 4px; font-size: 0.9em; color: #555;';
+      
+      let headerContent = '';
+      if (companyName) headerContent += `<strong>${companyName}</strong><br/>`;
+      if (contactPerson) headerContent += `Attn: ${contactPerson}<br/>`;
+      if (businessAddress) headerContent += `${businessAddress}<br/>`;
+      if (refNumber) headerContent += `Ref: ${refNumber}<br/>`;
+      
+      headerEl.innerHTML = headerContent;
+      
+      // Insert at the beginning
+      const placeholder = DOM.letterArea.querySelector('.placeholder');
+      if (placeholder) {
+        DOM.letterArea.insertBefore(headerEl, placeholder);
+      } else {
+        DOM.letterArea.insertBefore(headerEl, DOM.letterArea.firstChild);
+      }
+    }
     
     // Create salutation element
     const salutationEl = document.createElement('div');
     salutationEl.className = 'letter-salutation';
     salutationEl.style.cssText = 'margin-bottom: 15px; font-style: italic; color: #666; border-left: 3px solid #3498db; padding-left: 10px;';
-    
-    const contactPerson = sanitizeText(DOM.contactPerson.value);
-    const companyName = sanitizeText(DOM.companyName.value);
     
     if (contactPerson) {
       salutationEl.textContent = `Dear ${contactPerson},`;
@@ -2530,9 +2617,12 @@
       salutationEl.textContent = 'Dear Recruitment Officer,';
     }
     
-    // Insert salutation at the beginning (after any placeholder removal)
+    // Insert salutation after header (or at beginning if no header)
+    const headerElement = DOM.letterArea.querySelector('.letter-header-preview');
     const placeholder = DOM.letterArea.querySelector('.placeholder');
-    if (placeholder) {
+    if (headerElement) {
+      headerElement.insertAdjacentElement('afterend', salutationEl);
+    } else if (placeholder) {
       DOM.letterArea.insertBefore(salutationEl, placeholder);
     } else {
       DOM.letterArea.insertBefore(salutationEl, DOM.letterArea.firstChild);
@@ -2544,10 +2634,12 @@
       const id = p.dataset.responseId;
       const resp = appState.responses.find(r => r.id === id);
       if (!resp) return;
-      // Update only the text node content, keep the remove button
-      const first = p.firstChild;
-      if (first && first.nodeType === Node.TEXT_NODE) {
-        first.nodeValue = replacePlaceholders(resp.text);
+      // If user has custom edited this paragraph, don't overwrite
+      if (p.dataset.customText && p.dataset.customText.trim().length) return;
+      // Update editable child if present
+      const editable = p.querySelector('.editable-paragraph');
+      if (editable) {
+        editable.innerText = replacePlaceholders(resp.text);
       } else {
         // Fallback: reset with text node then re-append the remove button if present
         const removeBtn = p.querySelector('button');
@@ -2557,11 +2649,35 @@
         if (removeBtn) p.appendChild(removeBtn);
       }
     });
+    
+    // Add signature at the end (if content exists)
+    if (hasContent) {
+      const profile = appState.profile;
+      const fullName = `${profile.firstName || ''} ${profile.lastName || ''}`.trim();
+      
+      if ((profile.signature && String(profile.signature).trim()) || fullName || profile.phoneNumber || profile.emailAddress) {
+        const signatureEl = document.createElement('div');
+        signatureEl.className = 'letter-signature-preview';
+        signatureEl.style.cssText = 'margin-top: 20px; padding: 10px; background: #f8f9fa; border-radius: 4px; font-size: 0.9em; color: #555; white-space: pre-line;';
+        
+        if (profile.signature && String(profile.signature).trim()) {
+          signatureEl.textContent = profile.signature;
+        } else {
+          let sig = 'Sincerely,';
+          if (fullName) sig += `\n${fullName}`;
+          if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
+          if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
+          signatureEl.textContent = sig;
+        }
+        
+        DOM.letterArea.appendChild(signatureEl);
+      }
+    }
   }
 
   function updateLetterState() {
     const paragraphs = DOM.letterArea.querySelectorAll('.letter-paragraph');
-    appState.currentLetter.paragraphs = Array.from(paragraphs).map(p => p.dataset.responseId);
+    appState.currentLetter.paragraphs = Array.from(paragraphs).map(p => ({ responseId: p.dataset.responseId, text: p.dataset.customText || null }));
     
     // Show placeholder if no paragraphs
     if (paragraphs.length === 0) {
@@ -2620,9 +2736,14 @@
         const placeholder = DOM.letterArea.querySelector('.placeholder');
         if (placeholder) placeholder.remove();
         
-        // Add each paragraph back
-        letterState.paragraphs.forEach(responseId => {
-          addParagraphToLetter(responseId);
+        // Add each paragraph back. Support legacy array of responseIds or new objects {responseId, text}
+        letterState.paragraphs.forEach(item => {
+          if (!item) return;
+          if (typeof item === 'string') {
+            addParagraphToLetter(item);
+          } else if (item.responseId) {
+            addParagraphToLetter(item.responseId, item.text || null);
+          }
         });
         
         console.log('Restored letter with', letterState.paragraphs.length, 'paragraphs');
@@ -2679,27 +2800,35 @@
     }
     
     try {
+      // Extract paragraph texts for dashboard statistics
+      const paragraphTexts = (appState.currentLetter.paragraphs || []).map(item => {
+        // item may be legacy string (responseId) or object {responseId, text}
+        const responseId = typeof item === 'string' ? item : (item.responseId || '');
+        const resp = appState.responses.find(r => r.id === responseId);
+        const text = (item && item.text) ? item.text : (resp ? resp.text : '');
+        return text;
+      }).filter(t => t && t.trim());
+      
       const draftData = {
         id: generateId(),
         company: company,
         role: jobTitle,
         status: 'Draft',
         notes: '',
-        date: new Date().toISOString().split('T')[0],
-        paragraphs: appState.currentLetter.paragraphs.map(pId => {
-          const resp = appState.responses.find(r => r.id === pId);
-          return resp ? { id: pId, text: resp.text } : null;
-        }).filter(p => p !== null),
+        date: new Date().toISOString(),
+        paragraphs: JSON.stringify(paragraphTexts),  // Store as JSON string for database
         timeSpent: 0
       };
       
-      // Also store job info in notes for now
+      // Also store job info in notes
       const jobInfo = {
         contactPerson: DOM.contactPerson?.value || '',
         businessAddress: DOM.businessAddress?.value || '',
         refNumber: DOM.refNumber?.value || ''
       };
       draftData.notes = JSON.stringify(jobInfo);
+      
+      console.log('Saving draft with data:', draftData);
       
       const response = await fetch('/applications', {
         method: 'POST',
@@ -2715,11 +2844,63 @@
         throw new Error(error.error || 'Failed to save draft');
       }
       
-      alert(`✅ Draft saved: ${company} - ${jobTitle}`);
+      const result = await response.json();
+      console.log('✅ Draft saved successfully:', result);
+      
+      alert(`✅ Draft saved: ${company} - ${jobTitle}\n\nYou can view this in your Dashboard!`);
+      
+      // Notify dashboard API if it exists (for live refresh)
+      if (window.DashboardAPI && typeof window.DashboardAPI.refresh === 'function') {
+        window.DashboardAPI.refresh();
+      }
     } catch (error) {
-      console.error('Error saving draft:', error);
+      console.error('❌ Error saving draft:', error);
       alert(`Failed to save draft: ${error.message}`);
     }
+  }
+
+  // Helper function to create company details block
+  function createCompanyDetailsBlock(companyName, contactPerson, businessAddress, refNumber) {
+    if (!companyName && !contactPerson && !businessAddress && !refNumber) {
+      return null;
+    }
+    
+    const detailsBlock = document.createElement('div');
+    detailsBlock.style.textAlign = 'left';
+    detailsBlock.style.marginBottom = '16px';
+    detailsBlock.style.pageBreakInside = 'avoid';
+    detailsBlock.style.breakInside = 'avoid-page';
+    
+    if (companyName) {
+      const companyEl = document.createElement('div');
+      companyEl.innerText = companyName;
+      companyEl.style.fontWeight = '600';
+      companyEl.style.marginBottom = '2px';
+      detailsBlock.appendChild(companyEl);
+    }
+    
+    if (contactPerson) {
+      const contactEl = document.createElement('div');
+      contactEl.innerText = `Attn: ${contactPerson}`;
+      contactEl.style.marginBottom = '2px';
+      detailsBlock.appendChild(contactEl);
+    }
+    
+    if (businessAddress) {
+      const addressEl = document.createElement('div');
+      addressEl.innerText = businessAddress;
+      addressEl.style.marginBottom = '2px';
+      detailsBlock.appendChild(addressEl);
+    }
+    
+    if (refNumber) {
+      const refEl = document.createElement('div');
+      refEl.innerText = `Ref: ${refNumber}`;
+      refEl.style.marginBottom = '2px';
+      detailsBlock.appendChild(refEl);
+    }
+    
+    return detailsBlock;
   }
 
   // Build a letter DOM element for preview/PDF based on selected theme
@@ -2730,6 +2911,7 @@
     const companyName = sanitizeText(DOM.companyName.value);
     const contactPerson = sanitizeText(DOM.contactPerson.value);
     const businessAddress = sanitizeText(DOM.businessAddress.value);
+    const refNumber = sanitizeText(DOM.refNumber.value);
     const todayLong = formatDateLongAU(new Date());
 
     const printEl = document.createElement('div');
@@ -2747,30 +2929,10 @@
       const headerBlock = document.createElement('div');
       headerBlock.style.textAlign = 'center';
       headerBlock.style.marginBottom = '18px';
+      headerBlock.style.padding = '18px 12px';
+      headerBlock.style.background = '#f5f5f5';
 
-      if (fullName) {
-        const nameEl = document.createElement('div');
-        nameEl.innerText = fullName.toUpperCase().split('').join(' ');
-        nameEl.style.fontWeight = '700';
-        nameEl.style.fontSize = '20pt';
-        nameEl.style.letterSpacing = '6px';
-        nameEl.style.marginBottom = '6px';
-        nameEl.style.pageBreakInside = 'avoid';
-        nameEl.style.breakInside = 'avoid-page';
-        headerBlock.appendChild(nameEl);
-      }
-
-      const taglineEl = document.createElement('div');
-      const defaultTagline = 'NDIS SUPPORT SPECIALIST | DISABILITY CARE ADVOCATE';
-      taglineEl.innerText = defaultTagline;
-      taglineEl.style.fontSize = '10pt';
-      taglineEl.style.letterSpacing = '3px';
-      taglineEl.style.color = '#444';
-      taglineEl.style.marginBottom = '6px';
-      taglineEl.style.pageBreakInside = 'avoid';
-      taglineEl.style.breakInside = 'avoid-page';
-      headerBlock.appendChild(taglineEl);
-
+      // Contacts (email / phone) - Calibri Light 10pt; placed above name per request
       const contacts = [];
       if (profile.phoneNumber) contacts.push(profile.phoneNumber);
       if (profile.emailAddress) contacts.push(profile.emailAddress);
@@ -2781,7 +2943,69 @@
         contactEl.style.color = '#333';
         contactEl.style.pageBreakInside = 'avoid';
         contactEl.style.breakInside = 'avoid-page';
+        contactEl.style.fontFamily = 'Calibri, "Calibri Light", sans-serif';
+        contactEl.style.fontWeight = '300';
+        contactEl.style.marginBottom = '6px';
         headerBlock.appendChild(contactEl);
+      }
+
+      // Name area: split first name and surname for separate styling (name below contacts)
+      if (fullName) {
+        const nameWrapper = document.createElement('div');
+        nameWrapper.style.display = 'block';
+        nameWrapper.style.pageBreakInside = 'avoid';
+        nameWrapper.style.breakInside = 'avoid-page';
+
+        const nameParts = fullName.split(/\s+/).filter(Boolean);
+        const first = nameParts.length ? nameParts[0] : '';
+        const last = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+
+        const firstEl = document.createElement('span');
+        firstEl.innerText = first;
+        firstEl.style.display = 'inline-block';
+        firstEl.style.color = '#000';
+        firstEl.style.fontFamily = 'Calibri, sans-serif';
+        firstEl.style.fontSize = '36pt';
+        firstEl.style.fontWeight = '700';
+        firstEl.style.lineHeight = '1';
+
+        nameWrapper.appendChild(firstEl);
+
+        if (last) {
+          const space = document.createElement('span');
+          space.innerText = ' ';
+          nameWrapper.appendChild(space);
+
+          const lastEl = document.createElement('span');
+          lastEl.innerText = last;
+          lastEl.style.display = 'inline-block';
+          lastEl.style.color = '#0a2b5a';
+          lastEl.style.fontFamily = 'Calibri, sans-serif';
+          lastEl.style.fontSize = '36pt';
+          lastEl.style.fontWeight = '700';
+          lastEl.style.lineHeight = '1';
+          nameWrapper.appendChild(lastEl);
+        }
+
+        nameWrapper.style.marginBottom = '6px';
+        headerBlock.appendChild(nameWrapper);
+      }
+
+      // Keywords (from parsed resume) - Calibri Light 9pt bold
+      // Prefer manual profile keywords (up to 3); fall back to parsed resume keywords
+      const profileKws = appState.profile && Array.isArray(appState.profile.keywords) ? appState.profile.keywords.filter(Boolean) : [];
+      const resumeKws = appState.resume && Array.isArray(appState.resume.keywords) ? appState.resume.keywords.filter(Boolean) : [];
+      const kws = profileKws.length ? profileKws.slice(0, 3) : resumeKws.slice(0, 8);
+      if (kws && kws.length) {
+        const kwEl = document.createElement('div');
+        kwEl.innerText = kws.join(' • ');
+        kwEl.style.fontSize = '10pt';
+        kwEl.style.letterSpacing = '1px';
+        kwEl.style.color = '#333';
+        kwEl.style.fontFamily = 'Calibri, "Calibri Light", sans-serif';
+        kwEl.style.fontWeight = '700';
+        kwEl.style.marginTop = '6px';
+        headerBlock.appendChild(kwEl);
       }
 
       const hr = document.createElement('div');
@@ -2799,6 +3023,12 @@
       dateEl.style.marginBottom = '10px';
       printEl.appendChild(dateEl);
 
+      // Company details (left-aligned)
+      const companyDetails = createCompanyDetailsBlock(companyName, contactPerson, businessAddress, refNumber);
+      if (companyDetails) {
+        printEl.appendChild(companyDetails);
+      }
+
       const salutationP = document.createElement('p');
       if (contactPerson && contactPerson.trim()) {
         salutationP.innerText = `Dear ${contactPerson.trim()},`;
@@ -2812,10 +3042,10 @@
       salutationP.style.breakInside = 'avoid-page';
       printEl.appendChild(salutationP);
 
-      const paras = DOM.letterArea.querySelectorAll('.letter-paragraph');
+        const paras = DOM.letterArea.querySelectorAll('.letter-paragraph');
       paras.forEach(para => {
         const p = document.createElement('p');
-        p.innerText = para.textContent.replace('Ã—', '');
+        p.innerText = getParagraphText(para);
         p.style.marginBottom = '12px';
         p.style.pageBreakInside = 'avoid';
         p.style.breakInside = 'avoid-page';
@@ -2825,16 +3055,20 @@
         printEl.appendChild(p);
       });
 
-      if (fullName || profile.phoneNumber || profile.emailAddress) {
+      if ((profile.signature && String(profile.signature).trim()) || fullName || profile.phoneNumber || profile.emailAddress) {
         const signatureP = document.createElement('p');
         signatureP.style.marginTop = '30px';
         signatureP.style.pageBreakInside = 'avoid';
         signatureP.style.breakInside = 'avoid-page';
-        let sig = 'Sincerely,';
-        if (fullName) sig += `\n${fullName}`;
-        if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
-        if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
-        signatureP.innerText = sig;
+        if (profile.signature && String(profile.signature).trim()) {
+          signatureP.innerText = profile.signature;
+        } else {
+          let sig = 'Sincerely,';
+          if (fullName) sig += `\n${fullName}`;
+          if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
+          if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
+          signatureP.innerText = sig;
+        }
         printEl.appendChild(signatureP);
       }
 
@@ -2866,14 +3100,10 @@
 
       printEl.appendChild(sender);
 
-      // Recipient block (left-aligned)
-      if (companyName || businessAddress) {
-        const recip = document.createElement('div');
-        recip.style.textAlign = 'left';
-        recip.style.marginBottom = '12px';
-        if (companyName) recip.appendChild(Object.assign(document.createElement('div'), { innerText: companyName }));
-        if (businessAddress) recip.appendChild(Object.assign(document.createElement('div'), { innerText: businessAddress }));
-        printEl.appendChild(recip);
+      // Company details (left-aligned)
+      const companyDetails = createCompanyDetailsBlock(companyName, contactPerson, businessAddress, refNumber);
+      if (companyDetails) {
+        printEl.appendChild(companyDetails);
       }
 
       // Salutation
@@ -2891,10 +3121,10 @@
       printEl.appendChild(salutationP);
 
       // Body
-      const parasFC = DOM.letterArea.querySelectorAll('.letter-paragraph');
-      parasFC.forEach(para => {
-        const p = document.createElement('p');
-        p.innerText = para.textContent.replace('Ã—', '');
+      const paras = DOM.letterArea.querySelectorAll('.letter-paragraph');
+    paras.forEach(para => {
+      const p = document.createElement('p');
+      p.innerText = getParagraphText(para);
         p.style.marginBottom = '12px';
         p.style.pageBreakInside = 'avoid';
         p.style.breakInside = 'avoid-page';
@@ -2905,16 +3135,20 @@
       });
 
       // Signature
-      if (fullName || profile.phoneNumber || profile.emailAddress) {
+      if ((profile.signature && String(profile.signature).trim()) || fullName || profile.phoneNumber || profile.emailAddress) {
         const signatureP = document.createElement('p');
         signatureP.style.marginTop = '30px';
         signatureP.style.pageBreakInside = 'avoid';
         signatureP.style.breakInside = 'avoid-page';
-        let sig = 'Sincerely,';
-        if (fullName) sig += `\n${fullName}`;
-        if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
-        if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
-        signatureP.innerText = sig;
+        if (profile.signature && String(profile.signature).trim()) {
+          signatureP.innerText = profile.signature;
+        } else {
+          let sig = 'Sincerely,';
+          if (fullName) sig += `\n${fullName}`;
+          if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
+          if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
+          signatureP.innerText = sig;
+        }
         printEl.appendChild(signatureP);
       }
 
@@ -2950,20 +3184,18 @@
       const content = document.createElement('div');
       content.style.flex = '1';
 
-      if (companyName || businessAddress) {
-        const header = document.createElement('div');
-        header.style.marginBottom = '8px';
-        if (companyName) header.appendChild(Object.assign(document.createElement('div'), { innerText: companyName, style: 'font-weight:600;' }));
-        if (businessAddress) header.appendChild(Object.assign(document.createElement('div'), { innerText: businessAddress }));
-        content.appendChild(header);
-      }
-
       // Date (right-aligned within content)
       const dateEl = document.createElement('div');
       dateEl.innerText = todayLong;
       dateEl.style.textAlign = 'right';
       dateEl.style.marginBottom = '8px';
       content.appendChild(dateEl);
+
+      // Company details (left-aligned)
+      const companyDetails = createCompanyDetailsBlock(companyName, contactPerson, businessAddress, refNumber);
+      if (companyDetails) {
+        content.appendChild(companyDetails);
+      }
 
       const sal = document.createElement('p');
       if (contactPerson && contactPerson.trim()) sal.innerText = `Dear ${contactPerson.trim()},`; else sal.innerText = 'Dear Hiring Manager,';
@@ -2973,7 +3205,7 @@
       const parasSB = DOM.letterArea.querySelectorAll('.letter-paragraph');
       parasSB.forEach(para => {
         const p = document.createElement('p');
-        p.innerText = para.textContent.replace('Ã—', '');
+        p.innerText = getParagraphText(para);
         p.style.marginBottom = '12px';
         p.style.wordBreak = 'break-word';
         p.style.overflowWrap = 'anywhere';
@@ -2981,14 +3213,18 @@
         content.appendChild(p);
       });
 
-      if (fullName || profile.phoneNumber || profile.emailAddress) {
+      if ((profile.signature && String(profile.signature).trim()) || fullName || profile.phoneNumber || profile.emailAddress) {
         const signatureP = document.createElement('p');
         signatureP.style.marginTop = '24px';
-        let sig = 'Sincerely,';
-        if (fullName) sig += `\n${fullName}`;
-        if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
-        if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
-        signatureP.innerText = sig;
+        if (profile.signature && String(profile.signature).trim()) {
+          signatureP.innerText = profile.signature;
+        } else {
+          let sig = 'Sincerely,';
+          if (fullName) sig += `\n${fullName}`;
+          if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
+          if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
+          signatureP.innerText = sig;
+        }
         content.appendChild(signatureP);
       }
 
@@ -3040,6 +3276,12 @@
       dateEl.style.margin = '6px 0 10px';
       printEl.appendChild(dateEl);
 
+      // Company details (left-aligned)
+      const companyDetails = createCompanyDetailsBlock(companyName, contactPerson, businessAddress, refNumber);
+      if (companyDetails) {
+        printEl.appendChild(companyDetails);
+      }
+
       // Body
       const salutationP = document.createElement('p');
       if (contactPerson && contactPerson.trim()) salutationP.innerText = `Dear ${contactPerson.trim()},`; else if (companyName) salutationP.innerText = 'Dear Hiring Team,'; else salutationP.innerText = 'Dear Hiring Team,';
@@ -3049,19 +3291,23 @@
       const parasLH = DOM.letterArea.querySelectorAll('.letter-paragraph');
       parasLH.forEach(para => {
         const p = document.createElement('p');
-        p.innerText = para.textContent.replace('Ã—', '');
+        p.innerText = getParagraphText(para);
         p.style.marginBottom = '12px';
         printEl.appendChild(p);
       });
 
-      if (fullName || profile.phoneNumber || profile.emailAddress) {
+      if ((profile.signature && String(profile.signature).trim()) || fullName || profile.phoneNumber || profile.emailAddress) {
         const signatureP = document.createElement('p');
         signatureP.style.marginTop = '30px';
-        let sig = 'Sincerely,';
-        if (fullName) sig += `\n${fullName}`;
-        if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
-        if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
-        signatureP.innerText = sig;
+        if (profile.signature && String(profile.signature).trim()) {
+          signatureP.innerText = profile.signature;
+        } else {
+          let sig = 'Sincerely,';
+          if (fullName) sig += `\n${fullName}`;
+          if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
+          if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
+          signatureP.innerText = sig;
+        }
         printEl.appendChild(signatureP);
       }
 
@@ -3145,40 +3391,26 @@
       content.style.background = '#ffffff';
       content.style.color = '#000000';
 
-      // Recipient address and date
+      // Date and company details
       const headerBlock = document.createElement('div');
       headerBlock.style.marginBottom = '32px';
 
       // Location and date on same line
       const locationDateEl = document.createElement('div');
-      const location = businessAddress ? businessAddress.split(',')[0] : 'Los Angeles';
-      locationDateEl.innerText = `${location}, ${todayLong}`;
+      const location = businessAddress ? businessAddress.split(',')[0] : '';
+      if (location) {
+        locationDateEl.innerText = `${location}, ${todayLong}`;
+      } else {
+        locationDateEl.innerText = todayLong;
+      }
       locationDateEl.style.marginBottom = '24px';
       headerBlock.appendChild(locationDateEl);
 
-      // Recipient details
-      if (contactPerson) {
-        const contactEl = document.createElement('div');
-        contactEl.innerText = `Mr. ${contactPerson}`;
-        contactEl.style.marginBottom = '4px';
-        headerBlock.appendChild(contactEl);
-      }
-      if (jobTitle) {
-        const titleEl = document.createElement('div');
-        titleEl.innerText = 'Casting Director';
-        titleEl.style.marginBottom = '4px';
-        headerBlock.appendChild(titleEl);
-      }
-      if (companyName) {
-        const companyEl = document.createElement('div');
-        companyEl.innerText = companyName;
-        companyEl.style.marginBottom = '4px';
-        headerBlock.appendChild(companyEl);
-      }
-      if (businessAddress) {
-        const addressEl = document.createElement('div');
-        addressEl.innerText = businessAddress;
-        headerBlock.appendChild(addressEl);
+      // Company details using helper function
+      const companyDetails = createCompanyDetailsBlock(companyName, contactPerson, businessAddress, refNumber);
+      if (companyDetails) {
+        companyDetails.style.marginBottom = '0';
+        headerBlock.appendChild(companyDetails);
       }
 
       content.appendChild(headerBlock);
@@ -3296,6 +3528,12 @@
     dateEl.style.marginBottom = '10px';
     printEl.appendChild(dateEl);
 
+    // Company details (left-aligned)
+    const companyDetails = createCompanyDetailsBlock(companyName, contactPerson, businessAddress, refNumber);
+    if (companyDetails) {
+      printEl.appendChild(companyDetails);
+    }
+
     const salutationP = document.createElement('p');
     salutationP.style.marginBottom = '16px';
     salutationP.style.pageBreakInside = 'avoid';
@@ -3312,7 +3550,7 @@
     const paras = DOM.letterArea.querySelectorAll('.letter-paragraph');
     paras.forEach(para => {
       const p = document.createElement('p');
-      p.innerText = para.textContent.replace('Ã—', '');
+      p.innerText = getParagraphText(para);
       p.style.marginBottom = '12px';
       p.style.pageBreakInside = 'avoid';
       p.style.breakInside = 'avoid-page';
@@ -3322,17 +3560,21 @@
       printEl.appendChild(p);
     });
 
-    if (fullName || profile.phoneNumber || profile.emailAddress) {
+    if ((profile.signature && String(profile.signature).trim()) || fullName || profile.phoneNumber || profile.emailAddress) {
       const signatureP = document.createElement('p');
       signatureP.style.marginTop = '30px';
       signatureP.style.pageBreakInside = 'avoid';
       signatureP.style.breakInside = 'avoid-page';
       signatureP.style.whiteSpace = 'pre-wrap';
-      let sig = 'Sincerely,';
-      if (fullName) sig += `\n${fullName}`;
-      if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
-      if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
-      signatureP.innerText = sig;
+      if (profile.signature && String(profile.signature).trim()) {
+        signatureP.innerText = profile.signature;
+      } else {
+        let sig = 'Sincerely,';
+        if (fullName) sig += `\n${fullName}`;
+        if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
+        if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
+        signatureP.innerText = sig;
+      }
       printEl.appendChild(signatureP);
     }
 
@@ -3760,7 +4002,7 @@
   // Event Listeners Setup
   function setupEventListeners() {
     // Profile auto-save on input
-    [DOM.firstName, DOM.lastName, DOM.addressLine1, DOM.addressLine2, DOM.phoneNumber, DOM.emailAddress, DOM.industry].forEach(input => {
+    [DOM.firstName, DOM.lastName, DOM.addressLine1, DOM.addressLine2, DOM.phoneNumber, DOM.emailAddress, DOM.signature, DOM.keyword1, DOM.keyword2, DOM.keyword3, DOM.industry].forEach(input => {
       if (!input) return;
       input.addEventListener('blur', saveUserProfile);
     });
@@ -3949,6 +4191,10 @@
     DOM.addressLine2 = document.getElementById('addressLine2');
     DOM.phoneNumber = document.getElementById('phoneNumber');
     DOM.emailAddress = document.getElementById('emailAddress');
+    DOM.signature = document.getElementById('signature');
+    DOM.keyword1 = document.getElementById('keyword1');
+    DOM.keyword2 = document.getElementById('keyword2');
+    DOM.keyword3 = document.getElementById('keyword3');
     DOM.industry = document.getElementById('industry');
     
     // Resume upload elements
