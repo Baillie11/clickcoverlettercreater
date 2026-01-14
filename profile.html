@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Profile • Click Cover Letter Creator</title>
+  <title>Profile • Cover Letter Creator</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
@@ -14,7 +14,7 @@
 </head>
 <body class="profile-page">
   <header class="app-header">
-    <h1>Click Cover Letter Creator</h1>
+    <h1>Cover Letter Creator</h1>
     <nav class="app-nav">
       <div class="nav-left">
         <a href="index.html">Create Letter</a>
@@ -43,7 +43,15 @@
         <input type="text" id="addressLine2" placeholder="Address Line 2" />
         <input type="tel" id="phoneNumber" placeholder="Contact Number" />
         <input type="email" id="emailAddress" placeholder="Email Address" />
+        <textarea id="signature" placeholder="Optional signature block (e.g. Kind regards,\nJane Doe\nNDIS Support Worker)" rows="3"></textarea>
         
+          <div class="keywords-section">
+            <h4>Keywords (up to 3)</h4>
+            <input type="text" id="keyword1" placeholder="Keyword 1" />
+            <input type="text" id="keyword2" placeholder="Keyword 2" />
+            <input type="text" id="keyword3" placeholder="Keyword 3" />
+            <p class="hint">These keywords will appear in the header if set (overrides parsed resume keywords).</p>
+          </div>
         <select id="industry" class="industry-select">
           <option value="">Industry...</option>
           <option value="Aged Care">Aged Care</option>
@@ -136,7 +144,7 @@
   <!-- Auth Landing (full-screen) -->
   <div id="authLanding" class="auth-landing hidden" aria-live="polite">
     <div class="auth-card">
-      <h1>Welcome to Click Cover Letter Creator</h1>
+      <h1>Welcome to Cover Letter Creator</h1>
       <p class="subtle">Sign in or create an account to continue</p>
       <label>Username
         <input type="text" id="authUsername" autocomplete="username" />
@@ -175,6 +183,7 @@
     </div>
   </div>
 
+  <script src="env.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
