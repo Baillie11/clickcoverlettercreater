@@ -1,6 +1,6 @@
-// Simple local backend to persist responses using SQLite
+// VitaePro Backend Server - MySQL Compatible
+// Supports both SQLite (development) and MySQL (production)
 // Run with: node server.js
-// Requires: npm i express cors better-sqlite3
 
 require('dotenv').config();
 
@@ -9,71 +9,82 @@ const fs = require('fs');
 const express = require('express');
 const cors = require('cors');
 const OpenAI = require('openai');
-let Database = null;
-try { Database = require('better-sqlite3'); } catch (e) { console.warn('better-sqlite3 not available; using JSON file store.'); }
+const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
-// OpenAI setup
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+// Determine database type based on environment
+const USE_MYSQL = process.env.NODE_ENV === 'production' || process.env.USE_MYSQL === 'true';
 
-// Track OpenAI quota status
-let aiQuotaExceeded = false;
-let aiQuotaExceededAt = null;
+let db = null;
+let dbType = 'none';
 
-const app = express();
-const PORT = process.env.PORT || 3050;
+// Initialize database connection
+async function initDatabase() {
+  if (USE_MYSQL) {
+    // MySQL for production (VentraIP)
+    try {
+      const mysql = require('mysql2/promise');
+      const pool = mysql.createPool({
+        host: process.env.MYSQL_HOST || 'localhost',
+        port: parseInt(process.env.MYSQL_PORT || '3306'),
+        user: process.env.MYSQL_USER,
+        password: process.env.MYSQL_PASSWORD,
+        database: process.env.MYSQL_DATABASE,
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0
+      });
 
-// Production-ready CORS configuration
-const corsOptions = {
-  origin: process.env.NODE_ENV === 'production' 
-    ? [process.env.FRONTEND_URL, 'https://your-domain.com'] // Update with your domain
-    : true,
-  credentials: true
-};
-app.use(cors(corsOptions));
-app.use(express.json({ limit: '1mb' }));
+      // Test connection
+      const connection = await pool.getConnection();
+      console.log('✅ MySQL connected successfully');
+      connection.release();
 
-// Disable caching for development
-app.use((req, res, next) => {
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-  res.setHeader('Pragma', 'no-cache');
-  res.setHeader('Expires', '0');
-  next();
-});
-
-// Serve static files
-app.use(express.static(__dirname));
-
-// Database setup
-const dbFile = path.join(__dirname, 'data.db');
-const db = Database ? new Database(dbFile) : null;
-
-// JSON store fallback
-const storeFile = path.join(__dirname, 'data.json');
-let store = { users: [], sessions: [], responses: [] };
-if (!db) {
-  try {
-    if (fs.existsSync(storeFile)) {
-      store = JSON.parse(fs.readFileSync(storeFile, 'utf8')) || store;
-    } else {
-      fs.writeFileSync(storeFile, JSON.stringify(store, null, 2));
+      // Create tables
+      await createMySQLTables(pool);
+      
+      db = pool;
+      dbType = 'mysql';
+    } catch (e) {
+      console.error('❌ MySQL connection failed:', e.message);
+      console.error('Falling back to JSON store');
+      dbType = 'json';
     }
-  } catch (e) { console.error('Failed to init JSON store', e); }
-}
-function saveStore() {
-  if (!db) {
-    try { fs.writeFileSync(storeFile, JSON.stringify(store, null, 2)); } catch {}
+  } else {
+    // SQLite for development
+    try {
+      const Database = require('better-sqlite3');
+      const dataDir = path.join(__dirname, 'data');
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+      }
+      const dbFile = path.join(dataDir, 'data.db');
+      db = new Database(dbFile);
+      console.log('✅ SQLite connected successfully');
+      createSQLiteTables();
+      dbType = 'sqlite';
+    } catch (e) {
+      console.warn('⚠️  SQLite not available, using JSON store');
+      dbType = 'json';
+    }
   }
+
+  // JSON store fallback
+  if (dbType === 'json') {
+    initJSONStore();
+  }
+
+  console.log(`📊 Database type: ${dbType.toUpperCase()}`);
 }
 
-// Users and sessions for simple auth (SQLite setup)
-if (db) {
+// SQLite table creation
+function createSQLiteTables() {
   // Users
   db.prepare(`CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     username TEXT UNIQUE NOT NULL,
     passwordHash TEXT NOT NULL,
+    shareResponses INTEGER DEFAULT 1,
     createdAt TEXT NOT NULL
   )`).run();
 
@@ -86,38 +97,20 @@ if (db) {
     FOREIGN KEY(userId) REFERENCES users(id)
   )`).run();
 
-  // Responses (with userId)
+  // Responses
   db.prepare(`CREATE TABLE IF NOT EXISTS responses (
     id TEXT PRIMARY KEY,
     text TEXT NOT NULL,
     category TEXT NOT NULL,
     userCreated INTEGER NOT NULL,
     source TEXT,
+    tags TEXT,
+    userId TEXT,
     createdAt TEXT NOT NULL,
-    userId TEXT
+    FOREIGN KEY(userId) REFERENCES users(id)
   )`).run();
 
-  // Ensure userId column exists (migration for older DBs)
-  try {
-    const cols = db.prepare("PRAGMA table_info('responses')").all();
-    if (!cols.some(c => c.name === 'userId')) {
-      db.prepare('ALTER TABLE responses ADD COLUMN userId TEXT').run();
-    }
-    // Ensure tags column exists (migration)
-    if (!cols.some(c => c.name === 'tags')) {
-      db.prepare('ALTER TABLE responses ADD COLUMN tags TEXT').run();
-    }
-  } catch {}
-
-  // Ensure shareResponses column exists in users (migration)
-  try {
-    const userCols = db.prepare("PRAGMA table_info('users')").all();
-    if (!userCols.some(c => c.name === 'shareResponses')) {
-      db.prepare('ALTER TABLE users ADD COLUMN shareResponses INTEGER DEFAULT 1').run();
-    }
-  } catch {}
-
-  // Applications table for dashboard tracking
+  // Applications
   db.prepare(`CREATE TABLE IF NOT EXISTS applications (
     id TEXT PRIMARY KEY,
     userId TEXT NOT NULL,
@@ -133,15 +126,164 @@ if (db) {
     FOREIGN KEY(userId) REFERENCES users(id) ON DELETE CASCADE
   )`).run();
 
-  // Create indexes for better performance
+  // Indexes
   try {
     db.prepare('CREATE INDEX IF NOT EXISTS idx_applications_userId ON applications(userId)').run();
     db.prepare('CREATE INDEX IF NOT EXISTS idx_applications_date ON applications(date)').run();
     db.prepare('CREATE INDEX IF NOT EXISTS idx_applications_status ON applications(status)').run();
-  } catch {}
+  } catch (e) {
+    console.warn('Index creation warning:', e.message);
+  }
 }
 
-// Helpers
+// MySQL table creation
+async function createMySQLTables(pool) {
+  const connection = await pool.getConnection();
+  
+  try {
+    // Users
+    await connection.query(`CREATE TABLE IF NOT EXISTS users (
+      id VARCHAR(50) PRIMARY KEY,
+      username VARCHAR(100) UNIQUE NOT NULL,
+      passwordHash VARCHAR(255) NOT NULL,
+      shareResponses TINYINT DEFAULT 1,
+      createdAt DATETIME NOT NULL,
+      INDEX idx_username (username)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+
+    // Sessions
+    await connection.query(`CREATE TABLE IF NOT EXISTS sessions (
+      token VARCHAR(100) PRIMARY KEY,
+      userId VARCHAR(50) NOT NULL,
+      createdAt DATETIME NOT NULL,
+      expiresAt DATETIME NOT NULL,
+      INDEX idx_userId (userId),
+      INDEX idx_expiresAt (expiresAt),
+      FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+
+    // Responses
+    await connection.query(`CREATE TABLE IF NOT EXISTS responses (
+      id VARCHAR(50) PRIMARY KEY,
+      text TEXT NOT NULL,
+      category VARCHAR(50) NOT NULL,
+      userCreated TINYINT NOT NULL,
+      source VARCHAR(50),
+      tags TEXT,
+      userId VARCHAR(50),
+      createdAt DATETIME NOT NULL,
+      INDEX idx_userId (userId),
+      INDEX idx_category (category),
+      FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+
+    // Applications
+    await connection.query(`CREATE TABLE IF NOT EXISTS applications (
+      id VARCHAR(50) PRIMARY KEY,
+      userId VARCHAR(50) NOT NULL,
+      company VARCHAR(255),
+      role VARCHAR(255),
+      status VARCHAR(50),
+      notes TEXT,
+      date DATE,
+      paragraphs TEXT,
+      timeSpent INT DEFAULT 0,
+      createdAt DATETIME NOT NULL,
+      updatedAt DATETIME NOT NULL,
+      INDEX idx_userId (userId),
+      INDEX idx_date (date),
+      INDEX idx_status (status),
+      FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+
+    console.log('✅ MySQL tables created/verified');
+  } finally {
+    connection.release();
+  }
+}
+
+// JSON store initialization
+const dataDir = path.join(__dirname, 'data');
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
+const storeFile = path.join(dataDir, 'data.json');
+let store = { users: [], sessions: [], responses: [], applications: [] };
+
+function initJSONStore() {
+  try {
+    if (fs.existsSync(storeFile)) {
+      store = JSON.parse(fs.readFileSync(storeFile, 'utf8')) || store;
+    } else {
+      fs.writeFileSync(storeFile, JSON.stringify(store, null, 2));
+    }
+  } catch (e) {
+    console.error('Failed to init JSON store:', e);
+  }
+}
+
+function saveStore() {
+  if (dbType === 'json') {
+    try {
+      fs.writeFileSync(storeFile, JSON.stringify(store, null, 2));
+    } catch (e) {
+      console.error('Failed to save JSON store:', e);
+    }
+  }
+}
+
+// OpenAI setup
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+let aiQuotaExceeded = false;
+let aiQuotaExceededAt = null;
+
+// Express app setup
+const app = express();
+const PORT = process.env.PORT || 3050;
+
+// CORS configuration
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production'
+    ? ['https://clickcoverlettercreator.com.au', 'https://www.clickcoverlettercreator.com.au']
+    : true,
+  credentials: true
+};
+app.use(cors(corsOptions));
+app.use(express.json({ limit: '1mb' }));
+
+// Disable caching
+app.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
+// Serve static files
+app.use(express.static(__dirname));
+
+// Helper functions
+function genId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
+function genToken() {
+  return crypto.randomBytes(24).toString('hex');
+}
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function plusDays(days) {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString();
+}
+
 function rowToResponse(row) {
   let tags = [];
   if (row.tags) {
@@ -162,45 +304,470 @@ function rowToResponse(row) {
   };
 }
 
-// Auth helpers
-const bcrypt = require('bcryptjs');
-function genId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2);
-}
-function genToken() {
-  return Buffer.from(require('crypto').randomBytes(24)).toString('hex');
-}
-function nowIso() { return new Date().toISOString(); }
-function plusDays(days) {
-  const d = new Date(); d.setDate(d.getDate()+days); return d.toISOString();
-}
-function getUserFromAuth(req) {
+// Database abstraction layer
+const DB = {
+  // Users
+  async createUser(id, username, passwordHash) {
+    const createdAt = nowIso();
+    
+    if (dbType === 'mysql') {
+      await db.execute(
+        'INSERT INTO users (id, username, passwordHash, createdAt) VALUES (?, ?, ?, ?)',
+        [id, username, passwordHash, createdAt]
+      );
+    } else if (dbType === 'sqlite') {
+      db.prepare('INSERT INTO users (id, username, passwordHash, createdAt) VALUES (?, ?, ?, ?)')
+        .run(id, username, passwordHash, createdAt);
+    } else {
+      store.users.push({ id, username, passwordHash, createdAt, shareResponses: 1 });
+      saveStore();
+    }
+  },
+
+  async findUserByUsername(username) {
+    if (dbType === 'mysql') {
+      const [rows] = await db.execute('SELECT * FROM users WHERE username = ?', [username]);
+      return rows[0] || null;
+    } else if (dbType === 'sqlite') {
+      return db.prepare('SELECT * FROM users WHERE username = ?').get(username) || null;
+    } else {
+      return store.users.find(u => u.username === username) || null;
+    }
+  },
+
+  async findUserById(userId) {
+    if (dbType === 'mysql') {
+      const [rows] = await db.execute('SELECT * FROM users WHERE id = ?', [userId]);
+      return rows[0] || null;
+    } else if (dbType === 'sqlite') {
+      return db.prepare('SELECT * FROM users WHERE id = ?').get(userId) || null;
+    } else {
+      return store.users.find(u => u.id === userId) || null;
+    }
+  },
+
+  async updateUserPassword(userId, passwordHash) {
+    if (dbType === 'mysql') {
+      await db.execute('UPDATE users SET passwordHash = ? WHERE id = ?', [passwordHash, userId]);
+    } else if (dbType === 'sqlite') {
+      db.prepare('UPDATE users SET passwordHash = ? WHERE id = ?').run(passwordHash, userId);
+    } else {
+      const user = store.users.find(u => u.id === userId);
+      if (user) {
+        user.passwordHash = passwordHash;
+        saveStore();
+      }
+    }
+  },
+
+  async getUserPreferences(userId) {
+    if (dbType === 'mysql') {
+      const [rows] = await db.execute('SELECT shareResponses FROM users WHERE id = ?', [userId]);
+      return rows[0] || null;
+    } else if (dbType === 'sqlite') {
+      return db.prepare('SELECT shareResponses FROM users WHERE id = ?').get(userId) || null;
+    } else {
+      return store.users.find(u => u.id === userId) || null;
+    }
+  },
+
+  async updateUserPreferences(userId, shareResponses) {
+    if (dbType === 'mysql') {
+      await db.execute('UPDATE users SET shareResponses = ? WHERE id = ?', [shareResponses ? 1 : 0, userId]);
+    } else if (dbType === 'sqlite') {
+      db.prepare('UPDATE users SET shareResponses = ? WHERE id = ?').run(shareResponses ? 1 : 0, userId);
+    } else {
+      const user = store.users.find(u => u.id === userId);
+      if (user) {
+        user.shareResponses = shareResponses ? 1 : 0;
+        saveStore();
+      }
+    }
+  },
+
+  // Sessions
+  async createSession(token, userId) {
+    const createdAt = nowIso();
+    const expiresAt = plusDays(7);
+    
+    if (dbType === 'mysql') {
+      await db.execute(
+        'INSERT INTO sessions (token, userId, createdAt, expiresAt) VALUES (?, ?, ?, ?)',
+        [token, userId, createdAt, expiresAt]
+      );
+    } else if (dbType === 'sqlite') {
+      db.prepare('INSERT INTO sessions (token, userId, createdAt, expiresAt) VALUES (?, ?, ?, ?)')
+        .run(token, userId, createdAt, expiresAt);
+    } else {
+      store.sessions.push({ token, userId, createdAt, expiresAt });
+      saveStore();
+    }
+  },
+
+  async findSessionByToken(token) {
+    if (dbType === 'mysql') {
+      const [rows] = await db.execute('SELECT * FROM sessions WHERE token = ?', [token]);
+      return rows[0] || null;
+    } else if (dbType === 'sqlite') {
+      return db.prepare('SELECT * FROM sessions WHERE token = ?').get(token) || null;
+    } else {
+      return store.sessions.find(s => s.token === token) || null;
+    }
+  },
+
+  async deleteSession(token) {
+    if (dbType === 'mysql') {
+      await db.execute('DELETE FROM sessions WHERE token = ?', [token]);
+    } else if (dbType === 'sqlite') {
+      db.prepare('DELETE FROM sessions WHERE token = ?').run(token);
+    } else {
+      store.sessions = store.sessions.filter(s => s.token !== token);
+      saveStore();
+    }
+  },
+
+  async deleteUserSessions(userId) {
+    if (dbType === 'mysql') {
+      await db.execute('DELETE FROM sessions WHERE userId = ?', [userId]);
+    } else if (dbType === 'sqlite') {
+      db.prepare('DELETE FROM sessions WHERE userId = ?').run(userId);
+    } else {
+      store.sessions = store.sessions.filter(s => s.userId !== userId);
+      saveStore();
+    }
+  },
+
+  // Responses
+  async getResponses(userId, category = null) {
+    if (dbType === 'mysql') {
+      if (category) {
+        const [rows] = await db.execute(
+          'SELECT * FROM responses WHERE userId = ? AND category = ? ORDER BY createdAt ASC',
+          [userId, category]
+        );
+        return rows;
+      } else {
+        const [rows] = await db.execute(
+          'SELECT * FROM responses WHERE userId = ? ORDER BY createdAt ASC',
+          [userId]
+        );
+        return rows;
+      }
+    } else if (dbType === 'sqlite') {
+      if (category) {
+        return db.prepare('SELECT * FROM responses WHERE userId = ? AND category = ? ORDER BY createdAt ASC')
+          .all(userId, category);
+      } else {
+        return db.prepare('SELECT * FROM responses WHERE userId = ? ORDER BY createdAt ASC').all(userId);
+      }
+    } else {
+      return store.responses.filter(r => r.userId === userId && (!category || r.category === category));
+    }
+  },
+
+  async getCrowdResponses(userId) {
+    if (dbType === 'mysql') {
+      const [rows] = await db.execute(`
+        SELECT r.* FROM responses r
+        INNER JOIN users u ON r.userId = u.id
+        WHERE u.shareResponses = 1 AND r.userId != ? AND r.userCreated = 1
+        ORDER BY r.createdAt DESC
+        LIMIT 100
+      `, [userId]);
+      return rows;
+    } else if (dbType === 'sqlite') {
+      return db.prepare(`
+        SELECT r.* FROM responses r
+        INNER JOIN users u ON r.userId = u.id
+        WHERE u.shareResponses = 1 AND r.userId != ? AND r.userCreated = 1
+        ORDER BY r.createdAt DESC
+        LIMIT 100
+      `).all(userId);
+    } else {
+      const sharingUsers = store.users.filter(u => (u.shareResponses ?? 1) === 1 && u.id !== userId).map(u => u.id);
+      return store.responses.filter(r => r.userCreated && sharingUsers.includes(r.userId)).slice(0, 100);
+    }
+  },
+
+  async createResponse(id, text, category, userCreated, source, tags, userId) {
+    const createdAt = nowIso();
+    const tagsJson = tags ? JSON.stringify(tags) : null;
+    
+    if (dbType === 'mysql') {
+      await db.execute(
+        'INSERT INTO responses (id, text, category, userCreated, source, tags, userId, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [id, text, category, userCreated ? 1 : 0, source || null, tagsJson, userId, createdAt]
+      );
+      const [rows] = await db.execute('SELECT * FROM responses WHERE id = ?', [id]);
+      return rows[0];
+    } else if (dbType === 'sqlite') {
+      db.prepare('INSERT INTO responses (id, text, category, userCreated, source, tags, userId, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+        .run(id, text, category, userCreated ? 1 : 0, source || null, tagsJson, userId, createdAt);
+      return db.prepare('SELECT * FROM responses WHERE id = ?').get(id);
+    } else {
+      const row = { id, text, category, userCreated: !!userCreated, source: source || null, tags: tagsJson, userId, createdAt };
+      store.responses.push(row);
+      saveStore();
+      return row;
+    }
+  },
+
+  async updateResponse(id, userId, updates) {
+    if (dbType === 'mysql') {
+      const [existing] = await db.execute('SELECT * FROM responses WHERE id = ? AND userId = ?', [id, userId]);
+      if (!existing[0]) return null;
+      
+      const tagsJson = updates.tags !== undefined ? JSON.stringify(updates.tags) : existing[0].tags;
+      await db.execute(
+        'UPDATE responses SET text = ?, category = ?, userCreated = ?, source = ?, tags = ? WHERE id = ?',
+        [
+          updates.text ?? existing[0].text,
+          updates.category ?? existing[0].category,
+          updates.userCreated ? 1 : 0,
+          updates.source ?? existing[0].source,
+          tagsJson,
+          id
+        ]
+      );
+      const [rows] = await db.execute('SELECT * FROM responses WHERE id = ?', [id]);
+      return rows[0];
+    } else if (dbType === 'sqlite') {
+      const existing = db.prepare('SELECT * FROM responses WHERE id = ? AND userId = ?').get(id, userId);
+      if (!existing) return null;
+      
+      const tagsJson = updates.tags !== undefined ? JSON.stringify(updates.tags) : existing.tags;
+      db.prepare('UPDATE responses SET text = ?, category = ?, userCreated = ?, source = ?, tags = ? WHERE id = ?')
+        .run(
+          updates.text ?? existing.text,
+          updates.category ?? existing.category,
+          updates.userCreated ? 1 : 0,
+          updates.source ?? existing.source,
+          tagsJson,
+          id
+        );
+      return db.prepare('SELECT * FROM responses WHERE id = ?').get(id);
+    } else {
+      const idx = store.responses.findIndex(r => r.id === id && r.userId === userId);
+      if (idx === -1) return null;
+      
+      const existing = store.responses[idx];
+      const tagsJson = updates.tags !== undefined ? JSON.stringify(updates.tags) : existing.tags;
+      const updated = {
+        ...existing,
+        text: updates.text ?? existing.text,
+        category: updates.category ?? existing.category,
+        userCreated: updates.userCreated ?? existing.userCreated,
+        source: updates.source ?? existing.source,
+        tags: tagsJson
+      };
+      store.responses[idx] = updated;
+      saveStore();
+      return updated;
+    }
+  },
+
+  async deleteResponse(id, userId) {
+    if (dbType === 'mysql') {
+      const [result] = await db.execute('DELETE FROM responses WHERE id = ? AND userId = ?', [id, userId]);
+      return result.affectedRows > 0;
+    } else if (dbType === 'sqlite') {
+      const info = db.prepare('DELETE FROM responses WHERE id = ? AND userId = ?').run(id, userId);
+      return info.changes > 0;
+    } else {
+      const before = store.responses.length;
+      store.responses = store.responses.filter(r => !(r.id === id && r.userId === userId));
+      const deleted = store.responses.length < before;
+      if (deleted) saveStore();
+      return deleted;
+    }
+  },
+
+  // Applications
+  async getApplications(userId) {
+    if (dbType === 'mysql') {
+      const [rows] = await db.execute('SELECT * FROM applications WHERE userId = ? ORDER BY date DESC', [userId]);
+      return rows.map(app => ({
+        ...app,
+        paragraphs: app.paragraphs ? JSON.parse(app.paragraphs) : [],
+        timeSpent: app.timeSpent || 0
+      }));
+    } else if (dbType === 'sqlite') {
+      const rows = db.prepare('SELECT * FROM applications WHERE userId = ? ORDER BY date DESC').all(userId);
+      return rows.map(app => ({
+        ...app,
+        paragraphs: app.paragraphs ? JSON.parse(app.paragraphs) : [],
+        timeSpent: app.timeSpent || 0
+      }));
+    } else {
+      return store.applications ? store.applications.filter(a => a.userId === userId) : [];
+    }
+  },
+
+  async createApplication(data) {
+    const now = nowIso();
+    const paragraphsJson = JSON.stringify(data.paragraphs || []);
+    
+    if (dbType === 'mysql') {
+      await db.execute(
+        `INSERT INTO applications (id, userId, company, role, status, notes, date, paragraphs, timeSpent, createdAt, updatedAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          data.id,
+          data.userId,
+          data.company,
+          data.role,
+          data.status || 'Draft',
+          data.notes || '',
+          data.date || now,
+          paragraphsJson,
+          data.timeSpent || 0,
+          now,
+          now
+        ]
+      );
+    } else if (dbType === 'sqlite') {
+      db.prepare(
+        `INSERT INTO applications (id, userId, company, role, status, notes, date, paragraphs, timeSpent, createdAt, updatedAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).run(
+        data.id,
+        data.userId,
+        data.company,
+        data.role,
+        data.status || 'Draft',
+        data.notes || '',
+        data.date || now,
+        paragraphsJson,
+        data.timeSpent || 0,
+        now,
+        now
+      );
+    } else {
+      if (!store.applications) store.applications = [];
+      store.applications.push({
+        id: data.id,
+        userId: data.userId,
+        company: data.company,
+        role: data.role,
+        status: data.status || 'Draft',
+        notes: data.notes || '',
+        date: data.date || now,
+        paragraphs: data.paragraphs || [],
+        timeSpent: data.timeSpent || 0,
+        createdAt: now,
+        updatedAt: now
+      });
+      saveStore();
+    }
+  },
+
+  async updateApplication(id, userId, updates) {
+    const now = nowIso();
+    
+    if (dbType === 'mysql') {
+      const [existing] = await db.execute('SELECT * FROM applications WHERE id = ? AND userId = ?', [id, userId]);
+      if (!existing[0]) return false;
+
+      const fields = [];
+      const values = [];
+
+      if (updates.company !== undefined) { fields.push('company = ?'); values.push(updates.company); }
+      if (updates.role !== undefined) { fields.push('role = ?'); values.push(updates.role); }
+      if (updates.status !== undefined) { fields.push('status = ?'); values.push(updates.status); }
+      if (updates.notes !== undefined) { fields.push('notes = ?'); values.push(updates.notes); }
+      if (updates.date !== undefined) { fields.push('date = ?'); values.push(updates.date); }
+      if (updates.paragraphs !== undefined) { fields.push('paragraphs = ?'); values.push(JSON.stringify(updates.paragraphs)); }
+      if (updates.timeSpent !== undefined) { fields.push('timeSpent = ?'); values.push(updates.timeSpent); }
+      
+      fields.push('updatedAt = ?');
+      values.push(now, id, userId);
+
+      await db.execute(`UPDATE applications SET ${fields.join(', ')} WHERE id = ? AND userId = ?`, values);
+      return true;
+    } else if (dbType === 'sqlite') {
+      const existing = db.prepare('SELECT * FROM applications WHERE id = ? AND userId = ?').get(id, userId);
+      if (!existing) return false;
+
+      const fields = [];
+      const values = [];
+
+      if (updates.company !== undefined) { fields.push('company = ?'); values.push(updates.company); }
+      if (updates.role !== undefined) { fields.push('role = ?'); values.push(updates.role); }
+      if (updates.status !== undefined) { fields.push('status = ?'); values.push(updates.status); }
+      if (updates.notes !== undefined) { fields.push('notes = ?'); values.push(updates.notes); }
+      if (updates.date !== undefined) { fields.push('date = ?'); values.push(updates.date); }
+      if (updates.paragraphs !== undefined) { fields.push('paragraphs = ?'); values.push(JSON.stringify(updates.paragraphs)); }
+      if (updates.timeSpent !== undefined) { fields.push('timeSpent = ?'); values.push(updates.timeSpent); }
+      
+      fields.push('updatedAt = ?');
+      values.push(now, id, userId);
+
+      db.prepare(`UPDATE applications SET ${fields.join(', ')} WHERE id = ? AND userId = ?`).run(...values);
+      return true;
+    } else {
+      if (!store.applications) store.applications = [];
+      const index = store.applications.findIndex(a => a.id === id && a.userId === userId);
+      if (index === -1) return false;
+
+      store.applications[index] = {
+        ...store.applications[index],
+        ...updates,
+        updatedAt: now
+      };
+      saveStore();
+      return true;
+    }
+  },
+
+  async deleteApplication(id, userId) {
+    if (dbType === 'mysql') {
+      const [result] = await db.execute('DELETE FROM applications WHERE id = ? AND userId = ?', [id, userId]);
+      return result.affectedRows > 0;
+    } else if (dbType === 'sqlite') {
+      const result = db.prepare('DELETE FROM applications WHERE id = ? AND userId = ?').run(id, userId);
+      return result.changes > 0;
+    } else {
+      if (!store.applications) store.applications = [];
+      const initialLength = store.applications.length;
+      store.applications = store.applications.filter(a => !(a.id === id && a.userId === userId));
+      const deleted = store.applications.length < initialLength;
+      if (deleted) saveStore();
+      return deleted;
+    }
+  }
+};
+
+// Authentication middleware
+async function getUserFromAuth(req) {
   try {
     const h = req.headers['authorization'] || '';
     const m = /^Bearer\s+(.+)$/i.exec(h);
     if (!m) return null;
+    
     const token = m[1];
-    let s;
-    if (db) s = db.prepare('SELECT * FROM sessions WHERE token = ?').get(token);
-    else s = store.sessions.find(x => x.token === token);
-    if (!s) return null;
-    if (new Date(s.expiresAt) < new Date()) {
-      if (db) db.prepare('DELETE FROM sessions WHERE token = ?').run(token);
-      else { store.sessions = store.sessions.filter(x => x.token !== token); saveStore(); }
+    const session = await DB.findSessionByToken(token);
+    if (!session) return null;
+    
+    if (new Date(session.expiresAt) < new Date()) {
+      await DB.deleteSession(token);
       return null;
     }
-    let user;
-    if (db) user = db.prepare('SELECT id, username FROM users WHERE id = ?').get(s.userId);
-    else user = store.users.find(u => u.id === s.userId);
+    
+    const user = await DB.findUserById(session.userId);
     if (!user) return null;
+    
     return { token, user: { id: user.id, username: user.username } };
-  } catch { return null; }
+  } catch (e) {
+    console.error('Auth error:', e);
+    return null;
+  }
 }
 
 // Routes
-app.get('/health', (req, res) => res.json({ ok: true }));
+app.get('/health', (req, res) => {
+  res.json({ ok: true, database: dbType });
+});
 
-// AI Status endpoint
 app.get('/api/ai-status', (req, res) => {
   res.json({
     available: !aiQuotaExceeded,
@@ -210,359 +777,225 @@ app.get('/api/ai-status', (req, res) => {
 });
 
 // Auth routes
-app.post('/auth/register', (req, res) => {
+app.post('/auth/register', async (req, res) => {
   const { username, password } = req.body || {};
   if (!username || !password || String(username).length < 3 || String(password).length < 6) {
     return res.status(400).json({ error: 'Username min 3 chars, Password min 6 chars' });
   }
+  
   try {
     const uname = username.toLowerCase();
-    let existing;
-    if (db) existing = db.prepare('SELECT 1 FROM users WHERE username = ?').get(uname);
-    else existing = store.users.find(u => u.username === uname);
+    const existing = await DB.findUserByUsername(uname);
     if (existing) return res.status(409).json({ error: 'Username already exists' });
+    
     const id = genId();
     const hash = bcrypt.hashSync(password, 10);
-    if (db) {
-      db.prepare('INSERT INTO users (id, username, passwordHash, createdAt) VALUES (?, ?, ?, ?)')
-        .run(id, uname, hash, nowIso());
-    } else {
-      store.users.push({ id, username: uname, passwordHash: hash, createdAt: nowIso() });
-      saveStore();
-    }
-    // Create session
+    await DB.createUser(id, uname, hash);
+    
     const token = genToken();
-    if (db) db.prepare('INSERT INTO sessions (token, userId, createdAt, expiresAt) VALUES (?, ?, ?, ?)')
-      .run(token, id, nowIso(), plusDays(7));
-    else { store.sessions.push({ token, userId: id, createdAt: nowIso(), expiresAt: plusDays(7) }); saveStore(); }
+    await DB.createSession(token, id);
+    
     res.json({ token, user: { id, username: uname } });
   } catch (e) {
-    console.error(e);
+    console.error('Register error:', e);
     res.status(500).json({ error: 'Failed to register' });
   }
 });
 
-app.post('/auth/login', (req, res) => {
+app.post('/auth/login', async (req, res) => {
   const { username, password } = req.body || {};
   if (!username || !password) return res.status(400).json({ error: 'Missing credentials' });
+  
   try {
     const uname = username.toLowerCase();
-    let user;
-    if (db) user = db.prepare('SELECT * FROM users WHERE username = ?').get(uname);
-    else user = store.users.find(u => u.username === uname);
+    const user = await DB.findUserByUsername(uname);
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
     if (!bcrypt.compareSync(password, user.passwordHash)) return res.status(401).json({ error: 'Invalid credentials' });
+    
     const token = genToken();
-    if (db) db.prepare('INSERT INTO sessions (token, userId, createdAt, expiresAt) VALUES (?, ?, ?, ?)')
-      .run(token, user.id, nowIso(), plusDays(7));
-    else { store.sessions.push({ token, userId: user.id, createdAt: nowIso(), expiresAt: plusDays(7) }); saveStore(); }
+    await DB.createSession(token, user.id);
+    
     res.json({ token, user: { id: user.id, username: user.username } });
   } catch (e) {
-    console.error(e);
+    console.error('Login error:', e);
     res.status(500).json({ error: 'Failed to login' });
   }
 });
 
-app.get('/auth/me', (req, res) => {
-  const auth = getUserFromAuth(req);
+app.get('/auth/me', async (req, res) => {
+  const auth = await getUserFromAuth(req);
   if (!auth) return res.status(401).json({ error: 'Unauthorized' });
   res.json(auth.user);
 });
 
-app.post('/auth/logout', (req, res) => {
+app.post('/auth/logout', async (req, res) => {
   try {
     const h = req.headers['authorization'] || '';
     const m = /^Bearer\s+(.+)$/i.exec(h);
     if (m) {
-      if (db) db.prepare('DELETE FROM sessions WHERE token = ?').run(m[1]);
-      else { store.sessions = store.sessions.filter(s => s.token !== m[1]); saveStore(); }
+      await DB.deleteSession(m[1]);
     }
-  } catch {}
+  } catch (e) {
+    console.error('Logout error:', e);
+  }
   res.json({ ok: true });
 });
 
-app.post('/auth/reset-password', (req, res) => {
+app.post('/auth/reset-password', async (req, res) => {
   const { username, newPassword } = req.body || {};
   if (!username || !newPassword) return res.status(400).json({ error: 'Missing username or password' });
   if (String(newPassword).length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
   
   try {
     const uname = username.toLowerCase();
-    let user;
-    if (db) user = db.prepare('SELECT * FROM users WHERE username = ?').get(uname);
-    else user = store.users.find(u => u.username === uname);
-    
+    const user = await DB.findUserByUsername(uname);
     if (!user) return res.status(404).json({ error: 'Username not found' });
     
     const hash = bcrypt.hashSync(newPassword, 10);
-    
-    if (db) {
-      db.prepare('UPDATE users SET passwordHash = ? WHERE id = ?').run(hash, user.id);
-      // Invalidate all existing sessions
-      db.prepare('DELETE FROM sessions WHERE userId = ?').run(user.id);
-    } else {
-      const idx = store.users.findIndex(u => u.id === user.id);
-      if (idx !== -1) {
-        store.users[idx].passwordHash = hash;
-        // Invalidate all existing sessions
-        store.sessions = store.sessions.filter(s => s.userId !== user.id);
-        saveStore();
-      }
-    }
+    await DB.updateUserPassword(user.id, hash);
+    await DB.deleteUserSessions(user.id);
     
     res.json({ success: true, message: 'Password reset successfully' });
   } catch (e) {
-    console.error(e);
+    console.error('Reset password error:', e);
     res.status(500).json({ error: 'Failed to reset password' });
   }
 });
 
-// Get/update user preferences
-app.get('/user/preferences', (req, res) => {
-  const auth = getUserFromAuth(req);
+// User preferences
+app.get('/user/preferences', async (req, res) => {
+  const auth = await getUserFromAuth(req);
   if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+  
   try {
-    let user;
-    if (db) user = db.prepare('SELECT shareResponses FROM users WHERE id = ?').get(auth.user.id);
-    else user = store.users.find(u => u.id === auth.user.id);
+    const user = await DB.getUserPreferences(auth.user.id);
     res.json({ shareResponses: user?.shareResponses ?? 1 });
   } catch (e) {
-    console.error(e);
+    console.error('Get preferences error:', e);
     res.status(500).json({ error: 'Failed to fetch preferences' });
   }
 });
 
-app.put('/user/preferences', (req, res) => {
-  const auth = getUserFromAuth(req);
+app.put('/user/preferences', async (req, res) => {
+  const auth = await getUserFromAuth(req);
   if (!auth) return res.status(401).json({ error: 'Unauthorized' });
   const { shareResponses } = req.body || {};
+  
   try {
-    if (db) {
-      db.prepare('UPDATE users SET shareResponses = ? WHERE id = ?').run(shareResponses ? 1 : 0, auth.user.id);
-    } else {
-      const user = store.users.find(u => u.id === auth.user.id);
-      if (user) {
-        user.shareResponses = shareResponses ? 1 : 0;
-        saveStore();
-      }
-    }
+    await DB.updateUserPreferences(auth.user.id, shareResponses);
     res.json({ success: true });
   } catch (e) {
-    console.error(e);
+    console.error('Update preferences error:', e);
     res.status(500).json({ error: 'Failed to update preferences' });
   }
 });
 
-// List responses (optionally filter by category) — requires auth
-app.get('/responses', (req, res) => {
-  const auth = getUserFromAuth(req);
+// Responses endpoints
+app.get('/responses', async (req, res) => {
+  const auth = await getUserFromAuth(req);
   if (!auth) return res.status(401).json({ error: 'Unauthorized' });
   const { category } = req.query;
+  
   try {
-    let rows;
-    if (db) {
-      if (category) rows = db.prepare('SELECT * FROM responses WHERE userId = ? AND category = ? ORDER BY createdAt ASC').all(auth.user.id, category);
-      else rows = db.prepare('SELECT * FROM responses WHERE userId = ? ORDER BY createdAt ASC').all(auth.user.id);
-    } else {
-      rows = store.responses.filter(r => r.userId === auth.user.id && (!category || r.category === category));
-    }
+    const rows = await DB.getResponses(auth.user.id, category);
     res.json(rows.map(rowToResponse));
   } catch (e) {
-    console.error(e);
+    console.error('Get responses error:', e);
     res.status(500).json({ error: 'Failed to fetch responses' });
   }
 });
 
-// Get crowd-sourced responses (other users' shared responses) — requires auth
-app.get('/responses/crowd', (req, res) => {
-  const auth = getUserFromAuth(req);
+app.get('/responses/crowd', async (req, res) => {
+  const auth = await getUserFromAuth(req);
   if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+  
   try {
-    let rows;
-    if (db) {
-      // Get responses from users who have shareResponses enabled, excluding current user
-      rows = db.prepare(`
-        SELECT r.* FROM responses r
-        INNER JOIN users u ON r.userId = u.id
-        WHERE u.shareResponses = 1 AND r.userId != ? AND r.userCreated = 1
-        ORDER BY r.createdAt DESC
-        LIMIT 100
-      `).all(auth.user.id);
-    } else {
-      // JSON store fallback
-      const sharingUsers = store.users.filter(u => (u.shareResponses ?? 1) === 1 && u.id !== auth.user.id).map(u => u.id);
-      rows = store.responses.filter(r => r.userCreated && sharingUsers.includes(r.userId));
-    }
+    const rows = await DB.getCrowdResponses(auth.user.id);
     res.json(rows.map(rowToResponse));
   } catch (e) {
-    console.error(e);
+    console.error('Get crowd responses error:', e);
     res.status(500).json({ error: 'Failed to fetch crowd-sourced responses' });
   }
 });
 
-// Create response — requires auth
-app.post('/responses', (req, res) => {
-  const auth = getUserFromAuth(req);
+app.post('/responses', async (req, res) => {
+  const auth = await getUserFromAuth(req);
   if (!auth) return res.status(401).json({ error: 'Unauthorized' });
   const { id, text, category, userCreated, source, tags } = req.body || {};
   if (!id || !text || !category) return res.status(400).json({ error: 'Missing id, text, or category' });
+  
   try {
-    const createdAt = new Date().toISOString();
-    const tagsJson = tags ? JSON.stringify(tags) : null;
-    if (db) {
-      db.prepare('INSERT INTO responses (id, text, category, userCreated, source, createdAt, userId, tags) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-        .run(id, text, category, userCreated ? 1 : 0, source || null, createdAt, auth.user.id, tagsJson);
-      const row = db.prepare('SELECT * FROM responses WHERE id = ?').get(id);
-      res.status(201).json(rowToResponse(row));
-    } else {
-      const row = { id, text, category, userCreated: !!userCreated, source: source || null, createdAt, userId: auth.user.id, tags: tagsJson };
-      store.responses.push(row); saveStore();
-      res.status(201).json(rowToResponse(row));
-    }
+    const row = await DB.createResponse(id, text, category, userCreated, source, tags, auth.user.id);
+    res.status(201).json(rowToResponse(row));
   } catch (e) {
-    if (e && String(e.message || '').includes('UNIQUE')) {
+    if (e && String(e.message || '').includes('Duplicate') || String(e.message || '').includes('UNIQUE')) {
       return res.status(409).json({ error: 'ID already exists' });
     }
-    console.error(e);
+    console.error('Create response error:', e);
     res.status(500).json({ error: 'Failed to create response' });
   }
 });
 
-// Update response — requires auth and ownership
-app.put('/responses/:id', (req, res) => {
-  const auth = getUserFromAuth(req);
+app.put('/responses/:id', async (req, res) => {
+  const auth = await getUserFromAuth(req);
   if (!auth) return res.status(401).json({ error: 'Unauthorized' });
   const { id } = req.params;
   const { text, category, userCreated, source, tags } = req.body || {};
+  
   try {
-    if (db) {
-      const existing = db.prepare('SELECT * FROM responses WHERE id = ? AND userId = ?').get(id, auth.user.id);
-      if (!existing) return res.status(404).json({ error: 'Not found' });
-      const tagsJson = tags !== undefined ? JSON.stringify(tags) : existing.tags;
-      db.prepare('UPDATE responses SET text = ?, category = ?, userCreated = ?, source = ?, tags = ? WHERE id = ?')
-        .run(text ?? existing.text, category ?? existing.category, (userCreated ? 1 : 0), source ?? existing.source, tagsJson, id);
-      const updated = db.prepare('SELECT * FROM responses WHERE id = ?').get(id);
-      res.json(rowToResponse(updated));
-    } else {
-      const idx = store.responses.findIndex(r => r.id === id && r.userId === auth.user.id);
-      if (idx === -1) return res.status(404).json({ error: 'Not found' });
-      const existing = store.responses[idx];
-      const tagsJson = tags !== undefined ? JSON.stringify(tags) : existing.tags;
-      const updated = { ...existing, text: text ?? existing.text, category: category ?? existing.category, userCreated: userCreated ?? existing.userCreated, source: source ?? existing.source, tags: tagsJson };
-      store.responses[idx] = updated; saveStore();
-      res.json(rowToResponse(updated));
-    }
+    const updated = await DB.updateResponse(id, auth.user.id, { text, category, userCreated, source, tags });
+    if (!updated) return res.status(404).json({ error: 'Not found' });
+    res.json(rowToResponse(updated));
   } catch (e) {
-    console.error(e);
+    console.error('Update response error:', e);
     res.status(500).json({ error: 'Failed to update response' });
   }
 });
 
-// Delete response — requires auth and ownership
-app.delete('/responses/:id', (req, res) => {
-  const auth = getUserFromAuth(req);
+app.delete('/responses/:id', async (req, res) => {
+  const auth = await getUserFromAuth(req);
   if (!auth) return res.status(401).json({ error: 'Unauthorized' });
   const { id } = req.params;
+  
   try {
-    if (db) {
-      const info = db.prepare('DELETE FROM responses WHERE id = ? AND userId = ?').run(id, auth.user.id);
-      if (info.changes === 0) return res.status(404).json({ error: 'Not found' });
-    } else {
-      const before = store.responses.length;
-      store.responses = store.responses.filter(r => !(r.id === id && r.userId === auth.user.id));
-      if (store.responses.length === before) return res.status(404).json({ error: 'Not found' });
-      saveStore();
-    }
+    const deleted = await DB.deleteResponse(id, auth.user.id);
+    if (!deleted) return res.status(404).json({ error: 'Not found' });
     res.json({ ok: true });
   } catch (e) {
-    console.error(e);
+    console.error('Delete response error:', e);
     res.status(500).json({ error: 'Failed to delete response' });
   }
 });
 
-// ===== APPLICATIONS ENDPOINTS =====
-
-// Get all applications for the authenticated user
-app.get('/applications', (req, res) => {
-  const auth = getUserFromAuth(req);
+// Applications endpoints
+app.get('/applications', async (req, res) => {
+  const auth = await getUserFromAuth(req);
   if (!auth) return res.status(401).json({ error: 'Unauthorized' });
   
   try {
-    if (db) {
-      const rows = db.prepare('SELECT * FROM applications WHERE userId = ? ORDER BY date DESC').all(auth.user.id);
-      // Parse paragraphs JSON
-      const parsed = rows.map(app => ({
-        ...app,
-        paragraphs: app.paragraphs ? JSON.parse(app.paragraphs) : [],
-        timeSpent: app.timeSpent || 0
-      }));
-      res.json(parsed);
-    } else {
-      // JSON store fallback
-      const apps = store.applications ? store.applications.filter(a => a.userId === auth.user.id) : [];
-      res.json(apps);
-    }
+    const apps = await DB.getApplications(auth.user.id);
+    res.json(apps);
   } catch (e) {
-    console.error('Error fetching applications:', e);
+    console.error('Get applications error:', e);
     res.status(500).json({ error: 'Failed to fetch applications' });
   }
 });
 
-// Create new application
-app.post('/applications', (req, res) => {
-  const auth = getUserFromAuth(req);
+app.post('/applications', async (req, res) => {
+  const auth = await getUserFromAuth(req);
   if (!auth) return res.status(401).json({ error: 'Unauthorized' });
   
   const { id, company, role, status, notes, date, paragraphs, timeSpent } = req.body || {};
-  
   if (!id || !company || !role) {
     return res.status(400).json({ error: 'Missing required fields: id, company, role' });
   }
   
   try {
-    const now = nowIso();
-    const paragraphsJson = JSON.stringify(paragraphs || []);
-    
-    if (db) {
-      db.prepare(`INSERT INTO applications 
-        (id, userId, company, role, status, notes, date, paragraphs, timeSpent, createdAt, updatedAt) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-        .run(
-          id,
-          auth.user.id,
-          company,
-          role,
-          status || 'Draft',
-          notes || '',
-          date || now,
-          paragraphsJson,
-          timeSpent || 0,
-          now,
-          now
-        );
-      res.status(201).json({ id, message: 'Application created successfully' });
-    } else {
-      // JSON store fallback
-      if (!store.applications) store.applications = [];
-      store.applications.push({
-        id,
-        userId: auth.user.id,
-        company,
-        role,
-        status: status || 'Draft',
-        notes: notes || '',
-        date: date || now,
-        paragraphs: paragraphs || [],
-        timeSpent: timeSpent || 0,
-        createdAt: now,
-        updatedAt: now
-      });
-      saveStore();
-      res.status(201).json({ id, message: 'Application created successfully' });
-    }
+    await DB.createApplication({ id, userId: auth.user.id, company, role, status, notes, date, paragraphs, timeSpent });
+    res.status(201).json({ id, message: 'Application created successfully' });
   } catch (e) {
-    console.error('Error creating application:', e);
-    if (String(e.message || '').includes('UNIQUE')) {
+    console.error('Create application error:', e);
+    if (String(e.message || '').includes('Duplicate') || String(e.message || '').includes('UNIQUE')) {
       res.status(409).json({ error: 'Application with this ID already exists' });
     } else {
       res.status(500).json({ error: 'Failed to create application' });
@@ -570,125 +1003,44 @@ app.post('/applications', (req, res) => {
   }
 });
 
-// Update application
-app.put('/applications/:id', (req, res) => {
-  const auth = getUserFromAuth(req);
+app.put('/applications/:id', async (req, res) => {
+  const auth = await getUserFromAuth(req);
   if (!auth) return res.status(401).json({ error: 'Unauthorized' });
   
   const { id } = req.params;
   const updates = req.body || {};
   
   try {
-    if (db) {
-      // Verify ownership
-      const existing = db.prepare('SELECT * FROM applications WHERE id = ? AND userId = ?').get(id, auth.user.id);
-      if (!existing) {
-        return res.status(404).json({ error: 'Application not found' });
-      }
-      
-      // Build dynamic update query
-      const fields = [];
-      const values = [];
-      
-      if (updates.company !== undefined) {
-        fields.push('company = ?');
-        values.push(updates.company);
-      }
-      if (updates.role !== undefined) {
-        fields.push('role = ?');
-        values.push(updates.role);
-      }
-      if (updates.status !== undefined) {
-        fields.push('status = ?');
-        values.push(updates.status);
-      }
-      if (updates.notes !== undefined) {
-        fields.push('notes = ?');
-        values.push(updates.notes);
-      }
-      if (updates.date !== undefined) {
-        fields.push('date = ?');
-        values.push(updates.date);
-      }
-      if (updates.paragraphs !== undefined) {
-        fields.push('paragraphs = ?');
-        values.push(JSON.stringify(updates.paragraphs));
-      }
-      if (updates.timeSpent !== undefined) {
-        fields.push('timeSpent = ?');
-        values.push(updates.timeSpent);
-      }
-      
-      fields.push('updatedAt = ?');
-      values.push(nowIso());
-      
-      // Add id and userId for WHERE clause
-      values.push(id, auth.user.id);
-      
-      db.prepare(`UPDATE applications SET ${fields.join(', ')} WHERE id = ? AND userId = ?`).run(...values);
-      res.json({ id, message: 'Application updated successfully' });
-    } else {
-      // JSON store fallback
-      if (!store.applications) store.applications = [];
-      const index = store.applications.findIndex(a => a.id === id && a.userId === auth.user.id);
-      if (index === -1) {
-        return res.status(404).json({ error: 'Application not found' });
-      }
-      
-      store.applications[index] = {
-        ...store.applications[index],
-        ...updates,
-        updatedAt: nowIso()
-      };
-      saveStore();
-      res.json({ id, message: 'Application updated successfully' });
-    }
+    const updated = await DB.updateApplication(id, auth.user.id, updates);
+    if (!updated) return res.status(404).json({ error: 'Application not found' });
+    res.json({ id, message: 'Application updated successfully' });
   } catch (e) {
-    console.error('Error updating application:', e);
+    console.error('Update application error:', e);
     res.status(500).json({ error: 'Failed to update application' });
   }
 });
 
-// Delete application
-app.delete('/applications/:id', (req, res) => {
-  const auth = getUserFromAuth(req);
+app.delete('/applications/:id', async (req, res) => {
+  const auth = await getUserFromAuth(req);
   if (!auth) return res.status(401).json({ error: 'Unauthorized' });
   
   const { id } = req.params;
   
   try {
-    if (db) {
-      const result = db.prepare('DELETE FROM applications WHERE id = ? AND userId = ?').run(id, auth.user.id);
-      if (result.changes === 0) {
-        return res.status(404).json({ error: 'Application not found' });
-      }
-      res.json({ id, message: 'Application deleted successfully' });
-    } else {
-      // JSON store fallback
-      if (!store.applications) store.applications = [];
-      const initialLength = store.applications.length;
-      store.applications = store.applications.filter(a => !(a.id === id && a.userId === auth.user.id));
-      
-      if (store.applications.length === initialLength) {
-        return res.status(404).json({ error: 'Application not found' });
-      }
-      
-      saveStore();
-      res.json({ id, message: 'Application deleted successfully' });
-    }
+    const deleted = await DB.deleteApplication(id, auth.user.id);
+    if (!deleted) return res.status(404).json({ error: 'Application not found' });
+    res.json({ id, message: 'Application deleted successfully' });
   } catch (e) {
-    console.error('Error deleting application:', e);
+    console.error('Delete application error:', e);
     res.status(500).json({ error: 'Failed to delete application' });
   }
 });
 
-// ===== AI ENDPOINTS =====
-
+// AI endpoints
 app.post('/api/extract-job-ad', async (req, res) => {
-  const auth = getUserFromAuth(req);
+  const auth = await getUserFromAuth(req);
   if (!auth) return res.status(401).json({ error: 'Unauthorized' });
   
-  // Check if quota exceeded
   if (aiQuotaExceeded) {
     return res.status(503).json({
       error: 'AI features temporarily unavailable',
@@ -722,7 +1074,6 @@ app.post('/api/extract-job-ad', async (req, res) => {
   } catch (e) {
     console.error('OpenAI extraction error:', e);
     
-    // Check if quota exceeded
     if (e.status === 429 && e.code === 'insufficient_quota') {
       aiQuotaExceeded = true;
       aiQuotaExceededAt = new Date().toISOString();
@@ -738,10 +1089,9 @@ app.post('/api/extract-job-ad', async (req, res) => {
 });
 
 app.post('/api/generate-paragraphs', async (req, res) => {
-  const auth = getUserFromAuth(req);
+  const auth = await getUserFromAuth(req);
   if (!auth) return res.status(401).json({ error: 'Unauthorized' });
   
-  // Check if quota exceeded
   if (aiQuotaExceeded) {
     return res.status(503).json({
       error: 'AI features temporarily unavailable',
@@ -775,7 +1125,6 @@ app.post('/api/generate-paragraphs', async (req, res) => {
   } catch (e) {
     console.error('OpenAI generation error:', e);
     
-    // Check if quota exceeded
     if (e.status === 429 && e.code === 'insufficient_quota') {
       aiQuotaExceeded = true;
       aiQuotaExceededAt = new Date().toISOString();
@@ -790,6 +1139,14 @@ app.post('/api/generate-paragraphs', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Responses DB server listening on http://localhost:${PORT}`);
+// Start server
+initDatabase().then(() => {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`\n🚀 VitaePro server running on http://localhost:${PORT}`);
+    console.log(`📊 Database: ${dbType.toUpperCase()}`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}\n`);
+  });
+}).catch(err => {
+  console.error('Failed to initialize database:', err);
+  process.exit(1);
 });
