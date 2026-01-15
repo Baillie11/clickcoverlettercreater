@@ -11,6 +11,7 @@ deployment:
 
     # 3) Ensure protected folders exist on the live site
     - /bin/mkdir -p "$DEPLOYPATH/data"
+    - /bin/mkdir -p "$DEPLOYPATH/tmp"
 
     # 4) Copy everything EXCEPT protected items
     #    Excludes: .env, *.db, data/, node_modules/, .git/, tmp/
@@ -21,11 +22,8 @@ deployment:
         --exclude="*.db" \
         --exclude=".env" \
         --exclude="tmp/" \
+        --exclude=".cpanel.yml" \
         "$REPOPATH/" "$DEPLOYPATH/"
 
-    # 5) (Optional) keep your live .htaccess intact (uncomment if needed)
-    # - /bin/test -f "$DEPLOYPATH/.htaccess" && echo ".htaccess preserved"
-
-    # 6) Make sure .git never remains in live
+    # 5) Ensure .git never remains in live
     - /bin/rm -rf "$DEPLOYPATH/.git"
-
