@@ -1,1 +1,31 @@
+---
+deployment:
+  tasks:
+    # 1) Set paths
+    - export REPOPATH=/home/clickeco/repositories/clickcoverlettercreator
+    - export DEPLOYPATH=/home/clickeco/clickcoverlettercreator.com.au
+
+    # 2) Safety checks
+    - /bin/test -d "$REPOPATH" || (echo "ERROR: Repo path not found: $REPOPATH" && exit 1)
+    - /bin/test -d "$DEPLOYPATH" || (echo "ERROR: Deploy path not found: $DEPLOYPATH" && exit 1)
+
+    # 3) Ensure protected folders exist on the live site
+    - /bin/mkdir -p "$DEPLOYPATH/data"
+
+    # 4) Copy everything EXCEPT protected items
+    #    Excludes: .env, *.db, data/, node_modules/, .git/, tmp/
+    - /usr/bin/rsync -a --delete \
+        --exclude=".git/" \
+        --exclude="node_modules/" \
+        --exclude="data/" \
+        --exclude="*.db" \
+        --exclude=".env" \
+        --exclude="tmp/" \
+        "$REPOPATH/" "$DEPLOYPATH/"
+
+    # 5) (Optional) keep your live .htaccess intact (uncomment if needed)
+    # - /bin/test -f "$DEPLOYPATH/.htaccess" && echo ".htaccess preserved"
+
+    # 6) Make sure .git never remains in live
+    - /bin/rm -rf "$DEPLOYPATH/.git"
 
