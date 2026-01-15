@@ -2,7 +2,7 @@
 deployment:
   tasks:
     # 1) Set paths
-    - export REPOPATH=/home/clickeco/repositories/clickcoverlettercreator
+    - export REPOPATH=/home/clickeco/repositories/clickcoverlettercreater
     - export DEPLOYPATH=/home/clickeco/clickcoverlettercreator.com.au
 
     # 2) Safety checks
