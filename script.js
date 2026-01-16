@@ -3567,6 +3567,36 @@
 
       sidebar.appendChild(contactSection);
 
+      // Keywords section in sidebar
+      const profileKws = appState.profile && Array.isArray(appState.profile.keywords) ? appState.profile.keywords.filter(Boolean) : [];
+      const resumeKws = appState.resume && Array.isArray(appState.resume.keywords) ? appState.resume.keywords.filter(Boolean) : [];
+      const kws = profileKws.length ? profileKws.slice(0, 3) : resumeKws.slice(0, 3);
+      if (kws && kws.length) {
+        const keywordsSection = document.createElement('div');
+        keywordsSection.style.marginTop = '20px';
+        keywordsSection.style.paddingTop = '20px';
+        keywordsSection.style.borderTop = '1px solid rgba(255, 255, 255, 0.3)';
+        
+        const keywordsTitle = document.createElement('div');
+        keywordsTitle.innerText = 'KEY SKILLS';
+        keywordsTitle.style.fontSize = '10pt';
+        keywordsTitle.style.fontWeight = '600';
+        keywordsTitle.style.marginBottom = '12px';
+        keywordsTitle.style.letterSpacing = '1px';
+        keywordsSection.appendChild(keywordsTitle);
+        
+        kws.forEach(kw => {
+          const kwEl = document.createElement('div');
+          kwEl.innerText = `• ${kw}`;
+          kwEl.style.fontSize = '10pt';
+          kwEl.style.marginBottom = '6px';
+          kwEl.style.opacity = '0.95';
+          keywordsSection.appendChild(kwEl);
+        });
+        
+        sidebar.appendChild(keywordsSection);
+      }
+
       // Right content area
       const content = document.createElement('div');
       content.style.flex = '1';
@@ -3578,16 +3608,12 @@
       const headerBlock = document.createElement('div');
       headerBlock.style.marginBottom = '32px';
 
-      // Location and date on same line
-      const locationDateEl = document.createElement('div');
-      const location = businessAddress ? businessAddress.split(',')[0] : '';
-      if (location) {
-        locationDateEl.innerText = `${location}, ${todayLong}`;
-      } else {
-        locationDateEl.innerText = todayLong;
-      }
-      locationDateEl.style.marginBottom = '24px';
-      headerBlock.appendChild(locationDateEl);
+      // Date only (right-aligned)
+      const dateEl = document.createElement('div');
+      dateEl.innerText = todayLong;
+      dateEl.style.textAlign = 'right';
+      dateEl.style.marginBottom = '24px';
+      headerBlock.appendChild(dateEl);
 
       // Company details using helper function
       const companyDetails = createCompanyDetailsBlock(companyName, contactPerson, businessAddress, refNumber);
