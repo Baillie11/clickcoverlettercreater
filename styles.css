@@ -134,6 +134,50 @@ body {
   border-left: 4px solid var(--border);
 }
 
+/* Empty State for Response Categories */
+.empty-state {
+  padding: 32px 20px;
+  text-align: center;
+  background: linear-gradient(135deg, rgba(108, 99, 255, 0.03) 0%, rgba(108, 99, 255, 0.01) 100%);
+  border: 2px dashed rgba(108, 99, 255, 0.2);
+  border-radius: 10px;
+  margin: 10px 0;
+}
+
+.empty-state-icon {
+  font-size: 2.5rem;
+  margin: 0 0 12px 0;
+  opacity: 0.7;
+}
+
+.empty-state-text {
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: var(--text);
+  margin: 0 0 8px 0;
+}
+
+.empty-state-hint {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.empty-state-hint strong {
+  color: #2ecc71;
+  font-weight: 600;
+}
+
+body.theme-dark .empty-state {
+  background: linear-gradient(135deg, rgba(108, 99, 255, 0.08) 0%, rgba(108, 99, 255, 0.03) 100%);
+  border-color: rgba(108, 99, 255, 0.3);
+}
+
+body.theme-dark .empty-state-hint strong {
+  color: #3edb81;
+}
+
 .response {
   padding: 12px 12px 12px 14px;
   margin-bottom: 12px;
@@ -239,6 +283,42 @@ body.theme-dark .response-tag:last-child {
 /* Utility */
 .hidden { display: none !important; }
 
+/* Toggle category button */
+.toggle-category-btn {
+  background: rgba(108, 99, 255, 0.1);
+  color: var(--primary);
+  border: 1px solid rgba(108, 99, 255, 0.2);
+  border-radius: 4px;
+  width: 24px;
+  height: 24px;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: 6px;
+  vertical-align: middle;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.toggle-category-btn:hover {
+  background: rgba(108, 99, 255, 0.2);
+  transform: translateY(-1px);
+}
+.toggle-category-btn:active {
+  transform: translateY(0);
+}
+
+body.theme-dark .toggle-category-btn {
+  background: rgba(108, 99, 255, 0.15);
+  border-color: rgba(108, 99, 255, 0.3);
+  color: #8b84ff;
+}
+
+body.theme-dark .toggle-category-btn:hover {
+  background: rgba(108, 99, 255, 0.25);
+}
+
 /* Add category button */
 .add-category-btn {
   background: linear-gradient(135deg, #2ecc71, #27ae60);
@@ -296,12 +376,12 @@ body.theme-dark .sort-select {
 /* Modal */
 .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 2000; backdrop-filter: blur(2px); padding: 20px; overflow-y: auto; }
 .modal.hidden { display: none; }
-.modal-content { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 14px; padding: 24px; width: 90%; max-width: 520px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); margin: auto; }
+.modal-content { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 14px; padding: 32px; width: 90%; max-width: 900px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); margin: auto; box-sizing: border-box; }
 .modal-content h3 { margin-top: 0; margin-bottom: 16px; font-size: 1.4rem; }
-.modal-content textarea { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 10px; font-family: inherit; font-size: 1rem; margin-top: 12px; resize: vertical; min-height: 120px; }
+.modal-content textarea { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 10px; font-family: inherit; font-size: 1rem; margin-top: 12px; resize: vertical; min-height: 120px; box-sizing: border-box; }
 .modal-content textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.2); }
 .modal-content label { display: block; margin: 8px 0; font-size: 0.95rem; }
-.modal-content input[type="text"], .modal-content input[type="password"] { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; }
+.modal-content input[type="text"], .modal-content input[type="password"] { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; box-sizing: border-box; }
 .modal-content .inline { display: flex; align-items: center; gap: 8px; }
 
 /* Placeholder Guide */
@@ -796,13 +876,64 @@ body.theme-dark .auth-card .field-hint { color: #999; }
 
 .letter-paragraph {
   margin: 10px 0;
-  padding: 0; /* remove internal padding for cleaner text */
-  background: transparent; /* remove grey background */
-  border: none;
+  padding: 12px 12px 12px 36px; /* Added left padding for drag handle */
+  background: #ffffff;
+  border: 1px solid #e6eaf2;
+  border-radius: 8px;
   font-size: 1rem;
   line-height: 1.5;
   white-space: pre-wrap; /* Preserve newlines and spaces */
   word-wrap: break-word;
+  position: relative;
+  cursor: move;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.letter-paragraph:hover {
+  background: #f8f9fa;
+  border-color: #6c63ff;
+  box-shadow: 0 4px 8px rgba(108, 99, 255, 0.15);
+  transform: translateX(2px);
+}
+
+/* Drag handle icon */
+.letter-paragraph::before {
+  content: '⋮⋮';
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #999;
+  font-size: 16px;
+  font-weight: bold;
+  letter-spacing: -2px;
+  cursor: move;
+  opacity: 0.4;
+  transition: opacity 0.2s ease;
+  user-select: none;
+}
+
+.letter-paragraph:hover::before {
+  opacity: 1;
+  color: #6c63ff;
+}
+
+/* While dragging */
+.sortable-ghost {
+  opacity: 0.4;
+  background: #e6eaf2;
+}
+
+.sortable-drag {
+  cursor: grabbing !important;
+}
+
+.editable-paragraph {
+  white-space: pre-wrap;
+  outline: none;
+  min-height: 1.2em;
+  font-family: inherit;
 }
 
 .placeholder {
@@ -860,6 +991,30 @@ body.theme-dark .letter-preview {
   background: #141a2a;
   color: #e8edf7;
   border-color: #22304c;
+}
+
+/* Dark mode for draggable paragraphs */
+body.theme-dark .letter-paragraph {
+  background: #1a2332;
+  border-color: #2a3b52;
+  color: #e8edf7;
+}
+
+body.theme-dark .letter-paragraph:hover {
+  background: #22304c;
+  border-color: #8b84ff;
+}
+
+body.theme-dark .letter-paragraph::before {
+  color: #6b7a90;
+}
+
+body.theme-dark .letter-paragraph:hover::before {
+  color: #8b84ff;
+}
+
+body.theme-dark .sortable-ghost {
+  background: #2a3b52;
 }
 
 .add-response textarea {

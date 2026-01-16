@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VitaePro Feature Diagnostic</title>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    h1 { color: #2c3e50; }
+    .test-section {
+      background: white;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .status {
+      padding: 10px;
+      border-radius: 4px;
+      margin: 10px 0;
+    }
+    .pass { background: #d4edda; color: #155724; }
+    .fail { background: #f8d7da; color: #721c24; }
+    .letter-area {
+      border: 2px dashed #ccc;
+      padding: 20px;
+      min-height: 200px;
+      background: #fafafa;
+      border-radius: 4px;
+    }
+    .letter-paragraph {
+      background: white;
+      padding: 15px;
+      margin: 10px 0;
+      border-left: 3px solid #3498db;
+      cursor: move;
+      position: relative;
+      border-radius: 4px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .editable-paragraph {
+      outline: none;
+      min-height: 40px;
+    }
+    .editable-paragraph:focus {
+      background: #ffffcc;
+    }
+    button {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover { background: #2980b9; }
+    .remove-btn {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background: #ff4757;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 VitaePro Feature Diagnostic</h1>
+  
+  <div class="test-section">
+    <h2>Test 1: SortableJS Library</h2>
+    <div id="sortableStatus" class="status">Checking...</div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test 2: Inline Editing</h2>
+    <p>Try clicking inside the paragraph below and typing:</p>
+    <div class="letter-paragraph">
+      <div class="editable-paragraph" contenteditable="true" spellcheck="true">
+        Click here to edit this text. If you can type and modify this text, inline editing is working!
+      </div>
+      <button class="remove-btn" onclick="this.parentElement.remove()">×</button>
+    </div>
+    <div id="editStatus" class="status">Click and type in the paragraph above to test</div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test 3: Drag to Reorder</h2>
+    <p>Try dragging these paragraphs to reorder them:</p>
+    <div id="letterArea" class="letter-area">
+      <div class="letter-paragraph">
+        <div class="editable-paragraph" contenteditable="true">
+          Paragraph 1 - Drag me!
+        </div>
+        <button class="remove-btn" onclick="this.parentElement.remove()">×</button>
+      </div>
+      <div class="letter-paragraph">
+        <div class="editable-paragraph" contenteditable="true">
+          Paragraph 2 - Drag me too!
+        </div>
+        <button class="remove-btn" onclick="this.parentElement.remove()">×</button>
+      </div>
+      <div class="letter-paragraph">
+        <div class="editable-paragraph" contenteditable="true">
+          Paragraph 3 - Try reordering!
+        </div>
+        <button class="remove-btn" onclick="this.parentElement.remove()">×</button>
+      </div>
+    </div>
+    <div id="dragStatus" class="status">Try dragging paragraphs to reorder them</div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test 4: Browser Console Check</h2>
+    <p>Open your browser's Developer Tools (F12) and check the Console tab for any errors.</p>
+    <button onclick="runConsoleTest()">Run Console Test</button>
+    <div id="consoleStatus" class="status">Click button above to test</div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test 5: Cache Check</h2>
+    <p>Check if you need to clear your browser cache:</p>
+    <button onclick="checkCache()">Check Cache Status</button>
+    <div id="cacheStatus" class="status">Click button above</div>
+  </div>
+
+  <script>
+    // Test 1: Check if SortableJS is loaded
+    window.addEventListener('load', () => {
+      const sortableStatus = document.getElementById('sortableStatus');
+      if (typeof Sortable !== 'undefined') {
+        sortableStatus.className = 'status pass';
+        sortableStatus.textContent = '✅ SortableJS library is loaded successfully';
+        initializeSortable();
+      } else {
+        sortableStatus.className = 'status fail';
+        sortableStatus.textContent = '❌ SortableJS library failed to load - this is the problem!';
+      }
+    });
+    
+    // Test 2: Monitor inline editing
+    document.querySelectorAll('.editable-paragraph').forEach(el => {
+      el.addEventListener('input', () => {
+        const editStatus = document.getElementById('editStatus');
+        editStatus.className = 'status pass';
+        editStatus.textContent = '✅ Inline editing is working! You can type and modify text.';
+      });
+    });
+    
+    // Test 3: Initialize drag to reorder
+    function initializeSortable() {
+      const letterArea = document.getElementById('letterArea');
+      try {
+        new Sortable(letterArea, {
+          animation: 150,
+          ghostClass: 'sortable-ghost',
+          onEnd: function() {
+            const dragStatus = document.getElementById('dragStatus');
+            dragStatus.className = 'status pass';
+            dragStatus.textContent = '✅ Drag to reorder is working! You successfully moved a paragraph.';
+          }
+        });
+      } catch (e) {
+        const dragStatus = document.getElementById('dragStatus');
+        dragStatus.className = 'status fail';
+        dragStatus.textContent = '❌ Error initializing drag: ' + e.message;
+      }
+    }
+    
+    // Test 4: Console check
+    function runConsoleTest() {
+      const consoleStatus = document.getElementById('consoleStatus');
+      console.log('VitaePro Diagnostic Test - If you see this, console is working');
+      console.log('SortableJS available:', typeof Sortable !== 'undefined');
+      console.log('Current timestamp:', new Date().toISOString());
+      
+      consoleStatus.className = 'status pass';
+      consoleStatus.textContent = '✅ Check the Console tab (F12) - messages have been logged there';
+    }
+    
+    // Test 5: Cache check
+    function checkCache() {
+      const cacheStatus = document.getElementById('cacheStatus');
+      const timestamp = new Date().getTime();
+      
+      cacheStatus.className = 'status pass';
+      cacheStatus.innerHTML = `
+        Current timestamp: ${timestamp}<br>
+        <strong>To clear cache:</strong><br>
+        • Chrome/Edge: Ctrl+Shift+Delete, select "Cached images and files"<br>
+        • Firefox: Ctrl+Shift+Delete, select "Cache"<br>
+        • Or do a hard refresh: Ctrl+F5 (Windows) or Cmd+Shift+R (Mac)
+      `;
+    }
+  </script>
+</body>
+</html>
