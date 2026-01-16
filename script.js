@@ -11,7 +11,6 @@
     addressLine2: null,
     phoneNumber: null,
     emailAddress: null,
-    signature: null,
     
     // Resume Upload Elements
     resumeUploadArea: null,
@@ -593,10 +592,6 @@
       'phone number':     val(DOM.phoneNumber?.value),
       'email':            val(DOM.emailAddress?.value),
       'email address':    val(DOM.emailAddress?.value)
-      ,
-      // Signature / sign-off (from profile)
-      'signature':        val(DOM.signature?.value),
-      'sign off':         val(DOM.signature?.value)
     };
     return (text || '').replace(/[\[{]([^}\]]+)[}\]]/g, (m, rawKey) => {
       const k = rawKey.trim().toLowerCase();
@@ -849,10 +844,10 @@
     if (DOM.firstName) DOM.firstName.value = appState.profile.firstName || '';
     if (DOM.lastName) DOM.lastName.value = appState.profile.lastName || '';
     if (DOM.addressLine1) DOM.addressLine1.value = appState.profile.addressLine1 || '';
+    if (DOM.suburb) DOM.suburb.value = appState.profile.suburb || '';
     if (DOM.addressLine2) DOM.addressLine2.value = appState.profile.addressLine2 || '';
     if (DOM.phoneNumber) DOM.phoneNumber.value = appState.profile.phoneNumber || '';
     if (DOM.emailAddress) DOM.emailAddress.value = appState.profile.emailAddress || '';
-    if (DOM.signature) DOM.signature.value = appState.profile.signature || '';
     if (DOM.keyword1) DOM.keyword1.value = (appState.profile.keywords && appState.profile.keywords[0]) || '';
     if (DOM.keyword2) DOM.keyword2.value = (appState.profile.keywords && appState.profile.keywords[1]) || '';
     if (DOM.keyword3) DOM.keyword3.value = (appState.profile.keywords && appState.profile.keywords[2]) || '';
@@ -864,10 +859,10 @@
       firstName: sanitizeText(DOM.firstName?.value || ''),
       lastName: sanitizeText(DOM.lastName?.value || ''),
       addressLine1: sanitizeText(DOM.addressLine1?.value || ''),
+      suburb: sanitizeText(DOM.suburb?.value || ''),
       addressLine2: sanitizeText(DOM.addressLine2?.value || ''),
       phoneNumber: sanitizeText(DOM.phoneNumber?.value || ''),
       emailAddress: sanitizeText(DOM.emailAddress?.value || ''),
-      signature: sanitizeText(DOM.signature?.value || ''),
       keywords: [sanitizeText(DOM.keyword1?.value || ''), sanitizeText(DOM.keyword2?.value || ''), sanitizeText(DOM.keyword3?.value || '')].filter(k => k && k.length),
       industry: sanitizeText(DOM.industry?.value || '')
     };
@@ -2043,12 +2038,31 @@
     container.innerHTML = '';
     const query = searchQuery.toLowerCase().trim();
     
+    // Separate common and other tags
+    const commonTags = [];
+    const otherTags = [];
+    
     PRESET_TAGS.forEach(tag => {
       // Filter tags based on search query
       if (query && !tag.toLowerCase().includes(query)) {
         return; // Skip tags that don't match search
       }
       
+      if (COMMON_TAGS.includes(tag)) {
+        commonTags.push(tag);
+      } else {
+        otherTags.push(tag);
+      }
+    });
+    
+    // Sort both arrays alphabetically
+    commonTags.sort((a, b) => a.localeCompare(b));
+    otherTags.sort((a, b) => a.localeCompare(b));
+    
+    // Render common tags first, then other tags
+    const allTagsOrdered = [...commonTags, ...otherTags];
+    
+    allTagsOrdered.forEach(tag => {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'preset-tag-btn';
@@ -2112,6 +2126,18 @@
 
   // Track sort order for user responses
   let userResponsesSortOrder = 'tag'; // 'tag' or 'date-asc' or 'date-desc'
+  
+  // Track visibility state of response categories
+  let categoryVisibility = {
+    user: true,
+    crowd: true,
+    ai: true
+  };
+  
+  function toggleCategoryVisibility(category) {
+    categoryVisibility[category] = !categoryVisibility[category];
+    renderResponses();
+  }
 
   function filterResponses(searchQuery) {
     currentSearchQuery = searchQuery.toLowerCase().trim();
@@ -2135,6 +2161,7 @@
     if (!DOM.categoryUser || !DOM.categoryCrowd || !DOM.categoryAi) return;
     // Clear existing responses
     DOM.categoryUser.innerHTML = `<h3>User Created 
+      <button type="button" id="toggleUserBtn" class="toggle-category-btn" title="${categoryVisibility.user ? 'Hide' : 'Show'}">${categoryVisibility.user ? '▼' : '▶'}</button>
       <button type="button" id="addUserResponseBtn" class="add-category-btn" title="Add new response">+</button>
       <select id="userSortSelect" class="sort-select" title="Sort by">
         <option value="tag">Sort by Tag</option>
@@ -2142,8 +2169,12 @@
         <option value="date-asc">Oldest First</option>
       </select>
     </h3>`;
-    DOM.categoryCrowd.innerHTML = '<h3>Crowd Sourced</h3>';
-    DOM.categoryAi.innerHTML = '<h3>AI Generated</h3>';
+    DOM.categoryCrowd.innerHTML = `<h3>Crowd Sourced 
+      <button type="button" id="toggleCrowdBtn" class="toggle-category-btn" title="${categoryVisibility.crowd ? 'Hide' : 'Show'}">${categoryVisibility.crowd ? '▼' : '▶'}</button>
+    </h3>`;
+    DOM.categoryAi.innerHTML = `<h3>AI Generated 
+      <button type="button" id="toggleAiBtn" class="toggle-category-btn" title="${categoryVisibility.ai ? 'Hide' : 'Show'}">${categoryVisibility.ai ? '▼' : '▶'}</button>
+    </h3>`;
     
     // Re-attach event listener for the + button
     const addBtn = document.getElementById('addUserResponseBtn');
@@ -2158,6 +2189,14 @@
         renderResponses();
       });
     }
+    
+    // Re-attach event listeners for toggle buttons
+    const toggleUserBtn = document.getElementById('toggleUserBtn');
+    const toggleCrowdBtn = document.getElementById('toggleCrowdBtn');
+    const toggleAiBtn = document.getElementById('toggleAiBtn');
+    if (toggleUserBtn) toggleUserBtn.addEventListener('click', () => toggleCategoryVisibility('user'));
+    if (toggleCrowdBtn) toggleCrowdBtn.addEventListener('click', () => toggleCategoryVisibility('crowd'));
+    if (toggleAiBtn) toggleAiBtn.addEventListener('click', () => toggleCategoryVisibility('ai'));
 
     // Sort responses based on current sort order
     const sortedResponses = [...appState.responses].sort((a, b) => {
@@ -2184,6 +2223,11 @@
       return 0;
     });
 
+    // Track if any responses were added to each category
+    let hasUserResponses = false;
+    let hasCrowdResponses = false;
+    let hasAiResponses = false;
+    
     sortedResponses.forEach(response => {
       // Apply search filter
       if (!matchesSearch(response, currentSearchQuery)) return;
@@ -2191,13 +2235,34 @@
       const responseEl = createResponseElement(response);
       
       if (response.category === 'user') {
-        DOM.categoryUser.appendChild(responseEl);
+        if (categoryVisibility.user) {
+          DOM.categoryUser.appendChild(responseEl);
+        }
+        hasUserResponses = true;
       } else if (response.category === 'crowd') {
-        DOM.categoryCrowd.appendChild(responseEl);
+        if (categoryVisibility.crowd) {
+          DOM.categoryCrowd.appendChild(responseEl);
+        }
+        hasCrowdResponses = true;
       } else if (response.category === 'ai') {
-        DOM.categoryAi.appendChild(responseEl);
+        if (categoryVisibility.ai) {
+          DOM.categoryAi.appendChild(responseEl);
+        }
+        hasAiResponses = true;
       }
     });
+    
+    // Add empty state message for User Created if no responses (and category is visible)
+    if (!hasUserResponses && categoryVisibility.user) {
+      const emptyState = document.createElement('div');
+      emptyState.className = 'empty-state';
+      emptyState.innerHTML = `
+        <p class="empty-state-icon">📝</p>
+        <p class="empty-state-text">No saved responses yet</p>
+        <p class="empty-state-hint">Click the <strong>+</strong> button above to create your first reusable paragraph</p>
+      `;
+      DOM.categoryUser.appendChild(emptyState);
+    }
   }
 
   function createResponseElement(response) {
@@ -2246,6 +2311,21 @@
       
       controlsEl.appendChild(editBtn);
       controlsEl.appendChild(deleteBtn);
+      responseEl.appendChild(controlsEl);
+    } else if (response.category === 'crowd' || response.category === 'ai') {
+      // Add "Copy & Edit" button for crowd and AI responses
+      const controlsEl = document.createElement('div');
+      controlsEl.className = 'response-controls';
+      
+      const copyBtn = document.createElement('button');
+      copyBtn.textContent = '📝';
+      copyBtn.title = 'Copy & Edit as My Response';
+      copyBtn.onclick = (e) => {
+        e.stopPropagation();
+        copyResponseToUser(response);
+      };
+      
+      controlsEl.appendChild(copyBtn);
       responseEl.appendChild(controlsEl);
     }
     
@@ -2352,6 +2432,17 @@
     if (tags.length === 0) {
       if (DOM.modalError) DOM.modalError.textContent = 'Please add at least one tag to organize your response.';
       return;
+    }
+    
+    // Automatically add user's industry from profile as a tag (if set)
+    const userIndustry = appState.profile?.industry;
+    if (userIndustry && userIndustry.trim().length > 0) {
+      // Only add if not already in tags (case-insensitive check)
+      const industryLower = userIndustry.trim().toLowerCase();
+      const alreadyExists = tags.some(tag => tag.toLowerCase() === industryLower);
+      if (!alreadyExists) {
+        tags.push(userIndustry.trim());
+      }
     }
     
     // Automatically add creation date as a tag
@@ -2466,6 +2557,45 @@
       saveAppState();
       renderResponses();
     }
+  }
+
+  function copyResponseToUser(sourceResponse) {
+    // Pre-fill the create modal with the source response text and tags
+    if (!DOM.createResponseModal) return;
+    
+    // Set the text
+    if (DOM.modalResponseText) DOM.modalResponseText.value = sourceResponse.text;
+    
+    // Set the tags (excluding date tag if present)
+    const tagsInput = document.getElementById('modalResponseTags');
+    if (tagsInput && sourceResponse.tags) {
+      // Filter out date-like tags (e.g., "Jan 15, 2026")
+      const nonDateTags = sourceResponse.tags.filter(tag => {
+        // Simple heuristic: if tag contains digits and common date keywords, skip it
+        const isDateTag = /\d/.test(tag) && /(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\d{4})/i.test(tag);
+        return !isDateTag;
+      });
+      tagsInput.value = nonDateTags.join(', ');
+    }
+    
+    // Clear tag search
+    const tagSearchInput = document.getElementById('createTagSearch');
+    if (tagSearchInput) tagSearchInput.value = '';
+    
+    if (DOM.modalError) DOM.modalError.textContent = '';
+    
+    // Render preset tags
+    renderPresetTags('createPresetTags', 'modalResponseTags');
+    setTimeout(() => updatePresetTagsState('createPresetTags', 'modalResponseTags'), 10);
+    
+    // Setup tag search
+    setupTagSearch('createTagSearch', 'createPresetTags', 'modalResponseTags');
+    
+    // Setup placeholder buttons
+    setupPlaceholderButtons('#createResponseModal', 'modalResponseText');
+    
+    DOM.createResponseModal.classList.remove('hidden');
+    setTimeout(() => DOM.modalResponseText?.focus(), 100);
   }
 
   // Letter Builder
@@ -2655,20 +2785,16 @@
       const profile = appState.profile;
       const fullName = `${profile.firstName || ''} ${profile.lastName || ''}`.trim();
       
-      if ((profile.signature && String(profile.signature).trim()) || fullName || profile.phoneNumber || profile.emailAddress) {
+      if (fullName || profile.phoneNumber || profile.emailAddress) {
         const signatureEl = document.createElement('div');
         signatureEl.className = 'letter-signature-preview';
         signatureEl.style.cssText = 'margin-top: 20px; padding: 10px; background: #f8f9fa; border-radius: 4px; font-size: 0.9em; color: #555; white-space: pre-line;';
         
-        if (profile.signature && String(profile.signature).trim()) {
-          signatureEl.textContent = profile.signature;
-        } else {
-          let sig = 'Sincerely,';
-          if (fullName) sig += `\n${fullName}`;
-          if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
-          if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
-          signatureEl.textContent = sig;
-        }
+        let sig = 'Sincerely,';
+        if (fullName) sig += `\n${fullName}`;
+        if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
+        if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
+        signatureEl.textContent = sig;
         
         DOM.letterArea.appendChild(signatureEl);
       }
@@ -3055,20 +3181,16 @@
         printEl.appendChild(p);
       });
 
-      if ((profile.signature && String(profile.signature).trim()) || fullName || profile.phoneNumber || profile.emailAddress) {
+      if (fullName || profile.phoneNumber || profile.emailAddress) {
         const signatureP = document.createElement('p');
         signatureP.style.marginTop = '30px';
         signatureP.style.pageBreakInside = 'avoid';
         signatureP.style.breakInside = 'avoid-page';
-        if (profile.signature && String(profile.signature).trim()) {
-          signatureP.innerText = profile.signature;
-        } else {
-          let sig = 'Sincerely,';
-          if (fullName) sig += `\n${fullName}`;
-          if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
-          if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
-          signatureP.innerText = sig;
-        }
+        let sig = 'Sincerely,';
+        if (fullName) sig += `\n${fullName}`;
+        if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
+        if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
+        signatureP.innerText = sig;
         printEl.appendChild(signatureP);
       }
 
@@ -3090,6 +3212,7 @@
 
       if (profile.addressLine1) sender.appendChild(Object.assign(document.createElement('div'), { innerText: profile.addressLine1 }));
       if (profile.addressLine2) sender.appendChild(Object.assign(document.createElement('div'), { innerText: profile.addressLine2 }));
+      if (profile.suburb) sender.appendChild(Object.assign(document.createElement('div'), { innerText: profile.suburb }));
       if (profile.phoneNumber) sender.appendChild(Object.assign(document.createElement('div'), { innerText: `Tel: ${profile.phoneNumber}` }));
       if (profile.emailAddress) sender.appendChild(Object.assign(document.createElement('div'), { innerText: `Email: ${profile.emailAddress}` }));
 
@@ -3135,20 +3258,16 @@
       });
 
       // Signature
-      if ((profile.signature && String(profile.signature).trim()) || fullName || profile.phoneNumber || profile.emailAddress) {
+      if (fullName || profile.phoneNumber || profile.emailAddress) {
         const signatureP = document.createElement('p');
         signatureP.style.marginTop = '30px';
         signatureP.style.pageBreakInside = 'avoid';
         signatureP.style.breakInside = 'avoid-page';
-        if (profile.signature && String(profile.signature).trim()) {
-          signatureP.innerText = profile.signature;
-        } else {
-          let sig = 'Sincerely,';
-          if (fullName) sig += `\n${fullName}`;
-          if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
-          if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
-          signatureP.innerText = sig;
-        }
+        let sig = 'Sincerely,';
+        if (fullName) sig += `\n${fullName}`;
+        if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
+        if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
+        signatureP.innerText = sig;
         printEl.appendChild(signatureP);
       }
 
@@ -3180,6 +3299,7 @@
       if (profile.emailAddress) sidebar.appendChild(Object.assign(document.createElement('div'), { innerText: profile.emailAddress }));
       if (profile.addressLine1) sidebar.appendChild(Object.assign(document.createElement('div'), { innerText: profile.addressLine1 }));
       if (profile.addressLine2) sidebar.appendChild(Object.assign(document.createElement('div'), { innerText: profile.addressLine2 }));
+      if (profile.suburb) sidebar.appendChild(Object.assign(document.createElement('div'), { innerText: profile.suburb }));
 
       const content = document.createElement('div');
       content.style.flex = '1';
@@ -3213,18 +3333,14 @@
         content.appendChild(p);
       });
 
-      if ((profile.signature && String(profile.signature).trim()) || fullName || profile.phoneNumber || profile.emailAddress) {
+      if (fullName || profile.phoneNumber || profile.emailAddress) {
         const signatureP = document.createElement('p');
         signatureP.style.marginTop = '24px';
-        if (profile.signature && String(profile.signature).trim()) {
-          signatureP.innerText = profile.signature;
-        } else {
-          let sig = 'Sincerely,';
-          if (fullName) sig += `\n${fullName}`;
-          if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
-          if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
-          signatureP.innerText = sig;
-        }
+        let sig = 'Sincerely,';
+        if (fullName) sig += `\n${fullName}`;
+        if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
+        if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
+        signatureP.innerText = sig;
         content.appendChild(signatureP);
       }
 
@@ -3296,18 +3412,14 @@
         printEl.appendChild(p);
       });
 
-      if ((profile.signature && String(profile.signature).trim()) || fullName || profile.phoneNumber || profile.emailAddress) {
+      if (fullName || profile.phoneNumber || profile.emailAddress) {
         const signatureP = document.createElement('p');
         signatureP.style.marginTop = '30px';
-        if (profile.signature && String(profile.signature).trim()) {
-          signatureP.innerText = profile.signature;
-        } else {
-          let sig = 'Sincerely,';
-          if (fullName) sig += `\n${fullName}`;
-          if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
-          if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
-          signatureP.innerText = sig;
-        }
+        let sig = 'Sincerely,';
+        if (fullName) sig += `\n${fullName}`;
+        if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
+        if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
+        signatureP.innerText = sig;
         printEl.appendChild(signatureP);
       }
 
@@ -3369,6 +3481,11 @@
         const addr2 = document.createElement('div');
         addr2.innerText = profile.addressLine2;
         contactSection.appendChild(addr2);
+      }
+      if (profile.suburb) {
+        const suburb = document.createElement('div');
+        suburb.innerText = profile.suburb;
+        contactSection.appendChild(suburb);
       }
       if (profile.phoneNumber) {
         const phone = document.createElement('div');
@@ -3514,6 +3631,14 @@
       p.style.breakInside = 'avoid-page';
       rightCol.appendChild(p);
     }
+    if (profile.suburb) {
+      const p = document.createElement('p');
+      p.innerText = profile.suburb;
+      p.style.margin = '0';
+      p.style.pageBreakInside = 'avoid';
+      p.style.breakInside = 'avoid-page';
+      rightCol.appendChild(p);
+    }
 
     header.appendChild(leftCol);
     header.appendChild(rightCol);
@@ -3560,21 +3685,17 @@
       printEl.appendChild(p);
     });
 
-    if ((profile.signature && String(profile.signature).trim()) || fullName || profile.phoneNumber || profile.emailAddress) {
+    if (fullName || profile.phoneNumber || profile.emailAddress) {
       const signatureP = document.createElement('p');
       signatureP.style.marginTop = '30px';
       signatureP.style.pageBreakInside = 'avoid';
       signatureP.style.breakInside = 'avoid-page';
       signatureP.style.whiteSpace = 'pre-wrap';
-      if (profile.signature && String(profile.signature).trim()) {
-        signatureP.innerText = profile.signature;
-      } else {
-        let sig = 'Sincerely,';
-        if (fullName) sig += `\n${fullName}`;
-        if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
-        if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
-        signatureP.innerText = sig;
-      }
+      let sig = 'Sincerely,';
+      if (fullName) sig += `\n${fullName}`;
+      if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
+      if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
+      signatureP.innerText = sig;
       printEl.appendChild(signatureP);
     }
 
@@ -4002,7 +4123,7 @@
   // Event Listeners Setup
   function setupEventListeners() {
     // Profile auto-save on input
-    [DOM.firstName, DOM.lastName, DOM.addressLine1, DOM.addressLine2, DOM.phoneNumber, DOM.emailAddress, DOM.signature, DOM.keyword1, DOM.keyword2, DOM.keyword3, DOM.industry].forEach(input => {
+    [DOM.firstName, DOM.lastName, DOM.addressLine1, DOM.addressLine2, DOM.phoneNumber, DOM.emailAddress, DOM.keyword1, DOM.keyword2, DOM.keyword3, DOM.industry].forEach(input => {
       if (!input) return;
       input.addEventListener('blur', saveUserProfile);
     });
@@ -4188,10 +4309,10 @@
     DOM.firstName = document.getElementById('firstName');
     DOM.lastName = document.getElementById('lastName');
     DOM.addressLine1 = document.getElementById('addressLine1');
+    DOM.suburb = document.getElementById('suburb');
     DOM.addressLine2 = document.getElementById('addressLine2');
     DOM.phoneNumber = document.getElementById('phoneNumber');
     DOM.emailAddress = document.getElementById('emailAddress');
-    DOM.signature = document.getElementById('signature');
     DOM.keyword1 = document.getElementById('keyword1');
     DOM.keyword2 = document.getElementById('keyword2');
     DOM.keyword3 = document.getElementById('keyword3');

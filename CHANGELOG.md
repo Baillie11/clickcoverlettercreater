@@ -1,71 +1,134 @@
 # Changelog
 
-All notable changes to Click Cover Letter Creator will be documented in this file.
+All notable changes to VitaePro Cover Letter Creator will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [1.1.0] - 2025-12-06
+## [1.5.0] - 2026-01-16
 
 ### Added
-- **Draft Letter System**: Complete draft management functionality
-  - Save cover letters as drafts to database with "Save Draft" button
-  - Load previously saved drafts via "Load Draft" modal
-  - Delete unwanted drafts directly from the load modal
-  - Drafts include all job information and paragraph selections
-  - Drafts are user-specific and require authentication
-
-- **Dashboard Enhancements**
-  - New "Saved Drafts" stat card showing draft count
-  - Draft count integrated into dashboard statistics
-  - Drafts appear in applications table with "Draft" status
-  - Can manage drafts directly from dashboard
-
-- **User Created Response Sorting**
-  - Added sort dropdown for user-created responses
-  - Sort options: By Tag (default), Newest First, Oldest First
-  - Date-based sorting uses response creation timestamps
-  - Sort preference maintained during session
-
-- **Automatic Date Tags**
-  - Creation date automatically added as tag to new responses
-  - Date tags displayed in special amber/orange styling
-  - Date format: "Mon DD, YYYY" (e.g., "Dec 6, 2024")
-  - Helps organize and track when responses were created
+- **Drag-to-Reorder Functionality**: Paragraphs in the letter builder can now be reordered by dragging and dropping
+  - Visual drag handles (⋮⋮) appear on the left side of each paragraph
+  - Smooth hover effects with purple highlight
+  - Visual feedback while dragging (ghost element)
+  - Dark mode support for all drag interactions
+- **Inline Editing**: Paragraphs can be edited directly in the letter area
+  - Click inside any paragraph to edit text in-place
+  - Changes are preserved automatically
+  - Yellow highlight on focus for better visibility
+- **Copy & Edit for Crowd/AI Responses**: Users can now copy crowd-sourced or AI-generated responses to their personal library
+  - New "📝 Copy & Edit" button on crowd and AI responses
+  - Pre-fills create modal with source text and tags
+  - Automatically removes date tags when copying
+  - Saved as new user response with fresh ID and current date
+- **Show/Hide Toggle for Response Categories**: Quick navigation between response sections
+  - Toggle buttons (▼/▶) next to each category header
+  - Collapse/expand User Created, Crowd Sourced, and AI Generated sections
+  - State persists during session
+- **Empty State for User Responses**: Friendly message when no user responses exist yet
+  - Gradient background with dashed border
+  - Helpful hint to create first response
+  - Only shows when User Created section is visible and empty
+- **Diagnostic Tool**: New diagnostic.html page for troubleshooting
+  - Tests SortableJS library loading
+  - Tests inline editing functionality
+  - Tests drag-to-reorder functionality
+  - Browser console checks
+  - Cache status verification
 
 ### Changed
-- Updated API endpoint port from 3050 to 5050 for consistency
-- Renamed "Save Letter (locally)" button to "Save Draft"
-- Draft saving now uses backend database instead of localStorage
-- Improved response data structure to include `createdAt` timestamps
+- **Profile Address Field Order**: Reorganized address fields for better logical flow
+  - Order now: Street Address → State & Postcode → Suburb
+  - Updated label: "Suburb, State and Postcode"
+  - All 4 letter templates updated to reflect new order (formal-classic, sidebar-profile, teal-sidebar, standard)
+- **Modal Width**: Increased modal dialog width from 520px → 900px
+  - Better readability for longer response text
+  - Added padding increase (24px → 32px)
+  - Added box-sizing fixes to prevent border cutoff
+- **Preset Tags Organization**: Reorganized tag display for better usability
+  - Common tags (Closing, Education/Qualifications, Experience, Introduction, Skills) appear first
+  - Both groups sorted alphabetically
+  - Easier to find frequently-used tags
+- **Letter Paragraph Styling**: Enhanced visual appearance
+  - Added white background with subtle border
+  - Box shadow for depth
+  - Smooth hover transitions
+  - Left padding to accommodate drag handle
+  - Better visual hierarchy
 
 ### Fixed
-- Corrected syntax error in `matchesSearch` function
-- Fixed API connection issues between frontend and backend
-- Resolved "Failed to fetch" errors when saving/loading drafts
+- **Drag Handle Visibility**: Made drag handles clearly visible
+  - Previously invisible due to transparent background
+  - Now shows clear visual indicators for draggable items
+- **Cache Busting**: Updated version parameters to v=5
+  - Forces browser to load latest JavaScript and CSS
+  - Prevents stale cached files from causing issues
+  - Applied to index.html, profile.html, and dashboard.html
 
-### Technical Details
-- All draft operations require user authentication
-- Drafts stored in `applications` table with status "Draft"
-- Job information (contact, address, reference) stored in notes field as JSON
-- Response tags now properly include creation date
-- Date tags appear last in tag list with distinct styling
+### Technical
+- **Dependencies**: All external libraries remain current
+  - SortableJS 1.15.0 for drag-and-drop
+  - html2pdf.js 0.11.2 for PDF generation
+  - Mammoth 1.6.0 for DOCX parsing
+  - JSZip 3.10.1 for file handling
+- **Browser Compatibility**: Tested and working in modern browsers
+  - Chrome/Edge (Chromium)
+  - Firefox
+  - Safari (WebKit)
 
-## [1.0.0] - 2024-XX-XX
+## [1.4.0] - 2026-01-15
 
-### Initial Release
-- Core cover letter builder functionality
-- User profile management
-- Response library with categories (User Created, Crowd Sourced, AI Generated)
-- Multiple professional themes for letter generation
-- PDF export with customizable themes
-- Job ad parsing capabilities
-- AI-powered features (job info extraction, paragraph generation)
-- User authentication system
-- Dashboard with application tracking
-- SQLite database for data persistence
+### Added
+- **Auto-Tagging by Industry**: New responses automatically tagged with user's industry from profile
+  - Industry tag added alongside date tag
+  - Fully searchable via existing search functionality
+  - Case-insensitive duplicate prevention
+- **Profile Suburb Field**: Separated suburb from street address
+  - New dedicated suburb input field
+  - Updated all template rendering to display suburb on separate line
+  - Better address formatting in generated letters
+
+### Changed
+- **Dashboard Statistics**: Confirmed operational status
+  - Stats calculated dynamically via calculateStats() function
+  - Updates on page load, add/update/delete operations, and filter/sort changes
+  - Database API with localStorage fallback
+
+## [1.3.0] - Earlier
+
+### Features
+- User authentication and authorization
+- Database integration for response storage
+- AI-powered job ad parsing and response generation
+- Multiple letter themes (Standard, Modern, Formal Classic, Sidebar Profile, Letterhead Accent, Teal Sidebar)
+- Resume upload and parsing
+- Company name autocomplete
+- Draft saving and loading
+- PDF export functionality
+- Dark mode support
+- Application tracking dashboard
 
 ---
 
-[1.1.0]: https://github.com/yourusername/click-cover-letter-creator/compare/v1.0.0...v1.1.0
-[1.0.0]: https://github.com/yourusername/click-cover-letter-creator/releases/tag/v1.0.0
+## Version Format
+
+Versions follow Semantic Versioning (SemVer):
+- **MAJOR** version for incompatible API changes
+- **MINOR** version for new functionality in a backward-compatible manner
+- **PATCH** version for backward-compatible bug fixes
+
+## Release Process
+
+1. Update version number in CHANGELOG.md
+2. Document all changes under appropriate categories
+3. Commit changes with descriptive message
+4. Tag release with version number
+5. Push to repository
+
+## Categories
+
+- **Added**: New features
+- **Changed**: Changes to existing functionality
+- **Deprecated**: Soon-to-be removed features
+- **Removed**: Removed features
+- **Fixed**: Bug fixes
+- **Security**: Vulnerability fixes
+- **Technical**: Under-the-hood improvements
