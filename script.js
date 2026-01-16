@@ -3581,34 +3581,11 @@
     // Standard theme (left/right header)
     const header = document.createElement('div');
     header.style.display = 'flex';
-    header.style.justifyContent = 'space-between';
+    header.style.justifyContent = 'flex-end';
     header.style.alignItems = 'flex-start';
-    header.style.gap = '20px';
     header.style.marginBottom = '16px';
 
-    const leftCol = document.createElement('div');
-    leftCol.style.flex = '1';
-    leftCol.style.textAlign = 'left';
-    if (companyName) {
-      const p = document.createElement('p');
-      p.innerText = companyName;
-      p.style.margin = '0 0 4px 0';
-      p.style.fontWeight = '600';
-      p.style.pageBreakInside = 'avoid';
-      p.style.breakInside = 'avoid-page';
-      leftCol.appendChild(p);
-    }
-    if (businessAddress) {
-      const p = document.createElement('p');
-      p.innerText = businessAddress;
-      p.style.margin = '0';
-      p.style.pageBreakInside = 'avoid';
-      p.style.breakInside = 'avoid-page';
-      leftCol.appendChild(p);
-    }
-
     const rightCol = document.createElement('div');
-    rightCol.style.flex = '1';
     rightCol.style.textAlign = 'right';
     if (fullName) {
       const p = document.createElement('p');
@@ -3644,7 +3621,6 @@
       rightCol.appendChild(p);
     }
 
-    header.appendChild(leftCol);
     header.appendChild(rightCol);
     printEl.appendChild(header);
 
