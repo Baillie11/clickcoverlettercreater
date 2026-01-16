@@ -3653,12 +3653,19 @@
       });
 
       // Signature
-      const signatureP = document.createElement('p');
-      signatureP.style.marginTop = '32px';
-      signatureP.style.pageBreakInside = 'avoid';
-      signatureP.style.breakInside = 'avoid-page';
-      signatureP.innerText = 'Sincerely,';
-      content.appendChild(signatureP);
+      if (fullName || profile.phoneNumber || profile.emailAddress) {
+        const signatureP = document.createElement('p');
+        signatureP.style.marginTop = '32px';
+        signatureP.style.pageBreakInside = 'avoid';
+        signatureP.style.breakInside = 'avoid-page';
+        signatureP.style.whiteSpace = 'pre-wrap';
+        let sig = 'Sincerely,';
+        if (fullName) sig += `\n${fullName}`;
+        if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
+        if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
+        signatureP.innerText = sig;
+        content.appendChild(signatureP);
+      }
 
       container.appendChild(sidebar);
       container.appendChild(content);
