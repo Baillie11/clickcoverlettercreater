@@ -3033,6 +3033,72 @@
     return detailsBlock;
   }
 
+  // Helper function to create two-column address header (company left, user right)
+  function createTwoColumnAddressHeader(companyName, contactPerson, businessAddress, refNumber, profile, fullName, todayLong) {
+    const addressHeader = document.createElement('div');
+    addressHeader.style.display = 'flex';
+    addressHeader.style.justifyContent = 'space-between';
+    addressHeader.style.alignItems = 'flex-start';
+    addressHeader.style.gap = '20px';
+    addressHeader.style.marginBottom = '16px';
+
+    // Left column - Company details
+    const leftCol = document.createElement('div');
+    leftCol.style.flex = '1';
+    leftCol.style.textAlign = 'left';
+    
+    const companyDetails = createCompanyDetailsBlock(companyName, contactPerson, businessAddress, refNumber);
+    if (companyDetails) {
+      // Extract children from companyDetails and add to leftCol
+      while (companyDetails.firstChild) {
+        leftCol.appendChild(companyDetails.firstChild);
+      }
+    }
+
+    // Right column - User details
+    const rightCol = document.createElement('div');
+    rightCol.style.flex = '1';
+    rightCol.style.textAlign = 'right';
+    if (fullName) {
+      const p = document.createElement('p');
+      p.innerText = fullName;
+      p.style.margin = '0 0 4px 0';
+      p.style.fontWeight = '600';
+      p.style.pageBreakInside = 'avoid';
+      p.style.breakInside = 'avoid-page';
+      rightCol.appendChild(p);
+    }
+    if (profile.addressLine1) {
+      const p = document.createElement('p');
+      p.innerText = profile.addressLine1;
+      p.style.margin = '0';
+      p.style.pageBreakInside = 'avoid';
+      p.style.breakInside = 'avoid-page';
+      rightCol.appendChild(p);
+    }
+    if (profile.addressLine2) {
+      const p = document.createElement('p');
+      p.innerText = profile.addressLine2;
+      p.style.margin = '0';
+      p.style.pageBreakInside = 'avoid';
+      p.style.breakInside = 'avoid-page';
+      rightCol.appendChild(p);
+    }
+    if (profile.suburb) {
+      const p = document.createElement('p');
+      p.innerText = profile.suburb;
+      p.style.margin = '0';
+      p.style.pageBreakInside = 'avoid';
+      p.style.breakInside = 'avoid-page';
+      rightCol.appendChild(p);
+    }
+
+    addressHeader.appendChild(leftCol);
+    addressHeader.appendChild(rightCol);
+    
+    return addressHeader;
+  }
+
   // Build a letter DOM element for preview/PDF based on selected theme
   function buildLetterElement(selectedTheme) {
     const profile = appState.profile;
@@ -3146,18 +3212,16 @@
 
       printEl.appendChild(headerBlock);
 
+      // Two-column address header (company left, user right)
+      const addressHeader = createTwoColumnAddressHeader(companyName, contactPerson, businessAddress, refNumber, profile, fullName, todayLong);
+      printEl.appendChild(addressHeader);
+
       // Date (right-aligned)
       const dateEl = document.createElement('div');
       dateEl.innerText = todayLong;
       dateEl.style.textAlign = 'right';
       dateEl.style.marginBottom = '10px';
       printEl.appendChild(dateEl);
-
-      // Company details (left-aligned)
-      const companyDetails = createCompanyDetailsBlock(companyName, contactPerson, businessAddress, refNumber);
-      if (companyDetails) {
-        printEl.appendChild(companyDetails);
-      }
 
       const salutationP = document.createElement('p');
       if (contactPerson && contactPerson.trim()) {
@@ -3389,18 +3453,16 @@
       }
       printEl.appendChild(bar);
 
+      // Two-column address header (company left, user right)
+      const addressHeader = createTwoColumnAddressHeader(companyName, contactPerson, businessAddress, refNumber, profile, fullName, todayLong);
+      printEl.appendChild(addressHeader);
+
       // Date (right-aligned)
       const dateEl = document.createElement('div');
       dateEl.innerText = todayLong;
       dateEl.style.textAlign = 'right';
       dateEl.style.margin = '6px 0 10px';
       printEl.appendChild(dateEl);
-
-      // Company details (left-aligned)
-      const companyDetails = createCompanyDetailsBlock(companyName, contactPerson, businessAddress, refNumber);
-      if (companyDetails) {
-        printEl.appendChild(companyDetails);
-      }
 
       // Body
       const salutationP = document.createElement('p');
