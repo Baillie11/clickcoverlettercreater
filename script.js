@@ -3013,10 +3013,14 @@
     }
     
     if (businessAddress) {
-      const addressEl = document.createElement('div');
-      addressEl.innerText = businessAddress;
-      addressEl.style.marginBottom = '2px';
-      detailsBlock.appendChild(addressEl);
+      // Split address by comma for better formatting (e.g., "123 Main St, Melbourne, VIC 3000")
+      const addressParts = businessAddress.split(',').map(part => part.trim()).filter(part => part);
+      addressParts.forEach(part => {
+        const addressEl = document.createElement('div');
+        addressEl.innerText = part;
+        addressEl.style.marginBottom = '2px';
+        detailsBlock.appendChild(addressEl);
+      });
     }
     
     if (refNumber) {
