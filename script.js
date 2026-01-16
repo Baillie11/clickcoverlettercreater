@@ -3581,11 +3581,27 @@
     // Standard theme (left/right header)
     const header = document.createElement('div');
     header.style.display = 'flex';
-    header.style.justifyContent = 'flex-end';
+    header.style.justifyContent = 'space-between';
     header.style.alignItems = 'flex-start';
+    header.style.gap = '20px';
     header.style.marginBottom = '16px';
 
+    // Left column - Company details
+    const leftCol = document.createElement('div');
+    leftCol.style.flex = '1';
+    leftCol.style.textAlign = 'left';
+    
+    const companyDetails = createCompanyDetailsBlock(companyName, contactPerson, businessAddress, refNumber);
+    if (companyDetails) {
+      // Extract children from companyDetails and add to leftCol
+      while (companyDetails.firstChild) {
+        leftCol.appendChild(companyDetails.firstChild);
+      }
+    }
+
+    // Right column - User details
     const rightCol = document.createElement('div');
+    rightCol.style.flex = '1';
     rightCol.style.textAlign = 'right';
     if (fullName) {
       const p = document.createElement('p');
@@ -3621,6 +3637,7 @@
       rightCol.appendChild(p);
     }
 
+    header.appendChild(leftCol);
     header.appendChild(rightCol);
     printEl.appendChild(header);
 
@@ -3632,12 +3649,6 @@
     dateEl.style.textAlign = 'right';
     dateEl.style.marginBottom = '10px';
     printEl.appendChild(dateEl);
-
-    // Company details (left-aligned)
-    const companyDetails = createCompanyDetailsBlock(companyName, contactPerson, businessAddress, refNumber);
-    if (companyDetails) {
-      printEl.appendChild(companyDetails);
-    }
 
     const salutationP = document.createElement('p');
     salutationP.style.marginBottom = '16px';
