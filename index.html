@@ -26,7 +26,7 @@
 
     .landing-container {
       text-align: center;
-      max-width: 600px;
+      max-width: 1100px;
       width: 100%;
       animation: fadeIn 0.8s ease-in;
     }
@@ -65,6 +65,7 @@
       padding: 3rem 2rem;
       margin-bottom: 2rem;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      position: relative;
     }
 
     .coming-soon h2 {
@@ -82,8 +83,8 @@
 
     .features {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
       margin-bottom: 2rem;
     }
 
@@ -115,13 +116,15 @@
     }
 
     .login-button {
-      display: inline-block;
+      position: absolute;
+      top: 1.5rem;
+      right: 1.5rem;
       background: #fff;
       color: #667eea;
-      padding: 1rem 3rem;
+      padding: 0.75rem 2rem;
       border-radius: 50px;
       text-decoration: none;
-      font-size: 1.1rem;
+      font-size: 1rem;
       font-weight: 600;
       transition: all 0.3s ease;
       box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
@@ -161,6 +164,11 @@
       .features {
         grid-template-columns: 1fr;
       }
+
+      .login-button {
+        position: static;
+        margin-bottom: 1rem;
+      }
     }
   </style>
 </head>
@@ -170,6 +178,8 @@
     <div class="tagline">Professional Cover Letter Creator</div>
     
     <div class="coming-soon">
+      <a href="app.html" class="login-button">🔐 Login / Sign Up</a>
+      
       <h2>Coming Soon</h2>
       <p>We're building something special to help you create professional, compelling cover letters in minutes.</p>
       
@@ -190,8 +200,6 @@
           <div class="feature-desc">Create tailored, professional cover letters in minutes — without generic templates or copy-paste fatigue. More confidence. Less stress.</div>
         </div>
       </div>
-
-      <a href="app.html" class="login-button">🔐 Login / Sign Up</a>
     </div>
 
     <div class="footer">
