@@ -4639,6 +4639,12 @@
         body: JSON.stringify({ username: u, newPassword: p1 })
       });
       
+      // Check if response is JSON before parsing
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Server is not responding correctly. Please ensure the backend server is running.');
+      }
+      
       const data = await response.json();
       
       if (!response.ok) {
