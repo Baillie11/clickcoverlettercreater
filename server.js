@@ -1150,3 +1150,56 @@ initDatabase().then(() => {
   console.error('Failed to initialize database:', err);
   process.exit(1);
 });
+
+
+// --- Stats Tracking ---
+const statsFile = path.join(dataDir, 'stats.json');
+function readStats() {
+  try {
+    if (fs.existsSync(statsFile)) {
+      return JSON.parse(fs.readFileSync(statsFile, 'utf8'));
+    }
+  } catch (e) {
+    console.error('Failed to read stats:', e);
+  }
+  return { users: 0, actions: 0, lastUpdated: null };
+}
+
+function writeStats(stats) {
+  try {
+    fs.writeFileSync(statsFile, JSON.stringify(stats, null, 2));
+  } catch (e) {
+    console.error('Failed to write stats:', e);
+  }
+}
+
+function incrementStat(key) {
+  const stats = readStats();
+  stats[key] = (stats[key] || 0) + 1;
+  stats.lastUpdated = new Date().toISOString();
+  writeStats(stats);
+}
+
+// Stats API endpoint
+app.get('/api/stats', (req, res) => {
+  const stats = readStats();
+  res.json(stats);
+});
+
+// Increment stats on user registration
+const origCreateUser = DB.createUser;
+DB.createUser = async function(...args) {
+  await origCreateUser.apply(DB, args);
+  incrementStat('users');
+};
+
+// Increment stats on application creation
+const origCreateApplication = DB.createApplication;
+DB.createApplication = async function(data) {
+  await origCreateApplication.call(DB, data);
+  if ((data.status || '').toLowerCase() === 'draft') {
+    incrementStat('drafts');
+  } else {
+    incrementStat('actions');
+  }
+};

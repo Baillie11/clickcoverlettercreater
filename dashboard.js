@@ -180,6 +180,7 @@
         if (!Array.isArray(app.paragraphs)) {
           app.paragraphs = [];
         }
+        app.notes = '';
         return app;
       });
       console.log('Loaded applications from localStorage:', applications.length);
@@ -296,6 +297,8 @@
     if (isUpdate) {
       applications[index] = app;
     } else {
+      // Ensure new applications have blank notes
+      app.notes = '';
       applications.push(app);
     }
     
@@ -393,8 +396,14 @@
       // Track paragraph usage
       if (app.paragraphs && Array.isArray(app.paragraphs)) {
         app.paragraphs.forEach(para => {
-          const key = para.substring(0, 100); // Use first 100 chars as key
-          stats.topParagraphs[key] = (stats.topParagraphs[key] || 0) + 1;
+          if (typeof para === 'string') {
+            const key = para.substring(0, 100); // Use first 100 chars as key
+            stats.topParagraphs[key] = (stats.topParagraphs[key] || 0) + 1;
+          } else if (para && typeof para.text === 'string') {
+            // If para is an object with a text property
+            const key = para.text.substring(0, 100);
+            stats.topParagraphs[key] = (stats.topParagraphs[key] || 0) + 1;
+          }
         });
       }
     });
@@ -404,29 +413,33 @@
 
   // UI Rendering
   function renderStats() {
-    const stats = calculateStats();
+    // Always use local stats for status breakdown
+    const localStats = calculateStats();
 
     // Update stat cards
-    document.getElementById('totalApplications').textContent = stats.total;
-    document.getElementById('applicationsThisWeek').textContent = stats.thisWeek;
-    document.getElementById('applicationsThisMonth').textContent = stats.thisMonth;
-    document.getElementById('interviewCount').textContent = stats.interviews;
+    document.getElementById('totalApplications').textContent = localStats.total;
+    document.getElementById('applicationsThisWeek').textContent = localStats.thisWeek;
+    document.getElementById('applicationsThisMonth').textContent = localStats.thisMonth;
+    document.getElementById('interviewCount').textContent = localStats.interviews;
     const draftCountEl = document.getElementById('draftCount');
-    if (draftCountEl) draftCountEl.textContent = stats.drafts;
+    if (draftCountEl) draftCountEl.textContent = localStats.drafts;
 
-    // Update status breakdown
-    document.getElementById('statusDraft').textContent = stats.statusBreakdown['Draft'] || 0;
-    document.getElementById('statusApplied').textContent = stats.statusBreakdown['Applied'] || 0;
-    document.getElementById('statusInterviewScheduled').textContent = stats.statusBreakdown['InterviewScheduled'] || 0;
-    document.getElementById('statusInterviewComplete').textContent = stats.statusBreakdown['InterviewComplete'] || 0;
-    document.getElementById('statusAssessmentPending').textContent = stats.statusBreakdown['AssessmentPending'] || 0;
-    document.getElementById('statusOfferMade').textContent = stats.statusBreakdown['OfferMade'] || 0;
-    document.getElementById('statusOfferAccepted').textContent = stats.statusBreakdown['OfferAccepted'] || 0;
-    document.getElementById('statusRejected').textContent = stats.statusBreakdown['Rejected'] || 0;
+    // Update status breakdown panel
+    const breakdown = localStats.statusBreakdown;
+    if (breakdown) {
+      if (document.getElementById('statusDraft')) document.getElementById('statusDraft').textContent = breakdown.Draft || 0;
+      if (document.getElementById('statusApplied')) document.getElementById('statusApplied').textContent = breakdown.Applied || 0;
+      if (document.getElementById('statusInterviewScheduled')) document.getElementById('statusInterviewScheduled').textContent = breakdown.InterviewScheduled || 0;
+      if (document.getElementById('statusInterviewComplete')) document.getElementById('statusInterviewComplete').textContent = breakdown.InterviewComplete || 0;
+      if (document.getElementById('statusAssessmentPending')) document.getElementById('statusAssessmentPending').textContent = breakdown.AssessmentPending || 0;
+      if (document.getElementById('statusOfferMade')) document.getElementById('statusOfferMade').textContent = breakdown.OfferMade || 0;
+      if (document.getElementById('statusOfferAccepted')) document.getElementById('statusOfferAccepted').textContent = breakdown.OfferAccepted || 0;
+      if (document.getElementById('statusRejected')) document.getElementById('statusRejected').textContent = breakdown.Rejected || 0;
+    }
 
-    // Render top paragraphs
-    renderTopParagraphs(stats.topParagraphs);
-  }
+    // Render top paragraphs (local only)
+    renderTopParagraphs(localStats.topParagraphs);
+    }
 
   function renderTopParagraphs(paragraphsData) {
     const container = document.getElementById('topParagraphs');
@@ -461,12 +474,17 @@
       return;
     }
 
+
     tbody.innerHTML = filteredApps.map(app => `
       <tr data-id="${app.id}">
         <td>${formatDate(app.date)}</td>
         <td>${app.company || 'N/A'}</td>
         <td>${app.role || 'N/A'}</td>
-        <td><span class="${getStatusClass(app.status)}">${app.status || 'Draft'}</span></td>
+        <td>
+          <select class="status-dropdown" data-app-id="${app.id}">
+            ${STATUS_OPTIONS.map(opt => `<option value="${opt}"${app.status === opt ? ' selected' : ''}>${opt}</option>`).join('')}
+          </select>
+        </td>
         <td>${(app.notes || '').substring(0, 50)}${app.notes && app.notes.length > 50 ? '...' : ''}</td>
         <td>
           <div class="app-actions">
@@ -490,6 +508,21 @@
         const id = e.target.dataset.id;
         if (confirm('Are you sure you want to delete this application?')) {
           deleteApplication(id);
+        }
+      });
+    });
+
+    // Attach event listeners for status dropdowns
+    tbody.querySelectorAll('.status-dropdown').forEach(dropdown => {
+      dropdown.addEventListener('change', async function() {
+        const appId = this.getAttribute('data-app-id');
+        const newStatus = this.value;
+        const app = applications.find(a => a.id === appId);
+        if (app) {
+          app.status = newStatus;
+          await addOrUpdateApplication(app);
+          // Ensure dashboard stats and breakdown are refreshed
+          refreshDashboard();
         }
       });
     });
@@ -813,7 +846,7 @@
         company: company,
         role: role,
         status: status,
-        notes: notes,
+        notes: '', // Always blank for new applications
         date: new Date().toISOString(),
         paragraphs: paragraphs,
         timeSpent: 0
