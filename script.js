@@ -455,6 +455,15 @@
   // Local Storage Management
   async function loadAppState() {
     try {
+      // Data version check - force reload from DB if version changed
+      const DATA_VERSION = '3'; // Increment this to force reload from database
+      const currentVersion = localStorage.getItem('dataVersion');
+      if (currentVersion !== DATA_VERSION) {
+        console.log('Data version changed, clearing cached responses');
+        localStorage.removeItem('responses'); // Clear only responses cache
+        localStorage.setItem('dataVersion', DATA_VERSION);
+      }
+      
       const savedProfile = localStorage.getItem('userProfile');
       const savedResponses = localStorage.getItem('responses');
       const savedResume = localStorage.getItem('resumeData');
@@ -491,9 +500,12 @@
 
       // Sync with backend: try to load all responses from DB.
       try {
+        // Get user's own responses
         const dbResponses = await apiGetResponsesAll();
+        let allResponses = [];
+        
         if (dbResponses && dbResponses.length) {
-          appState.responses = dbResponses.map(r => ({
+          allResponses = dbResponses.map(r => ({
             id: r.id,
             text: r.text,
             category: r.category || 'user',
@@ -502,12 +514,33 @@
             tags: r.tags || [],
             createdAt: r.createdAt || null
           }));
-          // Cache to localStorage as well
-          localStorage.setItem('responses', JSON.stringify(appState.responses));
         } else {
           // DB empty: seed it with current in-memory responses
           await persistAllResponsesToDb(appState.responses || []);
         }
+        
+        // Also fetch crowd-sourced responses from other users
+        try {
+          const crowdList = await apiGetCrowdResponses();
+          if (Array.isArray(crowdList)) {
+            const crowdResponses = crowdList.map(r => ({
+              id: r.id,
+              text: r.text,
+              category: 'crowd', // Force crowd category
+              userCreated: false, // Not editable by current user
+              source: r.source || 'crowd',
+              tags: r.tags || [],
+              createdAt: r.createdAt || null
+            }));
+            allResponses = allResponses.concat(crowdResponses);
+          }
+        } catch (e) {
+          console.warn('Unable to fetch crowd-sourced responses:', e.message || e);
+        }
+        
+        appState.responses = allResponses;
+        // Cache to localStorage as well
+        localStorage.setItem('responses', JSON.stringify(appState.responses));
       } catch (e) {
         // Backend offline - continue using local storage
         console.warn('Responses DB not available, using local storage cache.');
