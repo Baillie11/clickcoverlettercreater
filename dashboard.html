@@ -7,10 +7,83 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <style>
+    /* Mobile notice styles */
+    .mobile-notice {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      z-index: 10000;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      color: white;
+      text-align: center;
+    }
+
+    .mobile-notice-content {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 16px;
+      padding: 2rem;
+      max-width: 400px;
+    }
+
+    .mobile-notice-icon {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+    }
+
+    .mobile-notice h2 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      font-weight: 600;
+    }
+
+    .mobile-notice p {
+      font-size: 1rem;
+      line-height: 1.5;
+      opacity: 0.95;
+      margin-bottom: 1.5rem;
+    }
+
+    .mobile-notice-btn {
+      background: white;
+      color: #667eea;
+      border: none;
+      padding: 0.75rem 2rem;
+      border-radius: 50px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    @media (max-width: 767px) {
+      .mobile-notice {
+        display: flex;
+      }
+    }
+  </style>
 </head>
 <body class="dashboard-page">
+  <!-- Mobile Device Notice -->
+  <div class="mobile-notice">
+    <div class="mobile-notice-content">
+      <div class="mobile-notice-icon">💻</div>
+      <h2>Best Viewed on Larger Screens</h2>
+      <p>VitaePro works best on tablets, laptops, and desktop computers for the optimal cover letter creation experience.</p>
+      <p><strong>We recommend using a device with at least a 10-inch screen.</strong></p>
+      <button class="mobile-notice-btn" onclick="this.parentElement.parentElement.style.display='none'">Continue Anyway</button>
+    </div>
+  </div>
   <header class="app-header">
-    <h1>Cover Letter Creator</h1>
+    <h1>VitaePro</h1>
     <nav class="app-nav">
       <div class="nav-left">
         <a href="app.html">Create Letter</a>
