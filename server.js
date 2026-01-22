@@ -1100,28 +1100,55 @@ app.post('/api/generate-paragraphs', async (req, res) => {
     });
   }
   
-  const { jobAdText, roleTitle, companyName } = req.body || {};
+  const { jobAdText, profile, resumeText } = req.body || {};
   if (!jobAdText) return res.status(400).json({ error: 'Missing jobAdText' });
   
   try {
-    const completion = await openai.chat.completions.create({
+    // Step 1: Extract job information
+    const extractCompletion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         {
           role: 'system',
-          content: 'You are an expert cover letter writer. Generate professional, tailored cover letter paragraphs based on job advertisements.'
+          content: 'You are a helpful assistant that extracts structured information from job advertisements. Return your response as valid JSON only.'
         },
         {
           role: 'user',
-          content: `Based on this job advertisement${roleTitle ? ` for the position of ${roleTitle}` : ''}${companyName ? ` at ${companyName}` : ''}, generate 3 professional cover letter paragraphs:\n\n1. An opening paragraph expressing interest\n2. A body paragraph highlighting relevant skills and experience\n3. A closing paragraph\n\nJob Ad:\n${jobAdText}\n\nReturn your response as JSON with keys "opening", "body", "closing".`
+          content: `Extract the following information from this job ad and return it as JSON with these exact keys: "roleTitle", "companyName", "contactPerson", "reference", "businessAddress". If any field is not found, use null.\n\nJob Ad:\n${jobAdText}`
+        }
+      ],
+      temperature: 0.3,
+      response_format: { type: 'json_object' }
+    });
+    
+    const extracted = JSON.parse(extractCompletion.choices[0].message.content);
+    
+    // Step 2: Generate targeted responses for job criteria
+    const profileInfo = profile ? `\n\nCandidate Profile:\nName: ${profile.firstName} ${profile.lastName}\nIndustry: ${profile.industry || 'Not specified'}\nKey Skills: ${profile.keywords?.join(', ') || 'Not specified'}` : '';
+    const resumeInfo = resumeText ? `\n\nCandidate Resume:\n${resumeText}` : '';
+    
+    const generateCompletion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are an expert cover letter writer. Analyze job requirements and generate multiple tailored paragraphs addressing specific criteria. Each paragraph should be professional, specific, and compelling.'
+        },
+        {
+          role: 'user',
+          content: `Based on this job advertisement, the candidate's profile, and their resume, generate separate paragraphs for each key requirement or criterion mentioned in the job ad. Each paragraph should address a specific aspect (skills, experience, qualifications, motivation, etc.).${profileInfo}${resumeInfo}\n\nJob Ad:\n${jobAdText}\n\nReturn your response as JSON with this structure:\n{\n  "jobInfo": { "roleTitle": string, "companyName": string, "contactPerson": string, "reference": string, "businessAddress": string },\n  "responses": [\n    { "text": "paragraph text", "tag": "appropriate tag like Introduction, Skills, Experience, Motivation, etc." }\n  ]\n}\n\nGenerate 4-8 targeted paragraphs covering: Introduction, relevant Skills/Experience for each major requirement, Why this company/role, and Closing.`
         }
       ],
       temperature: 0.7,
       response_format: { type: 'json_object' }
     });
     
-    const paragraphs = JSON.parse(completion.choices[0].message.content);
-    res.json(paragraphs);
+    const result = JSON.parse(generateCompletion.choices[0].message.content);
+    
+    // Merge extracted job info with generated responses
+    result.jobInfo = { ...extracted, ...result.jobInfo };
+    
+    res.json(result);
   } catch (e) {
     console.error('OpenAI generation error:', e);
     
@@ -1137,6 +1164,7 @@ app.post('/api/generate-paragraphs', async (req, res) => {
     
     res.status(500).json({ error: 'Failed to generate paragraphs' });
   }
+});
 });
 
 // Start server

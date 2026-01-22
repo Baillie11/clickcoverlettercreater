@@ -3929,14 +3929,17 @@
     // Check AI availability
     const aiStatus = await checkAiStatus();
     if (aiStatus.quotaExceeded) {
-      showJobAdStatus('âš ï¸ AI features are temporarily unavailable (quota exceeded)', 'error');
+      showJobAdStatus('⚠️ AI features are temporarily unavailable (quota exceeded)', 'error');
       disableAiButtons();
       return;
     }
 
-    showJobAdStatus('âœ¨ Generating cover letter paragraphs with AI...', 'loading');
+    showJobAdStatus('🤖 Analyzing job ad and generating tailored responses...', 'loading');
     
     try {
+      // Get resume text if available
+      const resumeText = appState.resume?.parsedText || '';
+      
       const response = await fetch('/api/generate-paragraphs', {
         method: 'POST',
         headers: {
@@ -3945,50 +3948,76 @@
         },
         body: JSON.stringify({
           jobAdText,
-          roleTitle: DOM.roleTitle?.value,
-          companyName: DOM.companyName?.value
+          profile: appState.profile,
+          resumeText
         })
       });
 
       if (!response.ok) {
-      const err = await response.json();
+        const err = await response.json();
         if (err.quotaExceeded) {
           disableAiButtons();
-          throw new Error('âš ï¸ AI quota exceeded - features disabled');
+          throw new Error('⚠️ AI quota exceeded - features disabled');
         }
         throw new Error(err.error || 'Failed to generate');
       }
 
-      const paragraphs = await response.json();
+      const result = await response.json();
       
-      // Add generated paragraphs as AI responses
-      if (paragraphs.opening) {
-        await addResponseToLibrary(paragraphs.opening, 'ai', 'AI Opening');
+      // Update job information fields if extracted
+      if (result.jobInfo) {
+        const overwrite = DOM.overwriteJobFields?.checked;
+        if (result.jobInfo.roleTitle && (overwrite || !DOM.roleTitle?.value)) {
+          DOM.roleTitle.value = result.jobInfo.roleTitle;
+        }
+        if (result.jobInfo.companyName && (overwrite || !DOM.companyName?.value)) {
+          DOM.companyName.value = result.jobInfo.companyName;
+        }
+        if (result.jobInfo.contactPerson && (overwrite || !DOM.contactPerson?.value)) {
+          DOM.contactPerson.value = result.jobInfo.contactPerson;
+        }
+        if (result.jobInfo.businessAddress && (overwrite || !DOM.businessAddress?.value)) {
+          DOM.businessAddress.value = result.jobInfo.businessAddress;
+        }
+        if (result.jobInfo.reference && (overwrite || !DOM.refNumber?.value)) {
+          DOM.refNumber.value = result.jobInfo.reference;
+        }
+        updateSalutationPreview();
       }
-      if (paragraphs.body) {
-        await addResponseToLibrary(paragraphs.body, 'ai', 'AI Body');
-      }
-      if (paragraphs.closing) {
-        await addResponseToLibrary(paragraphs.closing, 'ai', 'AI Closing');
+      
+      // Add generated responses to AI library
+      let addedCount = 0;
+      if (result.responses && Array.isArray(result.responses)) {
+        for (const resp of result.responses) {
+          await addResponseToLibrary(resp.text, 'ai', resp.tag || 'AI Generated', [resp.tag || 'AI Generated']);
+          addedCount++;
+        }
       }
 
-      showJobAdStatus('âœ… AI paragraphs generated and added to library!', 'success');
+      showJobAdStatus(`✅ Generated ${addedCount} tailored responses and added to AI library!`, 'success');
       await syncResponsesFromDb();
     } catch (error) {
       console.error('AI generation error:', error);
-      showJobAdStatus(`âŒ ${error.message}`, 'error');
+      showJobAdStatus(`❌ ${error.message}`, 'error');
     }
   }
 
-  async function addResponseToLibrary(text, category, source) {
+  async function addResponseToLibrary(text, category, source, tags = []) {
     if (!authToken) return;
+    
+    // Add creation date tag
+    const createdAt = new Date();
+    const dateTag = createdAt.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    const allTags = [...tags, dateTag];
     
     const newResponse = {
       id: generateId(),
       text: sanitizeText(text),
       category: category,
       userCreated: false,
-      source: source || null
+      source: source || null,
+      tags: allTags,
+      createdAt: createdAt.toISOString()
     };
 
     try {
