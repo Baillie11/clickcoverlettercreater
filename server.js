@@ -1165,7 +1165,6 @@ app.post('/api/generate-paragraphs', async (req, res) => {
     res.status(500).json({ error: 'Failed to generate paragraphs' });
   }
 });
-});
 
 // Start server
 initDatabase().then(() => {
