@@ -14,7 +14,7 @@
 </head>
 <body class="profile-page">
   <header class="app-header">
-    <h1>Cover Letter Creator</h1>
+      <h1>VitaePro</h1>
     <nav class="app-nav">
       <div class="nav-left">
         <a href="app.html">Create Letter</a>
@@ -137,10 +137,10 @@
   <!-- Auth Landing (full-screen) -->
   <div id="authLanding" class="auth-landing hidden" aria-live="polite">
     <div class="auth-card">
-      <h1>Welcome to Cover Letter Creator</h1>
+      <h1>Welcome to VitaePro</h1>
       <p class="subtle">Sign in or create an account to continue</p>
-      <label>Username
-        <input type="text" id="authUsername" autocomplete="username" />
+      <label>Username (email address)
+        <input type="email" id="authUsername" autocomplete="username" placeholder="e.g. email@example.com" />
       </label>
       <label>Password
         <input type="password" id="authPassword" autocomplete="current-password" />
@@ -158,9 +158,9 @@
   <div id="resetPasswordModal" class="auth-landing hidden" aria-live="polite">
     <div class="auth-card">
       <h1>Reset Password</h1>
-      <p class="subtle">Enter your username to reset your password</p>
-      <label>Username
-        <input type="text" id="resetUsername" autocomplete="username" />
+      <p class="subtle">Enter your email address to reset your password</p>
+      <label>Username (email address)
+        <input type="email" id="resetUsername" autocomplete="username" placeholder="e.g. email@example.com" />
       </label>
       <label>New Password
         <input type="password" id="resetNewPassword" autocomplete="new-password" />

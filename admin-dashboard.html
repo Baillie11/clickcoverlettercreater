@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard • VitaePro</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+</head>
+<body class="admin-dashboard-page">
+  <header class="app-header">
+    <h1>VitaePro Admin</h1>
+    <nav class="app-nav">
+      <div class="nav-left">
+        <a href="admin-dashboard.html" class="active">Admin Dashboard</a>
+        <a href="dashboard.html">User Dashboard</a>
+        <a href="app.html">Create Letter</a>
+      </div>
+    </nav>
+  </header>
+
+  <div class="app-container admin-container">
+    <main class="admin-panel">
+      <div class="admin-header">
+        <h2>System Usage Statistics</h2>
+        <p class="admin-subtitle">Overview of all users and system activity</p>
+      </div>
+      
+      <!-- Main Stats Cards -->
+      <div class="admin-stats-grid">
+        <div class="admin-stat-card">
+          <div class="stat-icon">👥</div>
+          <div class="stat-content">
+            <h3 id="totalUsers">0</h3>
+            <p>Total Users</p>
+          </div>
+        </div>
+        
+        <div class="admin-stat-card">
+          <div class="stat-icon">📝</div>
+          <div class="stat-content">
+            <h3 id="totalApplications">0</h3>
+            <p>Total Applications</p>
+          </div>
+        </div>
+        
+        <div class="admin-stat-card">
+          <div class="stat-icon">💬</div>
+          <div class="stat-content">
+            <h3 id="totalResponses">0</h3>
+            <p>Total Responses</p>
+          </div>
+        </div>
+        
+        <div class="admin-stat-card">
+          <div class="stat-icon">🤖</div>
+          <div class="stat-content">
+            <h3 id="totalAICalls">0</h3>
+            <p>AI API Calls</p>
+            <div class="stat-breakdown">
+              <span id="aiExtractCount">0</span> Extract | 
+              <span id="aiGenerateCount">0</span> Generate
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Secondary Stats -->
+      <div class="admin-secondary-stats">
+        <div class="admin-stat-card secondary">
+          <div class="stat-icon">📊</div>
+          <div class="stat-content">
+            <h3 id="avgApplicationsPerUser">0</h3>
+            <p>Avg Applications/User</p>
+          </div>
+        </div>
+        
+        <div class="admin-stat-card secondary">
+          <div class="stat-icon">📈</div>
+          <div class="stat-content">
+            <h3 id="avgResponsesPerUser">0</h3>
+            <p>Avg Responses/User</p>
+          </div>
+        </div>
+        
+        <div class="admin-stat-card secondary">
+          <div class="stat-icon">⚡</div>
+          <div class="stat-content">
+            <h3 id="aiUsageRate">0%</h3>
+            <p>AI Usage Rate</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Applications by Status -->
+      <section class="admin-section">
+        <h3>Applications by Status</h3>
+        <div class="status-breakdown-admin" id="statusBreakdownAdmin">
+          <p class="no-data">Loading statistics...</p>
+        </div>
+      </section>
+
+      <!-- Top Users -->
+      <section class="admin-section">
+        <h3>Top Active Users</h3>
+        <div class="top-users-container">
+          <table class="admin-table" id="topUsersTable">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Username</th>
+                <th>Applications</th>
+                <th>Member Since</th>
+              </tr>
+            </thead>
+            <tbody id="topUsersTableBody">
+              <tr class="no-data-row">
+                <td colspan="4">Loading user data...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Recent Activity -->
+      <section class="admin-section">
+        <h3>Recent Activity</h3>
+        <div class="recent-activity-container">
+          <table class="admin-table" id="recentActivityTable">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Username</th>
+                <th>Company</th>
+                <th>Role</th>
+              </tr>
+            </thead>
+            <tbody id="recentActivityTableBody">
+              <tr class="no-data-row">
+                <td colspan="4">Loading activity data...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Refresh Button -->
+      <div class="admin-actions">
+        <button type="button" id="refreshStatsBtn" class="primary-btn">🔄 Refresh Statistics</button>
+      </div>
+    </main>
+  </div>
+
+  <footer class="admin-footer">
+    <p>VitaePro Admin Dashboard • System statistics and monitoring</p>
+  </footer>
+
+  <script src="env.js?v=5"></script>
+  <script src="admin-dashboard.js?v=1"></script>
+</body>
+</html>

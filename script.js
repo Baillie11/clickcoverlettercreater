@@ -3837,10 +3837,19 @@
   // AI Functions
   async function checkAiStatus() {
     try {
-      const response = await fetch('/api/ai-status');
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+      
+      const response = await fetch('/api/ai-status', {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      
       const status = await response.json();
       return status;
     } catch (e) {
+      console.warn('AI status check failed:', e.message);
       return { available: false, quotaExceeded: false };
     }
   }
@@ -3998,7 +4007,9 @@
       await syncResponsesFromDb();
     } catch (error) {
       console.error('AI generation error:', error);
-      showJobAdStatus(`❌ ${error.message}`, 'error');
+      // Remove emoji from error message to avoid encoding issues
+      const cleanMessage = error.message.replace(/[^\x00-\x7F]/g, '').trim();
+      showJobAdStatus(`Failed to generate paragraphs: ${cleanMessage}`, 'error');
     }
   }
 
@@ -4599,8 +4610,16 @@
       const p = (DOM.authPassword?.value || '').trim();
       const create = !!(DOM.authCreate && DOM.authCreate.checked);
       if (DOM.authError) DOM.authError.textContent = '';
-      if (u.length < 3 || p.length < 6) {
-        if (DOM.authError) DOM.authError.textContent = 'Username min 3 chars, Password min 6 chars';
+      
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(u)) {
+        if (DOM.authError) DOM.authError.textContent = 'Please enter a valid email address';
+        return;
+      }
+      
+      if (p.length < 6) {
+        if (DOM.authError) DOM.authError.textContent = 'Password must be at least 6 characters';
         return;
       }
       const res = create ? await apiRegister(u, p) : await apiLogin(u, p);
@@ -4647,8 +4666,10 @@
       
       if (DOM.resetError) DOM.resetError.textContent = '';
       
-      if (!u || u.length < 3) {
-        if (DOM.resetError) DOM.resetError.textContent = 'Please enter your username';
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(u)) {
+        if (DOM.resetError) DOM.resetError.textContent = 'Please enter a valid email address';
         return;
       }
       

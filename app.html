@@ -89,7 +89,7 @@
   </div>
 
   <header class="app-header">
-    <h1>Cover Letter Creator</h1>
+      <h1>VitaePro</h1>
     <nav class="app-nav">
       <div class="nav-left">
         <a href="app.html" class="active">Create Letter</a>
@@ -97,8 +97,7 @@
         <a href="dashboard.html">Dashboard</a>
       </div>
       <div class="nav-right">
-        <button type="button" id="authBtn" class="nav-btn" title="Sign In">🔐 Sign In</button>
-        <div id="userSection" class="user-section" style="display:none;">
+        <div id="userSection" class="user-section">
           <span id="welcomeMessage" class="welcome-text"></span>
           <a href="#" id="logoutLink" class="logout-link">Sign Out</a>
         </div>
@@ -186,18 +185,8 @@
       <section class="job-ad-section">
         <h3>Paste Job Ad</h3>
         <textarea id="jobAdText" placeholder="Paste the job ad text here..."></textarea>
-        <div class="job-ad-url">
-          <input type="url" id="jobAdUrl" placeholder="Or paste a job ad URL (https://...)" />
-          <button type="button" id="fetchJobAdBtn" title="Fetch via readable proxy">Fetch & Parse</button>
-        </div>
         <div class="job-ad-controls">
-          <div class="job-ad-controls-left">
-            <label class="overwrite-toggle"><input type="checkbox" id="overwriteJobFields" /> Overwrite existing fields</label>
-          </div>
-          <div class="job-ad-controls-right">
-            <button type="button" id="parseJobAdBtn">Parse Job Ad</button>
-            <button type="button" id="aiGenerateBtn" title="Extract job info and generate tailored cover letter responses with AI">✨ AI Generate</button>
-          </div>
+          <button type="button" id="aiGenerateBtn" title="Extract job info and generate tailored cover letter responses with AI">✨ AI Generate</button>
         </div>
         <div id="jobAdParseStatus" class="job-ad-status" aria-live="polite"></div>
       </section>
@@ -207,11 +196,10 @@
   <!-- Auth Landing (full-screen) -->
   <div id="authLanding" class="auth-landing hidden" aria-live="polite">
     <div class="auth-card">
-      <h1>Welcome to Cover Letter Creator</h1>
+      <h1>Welcome to VitaePro</h1>
       <p class="subtle">Sign in or create an account to continue</p>
-      <label>Username
-        <input type="text" id="authUsername" autocomplete="username" placeholder="e.g. john.doe or email@example.com" />
-        <small class="field-hint">Minimum 3 characters. Can be alphanumeric, email, or any format you prefer.</small>
+      <label>Username (email address)
+        <input type="email" id="authUsername" autocomplete="username" placeholder="e.g. email@example.com" />
       </label>
       <label>Password
         <input type="password" id="authPassword" autocomplete="current-password" />
@@ -297,9 +285,9 @@
   <div id="resetPasswordModal" class="auth-landing hidden" aria-live="polite">
     <div class="auth-card">
       <h1>Reset Password</h1>
-      <p class="subtle">Enter your username to reset your password</p>
-      <label>Username
-        <input type="text" id="resetUsername" autocomplete="username" />
+      <p class="subtle">Enter your email address to reset your password</p>
+      <label>Username (email address)
+        <input type="email" id="resetUsername" autocomplete="username" placeholder="e.g. email@example.com" />
       </label>
       <label>New Password
         <input type="password" id="resetNewPassword" autocomplete="new-password" />

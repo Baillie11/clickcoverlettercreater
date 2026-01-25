@@ -11,6 +11,7 @@ const cors = require('cors');
 const OpenAI = require('openai');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 
 // Determine database type based on environment
 const USE_MYSQL = process.env.NODE_ENV === 'production' || process.env.USE_MYSQL === 'true';
@@ -239,6 +240,51 @@ const openai = new OpenAI({
 
 let aiQuotaExceeded = false;
 let aiQuotaExceededAt = null;
+
+// Email configuration
+let emailTransporter = null;
+if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
+  emailTransporter = nodemailer.createTransport({
+    service: process.env.EMAIL_SERVICE || 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASSWORD
+    }
+  });
+  console.log('📧 Email alerts configured');
+} else {
+  console.log('⚠️  Email alerts not configured (missing EMAIL_USER or EMAIL_PASSWORD)');
+}
+
+// Function to send login alert email
+async function sendLoginAlert(username, userId) {
+  if (!emailTransporter || !process.env.ALERT_EMAIL) {
+    console.log('Email alert skipped - not configured');
+    return;
+  }
+  
+  try {
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: process.env.ALERT_EMAIL,
+      subject: `VitaePro Login Alert - ${username}`,
+      html: `
+        <h2>VitaePro Login Alert</h2>
+        <p><strong>User:</strong> ${username}</p>
+        <p><strong>User ID:</strong> ${userId}</p>
+        <p><strong>Time:</strong> ${new Date().toLocaleString()}</p>
+        <p><strong>Action:</strong> User logged in successfully</p>
+        <hr>
+        <p style="color: #666; font-size: 12px;">This is an automated alert from VitaePro.</p>
+      `
+    };
+    
+    await emailTransporter.sendMail(mailOptions);
+    console.log(`📧 Login alert sent to ${process.env.ALERT_EMAIL} for user ${username}`);
+  } catch (error) {
+    console.error('Failed to send login alert email:', error.message);
+  }
+}
 
 // Express app setup
 const app = express();
@@ -815,6 +861,11 @@ app.post('/auth/login', async (req, res) => {
     const token = genToken();
     await DB.createSession(token, user.id);
     
+    // Send login alert email (non-blocking)
+    sendLoginAlert(user.username, user.id).catch(err => 
+      console.error('Login alert email error:', err)
+    );
+    
     res.json({ token, user: { id: user.id, username: user.username } });
   } catch (e) {
     console.error('Login error:', e);
@@ -1070,6 +1121,7 @@ app.post('/api/extract-job-ad', async (req, res) => {
     });
     
     const extracted = JSON.parse(completion.choices[0].message.content);
+    incrementStat('aiExtractCalls');
     res.json(extracted);
   } catch (e) {
     console.error('OpenAI extraction error:', e);
@@ -1147,6 +1199,7 @@ app.post('/api/generate-paragraphs', async (req, res) => {
     
     // Merge extracted job info with generated responses
     result.jobInfo = { ...extracted, ...result.jobInfo };
+    incrementStat('aiGenerateCalls');
     
     res.json(result);
   } catch (e) {
@@ -1163,6 +1216,169 @@ app.post('/api/generate-paragraphs', async (req, res) => {
     }
     
     res.status(500).json({ error: 'Failed to generate paragraphs' });
+  }
+});
+
+// Admin Stats API
+app.get('/api/admin/stats', async (req, res) => {
+  try {
+    const stats = {
+      totalUsers: 0,
+      totalApplications: 0,
+      totalResponses: 0,
+      aiCallsExtract: 0,
+      aiCallsGenerate: 0,
+      applicationsByStatus: {},
+      recentActivity: [],
+      topUsers: []
+    };
+
+    // Get total users
+    if (dbType === 'mysql') {
+      const [userRows] = await db.execute('SELECT COUNT(*) as count FROM users');
+      stats.totalUsers = userRows[0].count;
+      
+      const [appRows] = await db.execute('SELECT COUNT(*) as count FROM applications');
+      stats.totalApplications = appRows[0].count;
+      
+      const [respRows] = await db.execute('SELECT COUNT(*) as count FROM responses');
+      stats.totalResponses = respRows[0].count;
+      
+      // Applications by status
+      const [statusRows] = await db.execute(
+        'SELECT status, COUNT(*) as count FROM applications GROUP BY status ORDER BY count DESC'
+      );
+      statusRows.forEach(row => {
+        stats.applicationsByStatus[row.status || 'Unknown'] = row.count;
+      });
+      
+      // Top users by applications
+      const [topUserRows] = await db.execute(`
+        SELECT u.username, COUNT(a.id) as applicationCount, u.createdAt
+        FROM users u
+        LEFT JOIN applications a ON u.id = a.userId
+        GROUP BY u.id, u.username, u.createdAt
+        ORDER BY applicationCount DESC
+        LIMIT 10
+      `);
+      stats.topUsers = topUserRows.map(row => ({
+        username: row.username,
+        applicationCount: row.applicationCount,
+        memberSince: row.createdAt
+      }));
+      
+      // Recent activity (last 20 applications)
+      const [recentRows] = await db.execute(`
+        SELECT a.company, a.role, a.createdAt, u.username
+        FROM applications a
+        JOIN users u ON a.userId = u.id
+        ORDER BY a.createdAt DESC
+        LIMIT 20
+      `);
+      stats.recentActivity = recentRows.map(row => ({
+        username: row.username,
+        company: row.company,
+        role: row.role,
+        createdAt: row.createdAt
+      }));
+      
+    } else if (dbType === 'sqlite') {
+      stats.totalUsers = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
+      stats.totalApplications = db.prepare('SELECT COUNT(*) as count FROM applications').get().count;
+      stats.totalResponses = db.prepare('SELECT COUNT(*) as count FROM responses').get().count;
+      
+      // Applications by status
+      const statusRows = db.prepare(
+        'SELECT status, COUNT(*) as count FROM applications GROUP BY status ORDER BY count DESC'
+      ).all();
+      statusRows.forEach(row => {
+        stats.applicationsByStatus[row.status || 'Unknown'] = row.count;
+      });
+      
+      // Top users by applications
+      const topUserRows = db.prepare(`
+        SELECT u.username, COUNT(a.id) as applicationCount, u.createdAt
+        FROM users u
+        LEFT JOIN applications a ON u.id = a.userId
+        GROUP BY u.id, u.username, u.createdAt
+        ORDER BY applicationCount DESC
+        LIMIT 10
+      `).all();
+      stats.topUsers = topUserRows.map(row => ({
+        username: row.username,
+        applicationCount: row.applicationCount,
+        memberSince: row.createdAt
+      }));
+      
+      // Recent activity
+      const recentRows = db.prepare(`
+        SELECT a.company, a.role, a.createdAt, u.username
+        FROM applications a
+        JOIN users u ON a.userId = u.id
+        ORDER BY a.createdAt DESC
+        LIMIT 20
+      `).all();
+      stats.recentActivity = recentRows.map(row => ({
+        username: row.username,
+        company: row.company,
+        role: row.role,
+        createdAt: row.createdAt
+      }));
+      
+    } else {
+      // JSON store
+      stats.totalUsers = store.users?.length || 0;
+      stats.totalApplications = store.applications?.length || 0;
+      stats.totalResponses = store.responses?.length || 0;
+      
+      // Applications by status
+      if (store.applications) {
+        const statusCounts = {};
+        store.applications.forEach(app => {
+          const status = app.status || 'Unknown';
+          statusCounts[status] = (statusCounts[status] || 0) + 1;
+        });
+        stats.applicationsByStatus = statusCounts;
+      }
+      
+      // Top users
+      if (store.users && store.applications) {
+        const userAppCounts = {};
+        store.applications.forEach(app => {
+          userAppCounts[app.userId] = (userAppCounts[app.userId] || 0) + 1;
+        });
+        stats.topUsers = store.users.map(user => ({
+          username: user.username,
+          applicationCount: userAppCounts[user.id] || 0,
+          memberSince: user.createdAt
+        })).sort((a, b) => b.applicationCount - a.applicationCount).slice(0, 10);
+      }
+      
+      // Recent activity
+      if (store.applications && store.users) {
+        const userMap = {};
+        store.users.forEach(u => { userMap[u.id] = u.username; });
+        stats.recentActivity = store.applications
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .slice(0, 20)
+          .map(app => ({
+            username: userMap[app.userId] || 'Unknown',
+            company: app.company,
+            role: app.role,
+            createdAt: app.createdAt
+          }));
+      }
+    }
+    
+    // Add AI usage stats from tracking
+    const aiStats = readStats();
+    stats.aiCallsExtract = aiStats.aiExtractCalls || 0;
+    stats.aiCallsGenerate = aiStats.aiGenerateCalls || 0;
+    
+    res.json(stats);
+  } catch (e) {
+    console.error('Admin stats error:', e);
+    res.status(500).json({ error: 'Failed to fetch admin stats' });
   }
 });
 
