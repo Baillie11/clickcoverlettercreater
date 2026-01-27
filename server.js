@@ -293,7 +293,7 @@ const PORT = process.env.PORT || 3050;
 // CORS configuration
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production'
-    ? ['https://clickcoverlettercreator.com.au', 'https://www.clickcoverlettercreator.com.au']
+    ? ['https://vitaepro.com.au', 'https://www.vitaepro.com.au', 'https://clickcoverlettercreator.com.au', 'https://www.clickcoverlettercreator.com.au']
     : true,
   credentials: true
 };
