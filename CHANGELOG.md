@@ -17,12 +17,20 @@ All notable changes to VitaePro Cover Letter Creator will be documented in this 
   - User Created and Crowd Sourced responses maintain their existing sort behavior
 
 ### Changed
+- **AI Responses Now Temporary**: AI Generated responses are session-only and not saved to database
+  - AI responses kept in memory and browser storage only during session
+  - Never persisted to the database
+  - Automatically cleared when starting a new letter or after PDF download
+  - Ensures fresh AI generation for each cover letter
+  - User Created and Crowd Sourced responses remain permanently saved
 - **Auto-Clear After PDF Download**: Streamlined workflow for multiple applications
   - All AI Generated responses are automatically cleared after PDF download
   - Preview area is cleared
   - Letter area, job form, and saved state are cleared (existing behavior)
-  - User Created and Crowd Sourced responses remain intact
   - Ready for next cover letter with fresh AI generation
+- **Auto-Clear When Starting New Letter**: "New Cover Letter" button now clears AI responses
+  - Confirmation dialog updated to inform user AI responses will be cleared
+  - Preview area cleared along with letter and job form
 
 ### Technical
 - **Page Height Calculations**: Added precise page height calculations for accurate break markers
