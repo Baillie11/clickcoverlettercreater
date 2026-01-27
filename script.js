@@ -505,18 +505,21 @@
         let allResponses = [];
         
         if (dbResponses && dbResponses.length) {
-          allResponses = dbResponses.map(r => ({
-            id: r.id,
-            text: r.text,
-            category: r.category || 'user',
-            userCreated: !!r.userCreated,
-            source: r.source || null,
-            tags: r.tags || [],
-            createdAt: r.createdAt || null
-          }));
+          allResponses = dbResponses
+            .filter(r => r.category !== 'ai') // Filter out AI responses - they should never be in DB
+            .map(r => ({
+              id: r.id,
+              text: r.text,
+              category: r.category || 'user',
+              userCreated: !!r.userCreated,
+              source: r.source || null,
+              tags: r.tags || [],
+              createdAt: r.createdAt || null
+            }));
         } else {
-          // DB empty: seed it with current in-memory responses
-          await persistAllResponsesToDb(appState.responses || []);
+          // DB empty: seed it with current in-memory responses (excluding AI)
+          const nonAiResponses = (appState.responses || []).filter(r => r.category !== 'ai');
+          await persistAllResponsesToDb(nonAiResponses);
         }
         
         // Also fetch crowd-sourced responses from other users
@@ -799,15 +802,17 @@
       let allResponses = [];
       
       if (Array.isArray(list)) {
-        allResponses = list.map(r => ({
-          id: r.id,
-          text: r.text,
-          category: r.category || 'user',
-          userCreated: !!r.userCreated,
-          source: r.source || null,
-          tags: r.tags || [],
-          createdAt: r.createdAt || null
-        }));
+        allResponses = list
+          .filter(r => r.category !== 'ai') // Don't sync AI responses from DB
+          .map(r => ({
+            id: r.id,
+            text: r.text,
+            category: r.category || 'user',
+            userCreated: !!r.userCreated,
+            source: r.source || null,
+            tags: r.tags || [],
+            createdAt: r.createdAt || null
+          }));
       }
       
       // Get crowd-sourced responses from other users
@@ -2955,7 +2960,7 @@
       return;
     }
     
-    if (confirm('Are you sure you want to start a new letter? This will clear the current letter.')) {
+    if (confirm('Are you sure you want to start a new letter? This will clear the current letter and AI responses.')) {
       DOM.letterArea.innerHTML = '<p class="placeholder">Drag responses here to build your letter</p>';
       appState.currentLetter.paragraphs = [];
       
@@ -2966,13 +2971,23 @@
       if (DOM.businessAddress) DOM.businessAddress.value = '';
       if (DOM.refNumber) DOM.refNumber.value = '';
       
+      // Clear all AI Generated responses
+      appState.responses = appState.responses.filter(r => r.category !== 'ai');
+      saveAppState();
+      renderResponses();
+      
+      // Clear the preview area
+      if (DOM.letterPreview) {
+        DOM.letterPreview.innerHTML = '';
+      }
+      
       // Clear salutation preview
       updateSalutationPreview();
       
       // Clear saved letter state
       localStorage.removeItem('currentLetter');
       
-      console.log('New letter started');
+      console.log('New letter started, AI responses cleared');
     }
   }
 
@@ -4104,6 +4119,17 @@
       createdAt: createdAt.toISOString()
     };
 
+    // AI responses are temporary and should NOT be saved to database
+    // They are only kept in memory and local storage for the current session
+    if (category === 'ai') {
+      // Add to in-memory state only
+      appState.responses.push(newResponse);
+      // Update local storage
+      localStorage.setItem('responses', JSON.stringify(appState.responses));
+      return;
+    }
+
+    // For non-AI responses, save to database
     try {
       const response = await fetch('/responses', {
         method: 'POST',
