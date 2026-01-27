@@ -986,11 +986,48 @@ body.theme-dark .auth-card .field-hint { color: #999; }
   border-radius: 12px;
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
+  position: relative;
 }
 body.theme-dark .letter-preview {
   background: #141a2a;
   color: #e8edf7;
   border-color: #22304c;
+}
+
+/* Page break markers */
+.page-break-marker {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 2px dashed #e74c3c;
+  margin: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.page-break-marker::before {
+  content: '📄 Page Break';
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #fff;
+  color: #e74c3c;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 4px;
+  white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+body.theme-dark .page-break-marker {
+  border-top-color: #e67e73;
+}
+
+body.theme-dark .page-break-marker::before {
+  background: #1a2332;
+  color: #e67e73;
 }
 
 /* Dark mode for draggable paragraphs */

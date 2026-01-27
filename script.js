@@ -2160,6 +2160,17 @@
   // Track sort order for user responses
   let userResponsesSortOrder = 'tag'; // 'tag' or 'date-asc' or 'date-desc'
   
+  // Custom tag order for AI Generated responses
+  const AI_TAG_ORDER = [
+    'Introduction',
+    'Experience',
+    'Education / Qualifications',
+    'Skills',
+    'Motivation / Why this role',
+    'Why this company',
+    'Closing'
+  ];
+  
   // Track visibility state of response categories
   let categoryVisibility = {
     user: true,
@@ -2244,7 +2255,33 @@
         return userResponsesSortOrder === 'date-asc' ? aDate - bDate : bDate - aDate;
       }
       
-      // Default: sort by first tag
+      // Custom sorting for AI Generated responses
+      const aIsAi = a.category === 'ai';
+      const bIsAi = b.category === 'ai';
+      
+      if (aIsAi && bIsAi) {
+        // Get first tag for each response
+        const aFirstTag = (a.tags && a.tags.length > 0) ? a.tags[0] : '';
+        const bFirstTag = (b.tags && b.tags.length > 0) ? b.tags[0] : '';
+        
+        // Get order index for each tag (-1 if not in custom order)
+        const aIndex = AI_TAG_ORDER.indexOf(aFirstTag);
+        const bIndex = AI_TAG_ORDER.indexOf(bFirstTag);
+        
+        // If both tags are in custom order, sort by their order
+        if (aIndex !== -1 && bIndex !== -1) {
+          return aIndex - bIndex;
+        }
+        
+        // If only one tag is in custom order, prioritize it
+        if (aIndex !== -1) return -1;
+        if (bIndex !== -1) return 1;
+        
+        // If neither tag is in custom order, sort alphabetically
+        return aFirstTag.toLowerCase().localeCompare(bFirstTag.toLowerCase());
+      }
+      
+      // Default: sort by first tag alphabetically
       const aFirstTag = (a.tags && a.tags.length > 0) ? a.tags[0].toLowerCase() : 'zzz';
       const bFirstTag = (b.tags && b.tags.length > 0) ? b.tags[0].toLowerCase() : 'zzz';
       
@@ -3829,9 +3866,45 @@
     const wrapper = document.createElement('div');
     wrapper.style.maxWidth = '700px';
     wrapper.style.margin = '0 auto';
+    wrapper.style.position = 'relative';
     wrapper.appendChild(el);
     DOM.letterPreview.innerHTML = '';
     DOM.letterPreview.appendChild(wrapper);
+    
+    // Add page break markers after rendering
+    setTimeout(() => addPageBreakMarkers(wrapper), 100);
+  }
+  
+  function addPageBreakMarkers(wrapper) {
+    if (!wrapper) return;
+    
+    // Get the page size
+    const pageSize = (DOM.pageSizeSelect && DOM.pageSizeSelect.value) || (appState.settings?.pageSize) || 'a4';
+    
+    // Page heights in pixels (approximate at 96 DPI)
+    // These account for typical margins (top + bottom ~2.54cm / 1 inch on each side)
+    const PAGE_HEIGHTS = {
+      'a4': 1056,      // A4: 297mm height - ~40mm margins = 257mm ≈ 970px content + padding
+      'letter': 1020   // Letter: 11" height - ~2" margins = 9" ≈ 864px content + padding
+    };
+    
+    const pageHeight = PAGE_HEIGHTS[pageSize] || PAGE_HEIGHTS['a4'];
+    const contentHeight = wrapper.scrollHeight;
+    
+    // Calculate number of pages
+    const numPages = Math.ceil(contentHeight / pageHeight);
+    
+    // Remove any existing markers
+    const existingMarkers = wrapper.querySelectorAll('.page-break-marker');
+    existingMarkers.forEach(m => m.remove());
+    
+    // Add markers at page boundaries
+    for (let i = 1; i < numPages; i++) {
+      const marker = document.createElement('div');
+      marker.className = 'page-break-marker';
+      marker.style.top = `${i * pageHeight}px`;
+      wrapper.appendChild(marker);
+    }
   }
 
   // AI Functions
@@ -4266,13 +4339,23 @@
       DOM.businessAddress.value = '';
       DOM.refNumber.value = '';
       
+      // Clear all AI Generated responses
+      appState.responses = appState.responses.filter(r => r.category !== 'ai');
+      saveAppState();
+      renderResponses();
+      
+      // Clear the preview area
+      if (DOM.letterPreview) {
+        DOM.letterPreview.innerHTML = '';
+      }
+      
       // Clear salutation preview
       updateSalutationPreview();
       
       // Clear saved letter state
       localStorage.removeItem('currentLetter');
       
-      console.log('PDF downloaded, letter saved, and form cleared for next letter');
+      console.log('PDF downloaded, letter saved, AI responses cleared, and form cleared for next letter');
     }).catch((error) => {
       console.error('PDF generation failed:', error);
       alert('Failed to generate PDF. Please try again.');
@@ -4397,8 +4480,10 @@
     if (DOM.authCancelBtn) DOM.authCancelBtn.addEventListener('click', hideAuthModal);
     if (DOM.authSubmitBtn) DOM.authSubmitBtn.addEventListener('click', handleAuthSubmit);
     if (DOM.forgotPasswordBtn) DOM.forgotPasswordBtn.addEventListener('click', showResetPasswordModal);
-    if (DOM.resetSubmitBtn) DOM.resetSubmitBtn.addEventListener('click', handlePasswordReset);
+    if (DOM.requestResetBtn) DOM.requestResetBtn.addEventListener('click', handlePasswordResetRequest);
+    if (DOM.resetSubmitBtn) DOM.resetSubmitBtn.addEventListener('click', handlePasswordResetConfirm);
     if (DOM.resetCancelBtn) DOM.resetCancelBtn.addEventListener('click', hideResetPasswordModal);
+    if (DOM.resetBackBtn) DOM.resetBackBtn.addEventListener('click', showResetStep1);
 
     // Theme selection
     if (DOM.themeSelect) {
@@ -4554,12 +4639,18 @@
     
     // Password reset modal
     DOM.resetPasswordModal = document.getElementById('resetPasswordModal');
+    DOM.resetStep1 = document.getElementById('resetStep1');
+    DOM.resetStep2 = document.getElementById('resetStep2');
     DOM.resetUsername = document.getElementById('resetUsername');
+    DOM.resetToken = document.getElementById('resetToken');
     DOM.resetNewPassword = document.getElementById('resetNewPassword');
     DOM.resetConfirmPassword = document.getElementById('resetConfirmPassword');
+    DOM.requestResetBtn = document.getElementById('requestResetBtn');
     DOM.resetSubmitBtn = document.getElementById('resetSubmitBtn');
     DOM.resetCancelBtn = document.getElementById('resetCancelBtn');
+    DOM.resetBackBtn = document.getElementById('resetBackBtn');
     DOM.resetError = document.getElementById('resetError');
+    DOM.resetError2 = document.getElementById('resetError2');
   }
 
   // Application Initialization
@@ -4646,10 +4737,19 @@
   function showResetPasswordModal() {
     if (!DOM.resetPasswordModal) return;
     if (DOM.authModal) DOM.authModal.classList.add('hidden');
+    
+    // Reset to step 1
+    if (DOM.resetStep1) DOM.resetStep1.style.display = '';
+    if (DOM.resetStep2) DOM.resetStep2.style.display = 'none';
+    
+    // Clear all fields and errors
     if (DOM.resetError) DOM.resetError.textContent = '';
+    if (DOM.resetError2) DOM.resetError2.textContent = '';
     if (DOM.resetUsername) DOM.resetUsername.value = '';
+    if (DOM.resetToken) DOM.resetToken.value = '';
     if (DOM.resetNewPassword) DOM.resetNewPassword.value = '';
     if (DOM.resetConfirmPassword) DOM.resetConfirmPassword.value = '';
+    
     DOM.resetPasswordModal.classList.remove('hidden');
   }
 
@@ -4657,12 +4757,23 @@
     if (DOM.resetPasswordModal) DOM.resetPasswordModal.classList.add('hidden');
     if (DOM.authModal) DOM.authModal.classList.remove('hidden');
   }
+  
+  function showResetStep2() {
+    if (DOM.resetStep1) DOM.resetStep1.style.display = 'none';
+    if (DOM.resetStep2) DOM.resetStep2.style.display = '';
+    if (DOM.resetError2) DOM.resetError2.textContent = '';
+  }
+  
+  function showResetStep1() {
+    if (DOM.resetStep1) DOM.resetStep1.style.display = '';
+    if (DOM.resetStep2) DOM.resetStep2.style.display = 'none';
+    if (DOM.resetError) DOM.resetError.textContent = '';
+  }
 
-  async function handlePasswordReset() {
+  // Step 1: Request password reset token
+  async function handlePasswordResetRequest() {
     try {
       const u = (DOM.resetUsername?.value || '').trim();
-      const p1 = (DOM.resetNewPassword?.value || '').trim();
-      const p2 = (DOM.resetConfirmPassword?.value || '').trim();
       
       if (DOM.resetError) DOM.resetError.textContent = '';
       
@@ -4673,23 +4784,75 @@
         return;
       }
       
+      // Disable button during request
+      if (DOM.requestResetBtn) DOM.requestResetBtn.disabled = true;
+      
+      const response = await fetch(`${API_BASE}/auth/request-password-reset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: u })
+      });
+      
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Server is not responding correctly. Please ensure the backend server is running.');
+      }
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to request password reset');
+      }
+      
+      // Success - move to step 2
+      alert('Reset token sent! Check your email for the reset token.');
+      showResetStep2();
+    } catch (e) {
+      console.error('Password reset request error:', e);
+      let errorMsg = 'Failed to request password reset.';
+      if (e.message) {
+        if (e.message.includes('fetch')) errorMsg = 'Cannot connect to server.';
+        else errorMsg = e.message;
+      }
+      if (DOM.resetError) DOM.resetError.textContent = errorMsg;
+    } finally {
+      if (DOM.requestResetBtn) DOM.requestResetBtn.disabled = false;
+    }
+  }
+
+  // Step 2: Confirm password reset with token
+  async function handlePasswordResetConfirm() {
+    try {
+      const token = (DOM.resetToken?.value || '').trim();
+      const p1 = (DOM.resetNewPassword?.value || '').trim();
+      const p2 = (DOM.resetConfirmPassword?.value || '').trim();
+      
+      if (DOM.resetError2) DOM.resetError2.textContent = '';
+      
+      if (!token) {
+        if (DOM.resetError2) DOM.resetError2.textContent = 'Please enter the reset token';
+        return;
+      }
+      
       if (p1.length < 6) {
-        if (DOM.resetError) DOM.resetError.textContent = 'Password must be at least 6 characters';
+        if (DOM.resetError2) DOM.resetError2.textContent = 'Password must be at least 6 characters';
         return;
       }
       
       if (p1 !== p2) {
-        if (DOM.resetError) DOM.resetError.textContent = 'Passwords do not match';
+        if (DOM.resetError2) DOM.resetError2.textContent = 'Passwords do not match';
         return;
       }
       
-      const response = await fetch(`${API_BASE}/auth/reset-password`, {
+      // Disable button during request
+      if (DOM.resetSubmitBtn) DOM.resetSubmitBtn.disabled = true;
+      
+      const response = await fetch(`${API_BASE}/auth/confirm-password-reset`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: u, newPassword: p1 })
+        body: JSON.stringify({ token, newPassword: p1 })
       });
       
-      // Check if response is JSON before parsing
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
         throw new Error('Server is not responding correctly. Please ensure the backend server is running.');
@@ -4705,14 +4868,17 @@
       alert('Password reset successfully! Please sign in with your new password.');
       hideResetPasswordModal();
     } catch (e) {
-      console.error('Password reset error:', e);
+      console.error('Password reset confirm error:', e);
       let errorMsg = 'Failed to reset password.';
       if (e.message) {
-        if (e.message.includes('not found')) errorMsg = 'Username not found.';
+        if (e.message.includes('Invalid or expired')) errorMsg = 'Invalid or expired reset token.';
+        else if (e.message.includes('already been used')) errorMsg = 'This reset token has already been used.';
         else if (e.message.includes('fetch')) errorMsg = 'Cannot connect to server.';
         else errorMsg = e.message;
       }
-      if (DOM.resetError) DOM.resetError.textContent = errorMsg;
+      if (DOM.resetError2) DOM.resetError2.textContent = errorMsg;
+    } finally {
+      if (DOM.resetSubmitBtn) DOM.resetSubmitBtn.disabled = false;
     }
   }
 
