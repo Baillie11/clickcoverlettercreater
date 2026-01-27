@@ -2,6 +2,28 @@
 
 All notable changes to VitaePro Cover Letter Creator will be documented in this file.
 
+## [1.5.1] - 2026-01-27
+
+### Fixed
+- **Production Deployment**: Resolved module dependencies for CloudLinux/Passenger hosting environment
+  - Removed `better-sqlite3` dependency (development-only, caused build issues on production)
+  - Added `mysql2` as production dependency for MySQL database support
+  - Configured proper `node_modules` symlink for CloudLinux Node Selector compatibility
+  - Fixed MySQL connection in production environment
+
+### Changed
+- **Database Strategy**: Clarified development vs production database usage
+  - Development: Uses SQLite (better-sqlite3) - fast local database
+  - Production: Uses MySQL (mysql2) - robust cloud database
+  - Automatic detection via NODE_ENV environment variable
+
+### Technical
+- **Dependencies**: Updated for production compatibility
+  - Removed: better-sqlite3 (development only)
+  - Added: mysql2 ^3.11.5 (production database)
+  - CloudLinux Node Selector configuration verified
+  - Passenger/LiteSpeed module resolution optimized
+
 ## [1.5.0] - 2026-01-16
 
 ### Added
