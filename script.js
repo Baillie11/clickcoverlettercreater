@@ -4092,7 +4092,8 @@
       }
 
       showJobAdStatus(`✅ Generated ${addedCount} tailored responses and added to AI library!`, 'success');
-      await syncResponsesFromDb();
+      // Render the updated responses (AI responses are in memory only, don't sync from DB)
+      renderResponses();
     } catch (error) {
       console.error('AI generation error:', error);
       // Remove emoji from error message to avoid encoding issues
