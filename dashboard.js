@@ -125,8 +125,15 @@
   }
 
   function formatDate(dateStr) {
+    // Create date object from ISO string (which is in UTC)
     const date = new Date(dateStr);
-    return date.toLocaleDateString('en-AU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    // Format using local timezone
+    return date.toLocaleDateString('en-AU', { 
+      day: '2-digit', 
+      month: '2-digit', 
+      year: 'numeric',
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+    });
   }
 
   function getStartOfWeek(date = new Date()) {
