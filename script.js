@@ -2208,9 +2208,9 @@
   function renderResponses() {
     // Skip if response columns not present (e.g., on profile page)
     if (!DOM.categoryUser || !DOM.categoryCrowd || !DOM.categoryAi) return;
-    // Clear existing responses
+    // Clear existing responses (but keep the h3 elements)
     DOM.categoryUser.innerHTML = `<h3>User Created 
-      <button type="button" id="toggleUserBtn" class="toggle-category-btn" title="${categoryVisibility.user ? 'Hide' : 'Show'}">${categoryVisibility.user ? '▼' : '▶'}</button>
+      <button type="button" class="toggle-category-btn" data-category="user" title="${categoryVisibility.user ? 'Hide' : 'Show'}">${categoryVisibility.user ? '▼' : '▶'}</button>
       <button type="button" id="addUserResponseBtn" class="add-category-btn" title="Add new response">+</button>
       <select id="userSortSelect" class="sort-select" title="Sort by">
         <option value="tag">Sort by Tag</option>
@@ -2219,33 +2219,26 @@
       </select>
     </h3>`;
     DOM.categoryCrowd.innerHTML = `<h3>Crowd Sourced 
-      <button type="button" id="toggleCrowdBtn" class="toggle-category-btn" title="${categoryVisibility.crowd ? 'Hide' : 'Show'}">${categoryVisibility.crowd ? '▼' : '▶'}</button>
+      <button type="button" class="toggle-category-btn" data-category="crowd" title="${categoryVisibility.crowd ? 'Hide' : 'Show'}">${categoryVisibility.crowd ? '▼' : '▶'}</button>
     </h3>`;
     DOM.categoryAi.innerHTML = `<h3>AI Generated 
-      <button type="button" id="toggleAiBtn" class="toggle-category-btn" title="${categoryVisibility.ai ? 'Hide' : 'Show'}">${categoryVisibility.ai ? '▼' : '▶'}</button>
+      <button type="button" class="toggle-category-btn" data-category="ai" title="${categoryVisibility.ai ? 'Hide' : 'Show'}">${categoryVisibility.ai ? '▼' : '▶'}</button>
     </h3>`;
     
     // Re-attach event listener for the + button
     const addBtn = document.getElementById('addUserResponseBtn');
-    if (addBtn) addBtn.addEventListener('click', showCreateResponseModal);
+    if (addBtn) {
+      addBtn.removeEventListener('click', showCreateResponseModal); // Remove old listener first
+      addBtn.addEventListener('click', showCreateResponseModal);
+    }
     
     // Re-attach event listener for the sort dropdown
     const sortSelect = document.getElementById('userSortSelect');
     if (sortSelect) {
       sortSelect.value = userResponsesSortOrder;
-      sortSelect.addEventListener('change', (e) => {
-        userResponsesSortOrder = e.target.value;
-        renderResponses();
-      });
+      sortSelect.removeEventListener('change', handleSortChange); // Remove old listener first
+      sortSelect.addEventListener('change', handleSortChange);
     }
-    
-    // Re-attach event listeners for toggle buttons
-    const toggleUserBtn = document.getElementById('toggleUserBtn');
-    const toggleCrowdBtn = document.getElementById('toggleCrowdBtn');
-    const toggleAiBtn = document.getElementById('toggleAiBtn');
-    if (toggleUserBtn) toggleUserBtn.addEventListener('click', () => toggleCategoryVisibility('user'));
-    if (toggleCrowdBtn) toggleCrowdBtn.addEventListener('click', () => toggleCategoryVisibility('crowd'));
-    if (toggleAiBtn) toggleAiBtn.addEventListener('click', () => toggleCategoryVisibility('ai'));
 
     // Sort responses based on current sort order
     const sortedResponses = [...appState.responses].sort((a, b) => {
@@ -4561,6 +4554,22 @@
       clearSearchBtn.addEventListener('click', () => {
         if (searchInput) searchInput.value = '';
         filterResponses('');
+      });
+    }
+    
+    // Event delegation for toggle category buttons (they get recreated on each render)
+    const responsePanel = document.querySelector('.response-panel');
+    if (responsePanel) {
+      responsePanel.addEventListener('click', (e) => {
+        // Check if clicked element is a toggle button
+        if (e.target.classList.contains('toggle-category-btn')) {
+          const category = e.target.getAttribute('data-category');
+          if (category) {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleCategoryVisibility(category);
+          }
+        }
       });
     }
     
