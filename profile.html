@@ -157,22 +157,39 @@
   <!-- Password Reset Modal -->
   <div id="resetPasswordModal" class="auth-landing hidden" aria-live="polite">
     <div class="auth-card">
-      <h1>Reset Password</h1>
-      <p class="subtle">Enter your email address to reset your password</p>
-      <label>Username (email address)
-        <input type="email" id="resetUsername" autocomplete="username" placeholder="e.g. email@example.com" />
-      </label>
-      <label>New Password
-        <input type="password" id="resetNewPassword" autocomplete="new-password" />
-      </label>
-      <label>Confirm Password
-        <input type="password" id="resetConfirmPassword" autocomplete="new-password" />
-      </label>
-      <div class="auth-actions">
-        <button id="resetSubmitBtn">Reset Password</button>
-        <button type="button" id="resetCancelBtn" class="link-btn">Back to Sign In</button>
+      <!-- Step 1: Request Reset Token -->
+      <div id="resetStep1" class="reset-step">
+        <h1>Reset Password</h1>
+        <p class="subtle">Enter your email address and we'll send you a reset token</p>
+        <label>Email Address
+          <input type="email" id="resetUsername" autocomplete="username" placeholder="e.g. email@example.com" />
+        </label>
+        <div class="auth-actions">
+          <button id="requestResetBtn">Send Reset Token</button>
+          <button type="button" id="resetCancelBtn" class="link-btn">Back to Sign In</button>
+        </div>
+        <div id="resetError" class="auth-error" aria-live="polite"></div>
       </div>
-      <div id="resetError" class="auth-error" aria-live="polite"></div>
+      
+      <!-- Step 2: Confirm Reset with Token -->
+      <div id="resetStep2" class="reset-step" style="display: none;">
+        <h1>Enter Reset Token</h1>
+        <p class="subtle">Check your email for the reset token (expires in 30 minutes)</p>
+        <label>Reset Token
+          <input type="text" id="resetToken" placeholder="Enter the token from your email" autocomplete="off" />
+        </label>
+        <label>New Password
+          <input type="password" id="resetNewPassword" autocomplete="new-password" />
+        </label>
+        <label>Confirm Password
+          <input type="password" id="resetConfirmPassword" autocomplete="new-password" />
+        </label>
+        <div class="auth-actions">
+          <button id="resetSubmitBtn">Reset Password</button>
+          <button type="button" id="resetBackBtn" class="link-btn">Back</button>
+        </div>
+        <div id="resetError2" class="auth-error" aria-live="polite"></div>
+      </div>
     </div>
   </div>
 

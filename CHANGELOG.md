@@ -2,6 +2,50 @@
 
 All notable changes to VitaePro Cover Letter Creator will be documented in this file.
 
+## [1.6.1] - 2026-01-31 (Unreleased)
+
+### Added
+- **Password Reset Flow**: Two-step password recovery system
+  - Step 1: Request reset token via email
+  - Step 2: Confirm with token and set new password
+  - 30-minute token expiration for security
+  - Email notifications for reset requests and confirmations
+  - One-time use tokens (automatically marked as used)
+  - Automatic cleanup of expired tokens
+- **New Database Table**: `password_reset_tokens` with proper indexes
+  - Tracks token, userId, creation time, expiration, and usage status
+  - Cascade delete when user is removed
+  - Indexed on userId and expiresAt for performance
+- **Email Integration**: Nodemailer support for password reset emails
+  - Professional HTML email templates
+  - Configurable SMTP settings via environment variables
+  - Separate emails for reset request and confirmation
+
+### Changed
+- **Password Reset UI**: Updated modal to two-step process
+  - Clearer instructions and workflow
+  - Better user experience with explicit steps
+  - Improved error messaging per step
+  - "Forgot Password?" link on main auth screen
+
+### Security
+- **Token Security**: Short-lived tokens (30 minutes) with one-time use
+- **Session Invalidation**: All user sessions cleared on password reset
+- **Email Verification**: Reset tokens sent only to registered email addresses
+
+### Technical
+- **Backend Endpoints**:
+  - POST `/auth/request-password-reset` - Initiates reset flow
+  - POST `/auth/confirm-password-reset` - Completes reset with token
+- **Database Methods**:
+  - `createPasswordResetToken()` - Store new reset token
+  - `findResetToken()` - Validate and retrieve token
+  - `markResetTokenAsUsed()` - Prevent token reuse
+  - `deleteExpiredResetTokens()` - Cleanup stale tokens
+- **Email Functions**:
+  - `sendPasswordResetEmail()` - Send token to user
+  - `sendPasswordChangedEmail()` - Confirmation notification
+
 ## [1.6.0] - 2026-01-27
 
 ### Added

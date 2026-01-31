@@ -127,11 +127,23 @@ function createSQLiteTables() {
     FOREIGN KEY(userId) REFERENCES users(id) ON DELETE CASCADE
   )`).run();
 
+  // Password Reset Tokens
+  db.prepare(`CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    token TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    createdAt TEXT NOT NULL,
+    expiresAt TEXT NOT NULL,
+    used INTEGER DEFAULT 0,
+    FOREIGN KEY(userId) REFERENCES users(id) ON DELETE CASCADE
+  )`).run();
+
   // Indexes
   try {
     db.prepare('CREATE INDEX IF NOT EXISTS idx_applications_userId ON applications(userId)').run();
     db.prepare('CREATE INDEX IF NOT EXISTS idx_applications_date ON applications(date)').run();
     db.prepare('CREATE INDEX IF NOT EXISTS idx_applications_status ON applications(status)').run();
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_reset_tokens_userId ON password_reset_tokens(userId)').run();
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_reset_tokens_expiresAt ON password_reset_tokens(expiresAt)').run();
   } catch (e) {
     console.warn('Index creation warning:', e.message);
   }
@@ -197,6 +209,18 @@ async function createMySQLTables(pool) {
       FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
 
+    // Password Reset Tokens
+    await connection.query(`CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      token VARCHAR(100) PRIMARY KEY,
+      userId VARCHAR(50) NOT NULL,
+      createdAt DATETIME NOT NULL,
+      expiresAt DATETIME NOT NULL,
+      used TINYINT DEFAULT 0,
+      INDEX idx_userId (userId),
+      INDEX idx_expiresAt (expiresAt),
+      FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+
     console.log('✅ MySQL tables created/verified');
   } finally {
     connection.release();
@@ -209,7 +233,7 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 const storeFile = path.join(dataDir, 'data.json');
-let store = { users: [], sessions: [], responses: [], applications: [] };
+let store = { users: [], sessions: [], responses: [], applications: [], passwordResetTokens: [] };
 
 function initJSONStore() {
   try {
@@ -283,6 +307,84 @@ async function sendLoginAlert(username, userId) {
     console.log(`📧 Login alert sent to ${process.env.ALERT_EMAIL} for user ${username}`);
   } catch (error) {
     console.error('Failed to send login alert email:', error.message);
+  }
+}
+
+// Function to send password reset email
+async function sendPasswordResetEmail(username, token) {
+  if (!emailTransporter) {
+    console.log('Email not configured - cannot send password reset');
+    return false;
+  }
+  
+  try {
+    const resetUrl = `${process.env.APP_URL || 'http://localhost:3050'}/reset-password.html?token=${token}`;
+    
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: username, // username is the email address
+      subject: 'VitaePro - Password Reset Request',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333;">Password Reset Request</h2>
+          <p>You have requested to reset your password for your VitaePro account.</p>
+          <p>Your reset token is:</p>
+          <div style="background-color: #f5f5f5; padding: 15px; margin: 20px 0; border-radius: 5px; font-family: monospace; font-size: 16px; text-align: center; letter-spacing: 2px;">
+            <strong>${token}</strong>
+          </div>
+          <p>Or click the link below to reset your password:</p>
+          <p style="margin: 25px 0;">
+            <a href="${resetUrl}" style="background-color: #007bff; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; display: inline-block;">Reset Password</a>
+          </p>
+          <p><strong>This token will expire in 30 minutes.</strong></p>
+          <p style="color: #666; font-size: 14px; margin-top: 30px;">
+            If you did not request a password reset, please ignore this email. Your password will remain unchanged.
+          </p>
+          <hr style="margin-top: 30px; border: none; border-top: 1px solid #ddd;">
+          <p style="color: #999; font-size: 12px;">This is an automated email from VitaePro. Please do not reply.</p>
+        </div>
+      `
+    };
+    
+    await emailTransporter.sendMail(mailOptions);
+    console.log(`📧 Password reset email sent to ${username}`);
+    return true;
+  } catch (error) {
+    console.error('Failed to send password reset email:', error.message);
+    return false;
+  }
+}
+
+// Function to send password changed confirmation email
+async function sendPasswordChangedEmail(username) {
+  if (!emailTransporter) {
+    console.log('Email not configured - cannot send password changed confirmation');
+    return;
+  }
+  
+  try {
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: username, // username is the email address
+      subject: 'VitaePro - Password Changed Successfully',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #28a745;">✓ Password Changed Successfully</h2>
+          <p>Your VitaePro account password has been changed successfully.</p>
+          <p><strong>Time:</strong> ${new Date().toLocaleString()}</p>
+          <p style="margin-top: 25px; padding: 15px; background-color: #fff3cd; border-left: 4px solid #ffc107; color: #856404;">
+            <strong>⚠️ Security Notice:</strong> If you did not make this change, please contact support immediately as your account may be compromised.
+          </p>
+          <hr style="margin-top: 30px; border: none; border-top: 1px solid #ddd;">
+          <p style="color: #999; font-size: 12px;">This is an automated email from VitaePro. Please do not reply.</p>
+        </div>
+      `
+    };
+    
+    await emailTransporter.sendMail(mailOptions);
+    console.log(`📧 Password changed confirmation sent to ${username}`);
+  } catch (error) {
+    console.error('Failed to send password changed email:', error.message);
   }
 }
 
@@ -780,6 +882,67 @@ const DB = {
       if (deleted) saveStore();
       return deleted;
     }
+  },
+
+  // Password Reset Tokens
+  async createPasswordResetToken(userId, token, expiresAt) {
+    const createdAt = nowIso();
+    
+    if (dbType === 'mysql') {
+      await db.execute(
+        'INSERT INTO password_reset_tokens (token, userId, createdAt, expiresAt, used) VALUES (?, ?, ?, ?, 0)',
+        [token, userId, createdAt, expiresAt]
+      );
+    } else if (dbType === 'sqlite') {
+      db.prepare('INSERT INTO password_reset_tokens (token, userId, createdAt, expiresAt, used) VALUES (?, ?, ?, ?, 0)')
+        .run(token, userId, createdAt, expiresAt);
+    } else {
+      if (!store.passwordResetTokens) store.passwordResetTokens = [];
+      store.passwordResetTokens.push({ token, userId, createdAt, expiresAt, used: 0 });
+      saveStore();
+    }
+  },
+
+  async findResetToken(token) {
+    if (dbType === 'mysql') {
+      const [rows] = await db.execute('SELECT * FROM password_reset_tokens WHERE token = ?', [token]);
+      return rows[0] || null;
+    } else if (dbType === 'sqlite') {
+      return db.prepare('SELECT * FROM password_reset_tokens WHERE token = ?').get(token) || null;
+    } else {
+      if (!store.passwordResetTokens) store.passwordResetTokens = [];
+      return store.passwordResetTokens.find(t => t.token === token) || null;
+    }
+  },
+
+  async markResetTokenAsUsed(token) {
+    if (dbType === 'mysql') {
+      await db.execute('UPDATE password_reset_tokens SET used = 1 WHERE token = ?', [token]);
+    } else if (dbType === 'sqlite') {
+      db.prepare('UPDATE password_reset_tokens SET used = 1 WHERE token = ?').run(token);
+    } else {
+      if (!store.passwordResetTokens) store.passwordResetTokens = [];
+      const resetToken = store.passwordResetTokens.find(t => t.token === token);
+      if (resetToken) {
+        resetToken.used = 1;
+        saveStore();
+      }
+    }
+  },
+
+  async deleteExpiredResetTokens() {
+    const now = nowIso();
+    
+    if (dbType === 'mysql') {
+      await db.execute('DELETE FROM password_reset_tokens WHERE expiresAt < ?', [now]);
+    } else if (dbType === 'sqlite') {
+      db.prepare('DELETE FROM password_reset_tokens WHERE expiresAt < ?').run(now);
+    } else {
+      if (!store.passwordResetTokens) store.passwordResetTokens = [];
+      const initialLength = store.passwordResetTokens.length;
+      store.passwordResetTokens = store.passwordResetTokens.filter(t => t.expiresAt >= now);
+      if (store.passwordResetTokens.length < initialLength) saveStore();
+    }
   }
 };
 
@@ -892,23 +1055,116 @@ app.post('/auth/logout', async (req, res) => {
   res.json({ ok: true });
 });
 
-app.post('/auth/reset-password', async (req, res) => {
-  const { username, newPassword } = req.body || {};
-  if (!username || !newPassword) return res.status(400).json({ error: 'Missing username or password' });
-  if (String(newPassword).length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+// Password reset - Step 1: Request reset token
+app.post('/auth/request-password-reset', async (req, res) => {
+  const { username } = req.body || {};
+  if (!username) return res.status(400).json({ error: 'Missing username' });
   
   try {
+    // Clean up expired tokens first
+    await DB.deleteExpiredResetTokens().catch(err => 
+      console.error('Failed to delete expired tokens:', err)
+    );
+    
     const uname = username.toLowerCase();
     const user = await DB.findUserByUsername(uname);
-    if (!user) return res.status(404).json({ error: 'Username not found' });
     
+    // SECURITY: Always return the same response to prevent user enumeration
+    // Don't reveal whether the user exists or not
+    if (!user) {
+      console.log(`Password reset requested for non-existent user: ${uname}`);
+      // Still return success to prevent user enumeration
+      return res.json({ 
+        success: true, 
+        message: 'If an account with that email exists, a password reset email has been sent.' 
+      });
+    }
+    
+    // Generate secure reset token (64 character hex string)
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    
+    // Token expires in 30 minutes
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+    
+    // Store token in database
+    await DB.createPasswordResetToken(user.id, resetToken, expiresAt);
+    
+    // Send email with reset token (non-blocking)
+    sendPasswordResetEmail(user.username, resetToken).catch(err => 
+      console.error('Failed to send password reset email:', err)
+    );
+    
+    res.json({ 
+      success: true, 
+      message: 'If an account with that email exists, a password reset email has been sent.' 
+    });
+  } catch (e) {
+    console.error('Request password reset error:', e);
+    res.status(500).json({ error: 'Failed to process password reset request' });
+  }
+});
+
+// Password reset - Step 2: Confirm reset with token
+app.post('/auth/confirm-password-reset', async (req, res) => {
+  const { token, newPassword } = req.body || {};
+  if (!token || !newPassword) {
+    return res.status(400).json({ error: 'Missing token or password' });
+  }
+  
+  if (String(newPassword).length < 6) {
+    return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  }
+  
+  try {
+    // Find the reset token
+    const resetToken = await DB.findResetToken(token);
+    
+    if (!resetToken) {
+      return res.status(400).json({ error: 'Invalid or expired reset token' });
+    }
+    
+    // Check if token has already been used
+    if (resetToken.used) {
+      return res.status(400).json({ error: 'This reset token has already been used' });
+    }
+    
+    // Check if token has expired
+    if (new Date(resetToken.expiresAt) < new Date()) {
+      await DB.deleteExpiredResetTokens().catch(err => 
+        console.error('Failed to delete expired tokens:', err)
+      );
+      return res.status(400).json({ error: 'Reset token has expired. Please request a new one.' });
+    }
+    
+    // Get user
+    const user = await DB.findUserById(resetToken.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Update password
     const hash = bcrypt.hashSync(newPassword, 10);
     await DB.updateUserPassword(user.id, hash);
+    
+    // Mark token as used
+    await DB.markResetTokenAsUsed(token);
+    
+    // Delete all user sessions (force re-login)
     await DB.deleteUserSessions(user.id);
     
-    res.json({ success: true, message: 'Password reset successfully' });
+    // Send confirmation email (non-blocking)
+    sendPasswordChangedEmail(user.username).catch(err => 
+      console.error('Failed to send password changed email:', err)
+    );
+    
+    console.log(`Password reset successful for user: ${user.username}`);
+    
+    res.json({ 
+      success: true, 
+      message: 'Password has been reset successfully. Please log in with your new password.' 
+    });
   } catch (e) {
-    console.error('Reset password error:', e);
+    console.error('Confirm password reset error:', e);
     res.status(500).json({ error: 'Failed to reset password' });
   }
 });
