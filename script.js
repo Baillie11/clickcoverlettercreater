@@ -2208,8 +2208,21 @@
   function renderResponses() {
     // Skip if response columns not present (e.g., on profile page)
     if (!DOM.categoryUser || !DOM.categoryCrowd || !DOM.categoryAi) return;
+    
+    // Calculate counts for each category (matching search filter)
+    let userCount = 0;
+    let crowdCount = 0;
+    let aiCount = 0;
+    
+    appState.responses.forEach(response => {
+      if (!matchesSearch(response, currentSearchQuery)) return;
+      if (response.category === 'user') userCount++;
+      else if (response.category === 'crowd') crowdCount++;
+      else if (response.category === 'ai') aiCount++;
+    });
+    
     // Clear existing responses (but keep the h3 elements)
-    DOM.categoryUser.innerHTML = `<h3>User Created 
+    DOM.categoryUser.innerHTML = `<h3>User Created <span class="response-count">(${userCount})</span>
       <button type="button" class="toggle-category-btn" data-category="user" title="${categoryVisibility.user ? 'Hide' : 'Show'}">${categoryVisibility.user ? '▼' : '▶'}</button>
       <button type="button" id="addUserResponseBtn" class="add-category-btn" title="Add new response">+</button>
       <select id="userSortSelect" class="sort-select" title="Sort by">
@@ -2218,10 +2231,10 @@
         <option value="date-asc">Oldest First</option>
       </select>
     </h3>`;
-    DOM.categoryCrowd.innerHTML = `<h3>Crowd Sourced 
+    DOM.categoryCrowd.innerHTML = `<h3>Crowd Sourced <span class="response-count">(${crowdCount})</span>
       <button type="button" class="toggle-category-btn" data-category="crowd" title="${categoryVisibility.crowd ? 'Hide' : 'Show'}">${categoryVisibility.crowd ? '▼' : '▶'}</button>
     </h3>`;
-    DOM.categoryAi.innerHTML = `<h3>AI Generated 
+    DOM.categoryAi.innerHTML = `<h3>AI Generated <span class="response-count">(${aiCount})</span>
       <button type="button" class="toggle-category-btn" data-category="ai" title="${categoryVisibility.ai ? 'Hide' : 'Show'}">${categoryVisibility.ai ? '▼' : '▶'}</button>
     </h3>`;
     
