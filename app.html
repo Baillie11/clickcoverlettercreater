@@ -149,7 +149,10 @@
       <section class="letter-builder">
         <div class="section-header">
           <h3>Your Cover Letter</h3>
-          <button type="button" id="newLetterBtnTop" class="new-letter-btn-top">🆕 New Cover Letter</button>
+          <div class="header-actions">
+            <button type="button" id="aiGenerateBtn" class="ai-generate-btn" title="Generate AI responses from job ad">✨ AI Generate</button>
+            <button type="button" id="newLetterBtnTop" class="new-letter-btn-top">🆕 New Cover Letter</button>
+          </div>
         </div>
         <div class="letter-drop-area" id="letterArea">
           <p class="placeholder">Drag responses here to build your letter</p>
@@ -180,15 +183,6 @@
           </div>
         </div>
         <div id="letterPreview" class="letter-preview" aria-live="polite"></div>
-      </section>
-
-      <section class="job-ad-section">
-        <h3>Paste Job Ad</h3>
-        <textarea id="jobAdText" placeholder="Paste the job ad text here..."></textarea>
-        <div class="job-ad-controls">
-          <button type="button" id="aiGenerateBtn" title="Extract job info and generate tailored cover letter responses with AI">✨ AI Generate</button>
-        </div>
-        <div id="jobAdParseStatus" class="job-ad-status" aria-live="polite"></div>
       </section>
     </main>
   </div>
@@ -277,6 +271,20 @@
       </div>
       <div class="modal-actions">
         <button type="button" id="loadDraftCancelBtn" class="secondary-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Generate Modal (Job Ad) -->
+  <div id="aiGenerateModal" class="modal hidden" aria-live="polite">
+    <div class="modal-content ai-generate-modal">
+      <h3>AI Generate Responses</h3>
+      <p class="modal-subtitle">Paste a job ad below and AI will extract job information and generate tailored cover letter paragraphs</p>
+      <textarea id="jobAdText" placeholder="Paste the job ad text here..." rows="12"></textarea>
+      <div id="jobAdParseStatus" class="job-ad-status" aria-live="polite"></div>
+      <div class="modal-actions">
+        <button type="button" id="aiGenerateCancelBtn" class="secondary-btn">Cancel</button>
+        <button type="button" id="aiGenerateSubmitBtn" class="primary-btn">✨ Generate</button>
       </div>
     </div>
   </div>

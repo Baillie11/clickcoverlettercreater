@@ -650,6 +650,83 @@ body.theme-dark .draft-item:hover {
   box-shadow: 0 4px 12px rgba(108, 99, 255, 0.2);
 }
 
+/* AI Generate Modal */
+.ai-generate-modal {
+  max-width: 700px;
+}
+
+.modal-subtitle {
+  color: var(--muted);
+  font-size: 0.95rem;
+  margin: 0 0 16px 0;
+  line-height: 1.4;
+}
+
+.ai-generate-modal textarea {
+  width: 100%;
+  min-height: 200px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 1rem;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.ai-generate-modal textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.2);
+}
+
+.job-ad-status {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  display: none;
+}
+
+.job-ad-status.show {
+  display: block;
+}
+
+.job-ad-status.success {
+  background: rgba(46, 204, 113, 0.1);
+  color: #27ae60;
+  border: 1px solid rgba(46, 204, 113, 0.3);
+}
+
+.job-ad-status.error {
+  background: rgba(231, 76, 60, 0.1);
+  color: #c0392b;
+  border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+.job-ad-status.info {
+  background: rgba(108, 99, 255, 0.1);
+  color: var(--primary);
+  border: 1px solid rgba(108, 99, 255, 0.3);
+}
+
+.primary-btn {
+  background: var(--primary);
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  box-shadow: var(--shadow);
+  transition: all 0.2s ease;
+}
+
+.primary-btn:hover {
+  background: var(--primary-600);
+  transform: translateY(-1px);
+}
+
 /* Auth landing */
 .auth-landing { position: fixed; inset: 0; z-index: 3000; display: flex; align-items: center; justify-content: center; padding: 24px; background: radial-gradient(1000px 600px at 20% 10%, rgba(108,99,255,0.2), transparent 60%), radial-gradient(900px 500px at 80% 20%, rgba(0,184,148,0.18), transparent 55%), radial-gradient(700px 400px at 50% 80%, rgba(255,118,117,0.2), transparent 60%), var(--bg); }
 .auth-landing.hidden { pointer-events: none; }
@@ -823,6 +900,33 @@ body.theme-dark .auth-card .field-hint { color: #999; }
 
 .collapsible-content.collapsed {
   max-height: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.ai-generate-btn {
+  padding: 8px 14px;
+  background: linear-gradient(135deg, #b084f5, #8a6bd0);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  box-shadow: var(--shadow);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  position: relative;
+  z-index: 1001;
+  pointer-events: auto;
+}
+
+.ai-generate-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(176, 132, 245, 0.3);
+  filter: brightness(1.05);
 }
 
 .new-letter-btn-top {

@@ -4017,6 +4017,25 @@
     }
   }
 
+  // Show/hide AI Generate modal
+  function showAiGenerateModal() {
+    const modal = document.getElementById('aiGenerateModal');
+    if (modal) {
+      modal.classList.remove('hidden');
+      // Clear previous text and status
+      if (DOM.jobAdText) DOM.jobAdText.value = '';
+      if (DOM.jobAdParseStatus) {
+        DOM.jobAdParseStatus.textContent = '';
+        DOM.jobAdParseStatus.className = 'job-ad-status';
+      }
+    }
+  }
+  
+  function hideAiGenerateModal() {
+    const modal = document.getElementById('aiGenerateModal');
+    if (modal) modal.classList.add('hidden');
+  }
+  
   async function handleAiGenerate() {
     const jobAdText = DOM.jobAdText?.value?.trim();
     if (!jobAdText) {
@@ -4100,6 +4119,11 @@
       showJobAdStatus(`✅ Generated ${addedCount} tailored responses and added to AI library!`, 'success');
       // Render the updated responses (AI responses are in memory only, don't sync from DB)
       renderResponses();
+      
+      // Close modal after 2 seconds on success
+      setTimeout(() => {
+        hideAiGenerateModal();
+      }, 2000);
     } catch (error) {
       console.error('AI generation error:', error);
       // Remove emoji from error message to avoid encoding issues
@@ -4492,11 +4516,16 @@
     if (DOM.fetchJobAdBtn) DOM.fetchJobAdBtn.addEventListener('click', handleFetchJobAdUrl);
     if (DOM.jobAdUrl) DOM.jobAdUrl.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); handleFetchJobAdUrl(); }});
     
-    // AI features
+    // AI features - AI Generate button now opens modal
     DOM.aiExtractBtn = document.getElementById('aiExtractBtn');
     DOM.aiGenerateBtn = document.getElementById('aiGenerateBtn');
+    const aiGenerateSubmitBtn = document.getElementById('aiGenerateSubmitBtn');
+    const aiGenerateCancelBtn = document.getElementById('aiGenerateCancelBtn');
+    
     if (DOM.aiExtractBtn) DOM.aiExtractBtn.addEventListener('click', handleAiExtract);
-    if (DOM.aiGenerateBtn) DOM.aiGenerateBtn.addEventListener('click', handleAiGenerate);
+    if (DOM.aiGenerateBtn) DOM.aiGenerateBtn.addEventListener('click', showAiGenerateModal);
+    if (aiGenerateSubmitBtn) aiGenerateSubmitBtn.addEventListener('click', handleAiGenerate);
+    if (aiGenerateCancelBtn) aiGenerateCancelBtn.addEventListener('click', hideAiGenerateModal);
 
     // Header/Nav events
     if (DOM.themeToggleBtn) DOM.themeToggleBtn.addEventListener('click', toggleTheme);
