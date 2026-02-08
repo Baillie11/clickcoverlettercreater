@@ -2,6 +2,43 @@
 
 All notable changes to VitaePro Cover Letter Creator will be documented in this file.
 
+## [1.6.2] - 2026-02-08
+
+### Added
+- **AI Generate Modal**: Moved AI Generate functionality to header with modal popup
+  - AI Generate button now appears in header next to New Cover Letter button
+  - Purple gradient styling to differentiate from other actions
+  - Job ad input opens in modal popup instead of inline section
+  - Improved "above the fold" content visibility
+  - Modal auto-closes 2 seconds after successful generation
+- **Response Count Tallies**: Category headers now show count of responses
+  - Format: "User Created (50)" "Crowd Sourced (17)" "AI Generated (0)"
+  - Counts update dynamically based on search filter
+  - Muted styling for subtle visual hierarchy
+
+### Changed
+- **Job Information Toggle Label**: Updated from "Collapse/Expand" to "Show/Hide" for clarity
+- **Category Header Layout**: Fixed with flexbox for proper button alignment
+  - Toggle buttons, sort dropdowns, and action buttons now properly aligned
+  - Resolved CSS conflicts between float and flexbox
+  - Consistent spacing with gap property
+
+### Fixed
+- **Toggle Button Reliability**: Resolved intermittent clicking issues
+  - Implemented event delegation pattern to prevent race conditions
+  - Buttons no longer recreated on each render, preventing stale event listeners
+  - Changed from individual IDs to data-category attributes
+  - Single parent listener catches all toggle button clicks
+- **Missing handleSortChange Function**: Added missing sort dropdown handler
+  - Function was referenced but not defined, causing JavaScript error
+  - Prevented responses from rendering on page load
+  - Sort dropdown now works correctly for user responses
+
+### Technical
+- **Cache Version**: Bumped to v=13 for browser cache invalidation
+- **Event Delegation**: Migrated toggle buttons from direct listeners to delegated events
+- **Modal Styling**: Added new CSS classes for AI generate modal and actions header
+
 ## [1.6.1] - 2026-01-31 (Unreleased)
 
 ### Added
