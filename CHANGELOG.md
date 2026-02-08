@@ -5,6 +5,18 @@ All notable changes to VitaePro Cover Letter Creator will be documented in this 
 ## [1.6.2] - 2026-02-08
 
 ### Added
+- **Interactive Walkthrough Guide System**: Step-by-step tutorials for all pages
+  - Auto-starts on first visit to each page (app, profile, dashboard)
+  - Help button (❓) in navigation to replay walkthrough anytime
+  - Context-aware: automatically detects current page
+  - App Page: 12 steps covering response library, AI generate, letter building
+  - Profile Page: 8 steps covering personal info, resume upload, preferences  
+  - Dashboard Page: 8 steps covering stats, filters, application tracking
+  - Interactive UI: highlighted elements, spotlight effect, smart positioning
+  - Progress tracking with Next/Previous/Skip/Finish navigation
+  - localStorage tracks completion status per page
+  - Public API via window.VitaeProWalkthrough
+  - Comprehensive documentation in WALKTHROUGH_README.md
 - **AI Generate Modal**: Moved AI Generate functionality to header with modal popup
   - AI Generate button now appears in header next to New Cover Letter button
   - Purple gradient styling to differentiate from other actions
