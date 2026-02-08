@@ -2204,6 +2204,11 @@
     
     return false;
   }
+  
+  function handleSortChange(e) {
+    userResponsesSortOrder = e.target.value;
+    renderResponses();
+  }
 
   function renderResponses() {
     // Skip if response columns not present (e.g., on profile page)
