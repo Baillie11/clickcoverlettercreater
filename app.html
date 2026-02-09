@@ -6,6 +6,7 @@
   <title>Cover Letter Creator</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css?v=15" />
+  <link rel="stylesheet" href="mobile.css?v=1" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.11.2/html2pdf.bundle.min.js"></script>
@@ -107,6 +108,11 @@
 
   <div class="app-container">
     <aside class="response-panel">
+      <button type="button" class="mobile-panel-toggle" id="mobilePanelToggle">
+        <span>📚 Response Library</span>
+        <span id="toggleIcon">▼</span>
+      </button>
+      <div class="response-panel-content">
       <h2>Response Library</h2>
       
       <div class="search-container">
@@ -125,7 +131,7 @@
       <div class="category-section" id="category-ai">
         <h3>AI Generated</h3>
       </div>
-
+      </div>
     </aside>
 
     <main class="builder-panel">
@@ -331,5 +337,20 @@
   <script src="env.js?v=13"></script>
   <script src="script.js?v=13"></script>
   <script src="walkthrough.js?v=1"></script>
+  <script>
+    // Mobile panel toggle functionality
+    (function() {
+      const toggle = document.getElementById('mobilePanelToggle');
+      const panel = document.querySelector('.response-panel');
+      const icon = document.getElementById('toggleIcon');
+      
+      if (toggle && panel) {
+        toggle.addEventListener('click', function() {
+          panel.classList.toggle('collapsed');
+          icon.textContent = panel.classList.contains('collapsed') ? '▶' : '▼';
+        });
+      }
+    })();
+  </script>
 </body>
 </html>
