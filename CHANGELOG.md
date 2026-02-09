@@ -17,6 +17,7 @@ All notable changes to VitaePro Cover Letter Creator will be documented in this 
   - localStorage tracks completion status per page
   - Public API via window.VitaeProWalkthrough
   - Comprehensive documentation in WALKTHROUGH_README.md
+  - Quick start guide in WALKTHROUGH_QUICKSTART.md for users and developers
 - **AI Generate Modal**: Moved AI Generate functionality to header with modal popup
   - AI Generate button now appears in header next to New Cover Letter button
   - Purple gradient styling to differentiate from other actions
@@ -45,6 +46,11 @@ All notable changes to VitaePro Cover Letter Creator will be documented in this 
   - Function was referenced but not defined, causing JavaScript error
   - Prevented responses from rendering on page load
   - Sort dropdown now works correctly for user responses
+- **Emoji Icon Encoding**: Fixed garbled emoji display in button labels
+  - Resaved all HTML files with UTF-8 BOM (Byte Order Mark) encoding
+  - Ensures proper display of emoji icons: 🆕💾📂✨❓💡📌🔍
+  - Affects New Cover Letter, Save Draft, Load Draft, AI Generate, and help buttons
+  - Previously showed as corrupted Unicode characters
 
 ### Technical
 - **Cache Version**: Bumped to v=13 for browser cache invalidation
