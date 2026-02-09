@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cover Letter Creator</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=14" />
+  <link rel="stylesheet" href="styles.css?v=15" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.11.2/html2pdf.bundle.min.js"></script>
@@ -80,7 +80,7 @@
   <!-- Mobile Device Notice -->
   <div class="mobile-notice">
     <div class="mobile-notice-content">
-      <div class="mobile-notice-icon">💻</div>
+      <div class="mobile-notice-icon">&#128187;</div>
       <h2>Best Viewed on Larger Screens</h2>
       <p>VitaePro works best on tablets, laptops, and desktop computers for the optimal cover letter creation experience.</p>
       <p><strong>We recommend using a device with at least a 10-inch screen.</strong></p>
@@ -150,8 +150,8 @@
         <div class="section-header">
           <h3>Your Cover Letter</h3>
           <div class="header-actions">
-            <button type="button" id="aiGenerateBtn" class="ai-generate-btn" title="Generate AI responses from job ad">✨ AI Generate</button>
-            <button type="button" id="newLetterBtnTop" class="new-letter-btn-top">🆕 New Cover Letter</button>
+            <button type="button" id="aiGenerateBtn" class="ai-generate-btn" title="Generate AI responses from job ad">&#10024; AI Generate</button>
+            <button type="button" id="newLetterBtnTop" class="new-letter-btn-top">&#127381; New Cover Letter</button>
           </div>
         </div>
         <div class="letter-drop-area" id="letterArea">
@@ -160,8 +160,8 @@
         <div class="letter-actions">
           <div class="left-actions">
             <button id="newLetterBtn">New Cover Letter</button>
-            <button id="saveDraftBtn">💾 Save Draft</button>
-            <button id="loadDraftBtn">📂 Load Draft</button>
+            <button id="saveDraftBtn">&#128190; Save Draft</button>
+            <button id="loadDraftBtn">&#128194; Load Draft</button>
             <button id="previewLetterBtn">Preview</button>
             <button id="downloadPdfBtn">Download as PDF</button>
           </div>
@@ -213,7 +213,7 @@
     <div class="modal-content">
       <h3>Create New Response</h3>
       <div class="placeholder-guide">
-        <strong>💡 Tip:</strong> Click placeholders to insert:
+        <strong>&#128161; Tip:</strong> Click placeholders to insert:
         <span class="placeholder-btn" data-placeholder="[Company Name]">[Company Name]</span>
         <span class="placeholder-btn" data-placeholder="[Role Title]">[Role Title]</span>
         <span class="placeholder-btn" data-placeholder="[Contact]">[Contact]</span>
@@ -223,8 +223,8 @@
       </div>
       <textarea id="modalResponseText" placeholder="Write your response here..." rows="6"></textarea>
       <label for="modalResponseTags">Tags (comma separated):</label>
-      <p class="tag-help-text">📌 <strong>Note:</strong> Responses are sorted by the <em>first tag</em>. Choose your primary category first.</p>
-      <input type="text" id="createTagSearch" class="tag-search-input" placeholder="🔍 Search tags..." />
+      <p class="tag-help-text">&#128204; <strong>Note:</strong> Responses are sorted by the <em>first tag</em>. Choose your primary category first.</p>
+      <input type="text" id="createTagSearch" class="tag-search-input" placeholder="&#128269; Search tags..." />
       <div class="preset-tags" id="createPresetTags"></div>
       <input type="text" id="modalResponseTags" placeholder="e.g. healthcare, opening, teamwork" />
       <div class="modal-actions">
@@ -240,7 +240,7 @@
     <div class="modal-content">
       <h3>Edit Response</h3>
       <div class="placeholder-guide">
-        <strong>💡 Tip:</strong> Click placeholders to insert:
+        <strong>&#128161; Tip:</strong> Click placeholders to insert:
         <span class="placeholder-btn" data-placeholder="[Company Name]">[Company Name]</span>
         <span class="placeholder-btn" data-placeholder="[Role Title]">[Role Title]</span>
         <span class="placeholder-btn" data-placeholder="[Contact]">[Contact]</span>
@@ -250,8 +250,8 @@
       </div>
       <textarea id="editModalResponseText" placeholder="Edit your response here..." rows="6"></textarea>
       <label for="editModalResponseTags">Tags (comma separated):</label>
-      <p class="tag-help-text">📌 <strong>Note:</strong> Responses are sorted by the <em>first tag</em>. Choose your primary category first.</p>
-      <input type="text" id="editTagSearch" class="tag-search-input" placeholder="🔍 Search tags..." />
+      <p class="tag-help-text">&#128204; <strong>Note:</strong> Responses are sorted by the <em>first tag</em>. Choose your primary category first.</p>
+      <input type="text" id="editTagSearch" class="tag-search-input" placeholder="&#128269; Search tags..." />
       <div class="preset-tags" id="editPresetTags"></div>
       <input type="text" id="editModalResponseTags" placeholder="e.g. healthcare, opening, teamwork" />
       <div class="modal-actions">
@@ -284,7 +284,7 @@
       <div id="jobAdParseStatus" class="job-ad-status" aria-live="polite"></div>
       <div class="modal-actions">
         <button type="button" id="aiGenerateCancelBtn" class="secondary-btn">Cancel</button>
-        <button type="button" id="aiGenerateSubmitBtn" class="primary-btn">✨ Generate</button>
+        <button type="button" id="aiGenerateSubmitBtn" class="primary-btn">&#10024; Generate</button>
       </div>
     </div>
   </div>
