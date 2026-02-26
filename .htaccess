@@ -1,23 +1,7 @@
-RewriteEngine On
-
-# Pass Authorization header to PHP/CGI (required for proxy)
-SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
-
-# Handle OPTIONS preflight requests
-RewriteCond %{REQUEST_METHOD} OPTIONS
-RewriteRule ^(.*)$ $1 [R=200,L]
-
-# Proxy API requests to Node.js backend on port 3050
-RewriteCond %{REQUEST_URI} ^/auth/ [OR]
-RewriteCond %{REQUEST_URI} ^/api/ [OR]
-RewriteCond %{REQUEST_URI} ^/responses [OR]
-RewriteCond %{REQUEST_URI} ^/user/ [OR]
-RewriteCond %{REQUEST_URI} ^/applications [OR]
-RewriteCond %{REQUEST_URI} ^/health
-RewriteRule ^(.*)$ http://localhost:3050/$1 [P,L]
-
-# Enable CORS for proxied requests
-Header always set Access-Control-Allow-Origin "*"
-Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
-Header always set Access-Control-Allow-Headers "Content-Type, Authorization"
-Header always set Access-Control-Allow-Credentials "true"
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION BEGIN
+PassengerAppRoot "/home/clickeco/vitaepro.com.au"
+PassengerBaseURI "/"
+PassengerNodejs "/home/clickeco/nodevenv/vitaepro.com.au/20/bin/node"
+PassengerAppType node
+PassengerStartupFile server.js
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION END
