@@ -4,6 +4,10 @@
 
 require('dotenv').config();
 
+// Initialise production logger - must be early so hookConsole captures everything
+const logger = require('./logger');
+logger.hookConsole();
+
 const path = require('path');
 const fs = require('fs');
 const express = require('express');
@@ -41,13 +45,36 @@ async function initDatabase() {
       console.log('✅ MySQL connected successfully');
       connection.release();
 
+      // Monitor MySQL connection pool health
+      try {
+        const poolForEvents = pool.pool || pool;
+        poolForEvents.on('connection', (conn) => {
+          logger.db('info', 'New MySQL connection established', { threadId: conn.threadId });
+        });
+        poolForEvents.on('enqueue', () => {
+          logger.db('warn', 'MySQL connection pool exhausted - query queued. Consider increasing connectionLimit.');
+        });
+        poolForEvents.on('release', (conn) => {
+          logger.db('debug', 'MySQL connection released', { threadId: conn.threadId });
+        });
+      } catch (evtErr) {
+        logger.db('warn', 'Could not attach pool event listeners', { error: evtErr.message });
+      }
+
       // Create tables
       await createMySQLTables(pool);
       
       db = pool;
       dbType = 'mysql';
     } catch (e) {
-      console.error('❌ MySQL connection failed:', e.message);
+      logger.db('error', 'MySQL connection failed', {
+        error: e.message,
+        code: e.code,
+        errno: e.errno,
+        host: process.env.MYSQL_HOST,
+        database: process.env.MYSQL_DATABASE,
+        stack: e.stack,
+      });
       console.error('Falling back to JSON store');
       dbType = 'json';
     }
@@ -402,6 +429,9 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '1mb' }));
 
+// Request logging (writes to log files via Winston)
+app.use(logger.requestMiddleware);
+
 // Disable caching
 app.use((req, res, next) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -424,6 +454,11 @@ function genToken() {
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+// MySQL-compatible datetime format (YYYY-MM-DD HH:MM:SS)
+function toMySQLDatetime(date) {
+  return date.toISOString().slice(0, 19).replace('T', ' ');
 }
 
 function plusDays(days) {
@@ -535,18 +570,26 @@ const DB = {
 
   // Sessions
   async createSession(token, userId) {
-    const createdAt = nowIso();
-    const expiresAt = plusDays(7);
+    const now = new Date();
+    const expires = new Date();
+    expires.setDate(expires.getDate() + 7);
     
     if (dbType === 'mysql') {
+      // MySQL needs datetime format without T and Z
+      const createdAt = toMySQLDatetime(now);
+      const expiresAt = toMySQLDatetime(expires);
       await db.execute(
         'INSERT INTO sessions (token, userId, createdAt, expiresAt) VALUES (?, ?, ?, ?)',
         [token, userId, createdAt, expiresAt]
       );
     } else if (dbType === 'sqlite') {
+      const createdAt = nowIso();
+      const expiresAt = plusDays(7);
       db.prepare('INSERT INTO sessions (token, userId, createdAt, expiresAt) VALUES (?, ?, ?, ?)')
         .run(token, userId, createdAt, expiresAt);
     } else {
+      const createdAt = nowIso();
+      const expiresAt = plusDays(7);
       store.sessions.push({ token, userId, createdAt, expiresAt });
       saveStore();
     }
@@ -951,19 +994,34 @@ async function getUserFromAuth(req) {
   try {
     const h = req.headers['authorization'] || '';
     const m = /^Bearer\s+(.+)$/i.exec(h);
-    if (!m) return null;
+    if (!m) {
+      console.log('Auth: No valid Authorization header found');
+      return null;
+    }
     
     const token = m[1];
     const session = await DB.findSessionByToken(token);
-    if (!session) return null;
+    if (!session) {
+      console.log('Auth: Session not found for token');
+      return null;
+    }
     
-    if (new Date(session.expiresAt) < new Date()) {
+    // Handle both Date objects (MySQL) and ISO strings (SQLite/JSON)
+    const expiresAt = session.expiresAt instanceof Date 
+      ? session.expiresAt 
+      : new Date(session.expiresAt);
+    
+    if (expiresAt < new Date()) {
+      console.log('Auth: Session expired at', expiresAt.toISOString());
       await DB.deleteSession(token);
       return null;
     }
     
     const user = await DB.findUserById(session.userId);
-    if (!user) return null;
+    if (!user) {
+      console.log('Auth: User not found for session userId:', session.userId);
+      return null;
+    }
     
     return { token, user: { id: user.id, username: user.username } };
   } catch (e) {
@@ -975,6 +1033,22 @@ async function getUserFromAuth(req) {
 // Routes
 app.get('/health', (req, res) => {
   res.json({ ok: true, database: dbType });
+});
+
+// Diagnostic endpoint to help troubleshoot auth issues
+app.get('/api/debug-auth', async (req, res) => {
+  const authHeader = req.headers['authorization'] || 'none';
+  const hasBearer = authHeader.startsWith('Bearer ');
+  const auth = await getUserFromAuth(req);
+  res.json({
+    database: dbType,
+    authHeaderPresent: authHeader !== 'none',
+    authHeaderHasBearer: hasBearer,
+    authHeaderPreview: authHeader.substring(0, 20) + '...',
+    authenticated: !!auth,
+    userId: auth?.user?.id || null,
+    timestamp: new Date().toISOString()
+  });
 });
 
 app.get('/api/ai-status', (req, res) => {
@@ -1638,14 +1712,89 @@ app.get('/api/admin/stats', async (req, res) => {
   }
 });
 
+// ─── Admin log viewer endpoint ───
+// Protected by LOG_VIEWER_KEY env var. Access via:
+//   GET /api/admin/logs?key=YOUR_KEY&type=error&lines=100
+//   type: error | combined | exceptions | rejections
+app.get('/api/admin/logs', (req, res) => {
+  const key = req.query.key || req.headers['x-log-key'];
+  if (!process.env.LOG_VIEWER_KEY || key !== process.env.LOG_VIEWER_KEY) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
+  const type = req.query.type || 'error';
+  const lines = parseInt(req.query.lines) || 100;
+
+  if (req.query.list === 'true') {
+    return res.json({ files: logger.listLogFiles() });
+  }
+
+  const result = logger.readLogFile(type, lines);
+  res.json(result);
+});
+
+// ─── Admin health-check endpoint ───
+// Detailed server + DB health for remote diagnostics
+app.get('/api/admin/health', async (req, res) => {
+  const key = req.query.key || req.headers['x-log-key'];
+  if (!process.env.LOG_VIEWER_KEY || key !== process.env.LOG_VIEWER_KEY) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
+  const health = {
+    timestamp: new Date().toISOString(),
+    uptime: `${Math.floor(process.uptime())}s`,
+    memory: process.memoryUsage(),
+    nodeVersion: process.version,
+    env: process.env.NODE_ENV || 'development',
+    database: { type: dbType, status: 'unknown' },
+  };
+
+  if (dbType === 'mysql' && db) {
+    try {
+      const start = Date.now();
+      await db.execute('SELECT 1 AS ok');
+      health.database.status = 'connected';
+      health.database.pingMs = Date.now() - start;
+    } catch (e) {
+      health.database.status = 'error';
+      health.database.error = e.message;
+      health.database.code = e.code;
+      logger.db('error', 'Health check DB ping failed', { error: e.message, code: e.code });
+    }
+  } else if (dbType === 'sqlite' && db) {
+    try {
+      db.prepare('SELECT 1 AS ok').get();
+      health.database.status = 'connected';
+    } catch (e) {
+      health.database.status = 'error';
+      health.database.error = e.message;
+    }
+  } else {
+    health.database.status = dbType === 'json' ? 'json-store' : 'not-initialised';
+  }
+
+  res.json(health);
+});
+
+// ─── Global Express error handler (must be last middleware) ───
+app.use(logger.errorMiddleware);
+
 // Start server
 initDatabase().then(() => {
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🚀 VitaePro server running on http://localhost:${PORT}`);
     console.log(`📊 Database: ${dbType.toUpperCase()}`);
-    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}\n`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`📝 Logs directory: ${logger.logsDir}\n`);
   });
 }).catch(err => {
+  logger.error('Failed to initialise database - server cannot start', {
+    component: 'database',
+    error: err.message,
+    stack: err.stack,
+    code: err.code,
+  });
   console.error('Failed to initialize database:', err);
   process.exit(1);
 });

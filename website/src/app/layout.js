@@ -55,7 +55,7 @@ export default function RootLayout({ children }) {
         ) : null}
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} bg-slate-50 text-slate-900 antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} theme-vitae bg-[#0f1033] text-slate-50 antialiased`}
       >
         <NavBar />
         <main className="min-h-[80vh]">{children}</main>

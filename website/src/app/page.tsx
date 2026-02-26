@@ -132,46 +132,46 @@ export default function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <main className="bg-slate-50 pb-16">
-        <section className="mx-auto flex max-w-6xl flex-col gap-8 px-6 pt-16 text-center md:pt-20 md:text-left">
-          <div className="inline-flex items-center gap-3 self-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm md:self-start">
+      <main className="pb-16">
+        <section className="section-shell mx-auto flex max-w-6xl flex-col gap-10 px-6 pt-16 text-center md:pt-20 md:text-left">
+          <div className="glass-pill inline-flex items-center gap-3 self-center rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wide md:self-start">
             Human-first cover letters, anywhere
           </div>
           <div className="space-y-6">
-            <h1 className="text-4xl font-semibold leading-tight text-slate-900 md:text-5xl">
+            <h1 className="text-4xl font-semibold leading-tight text-white md:text-5xl">
               Authentic cover letters, zero AI fluff.
             </h1>
-            <p className="max-w-2xl text-lg text-slate-700">
+            <p className="max-w-2xl text-lg text-slate-100/90">
               VitaePro blends your own writing, a crowd-sourced response library, and optional AI assist to craft tailored cover letters and selection criteria responses that sound human and win job application shortlists.
             </p>
             <div className="flex flex-col gap-3 md:flex-row md:items-center">
               <Link
                 href="/pricing"
-                className="rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+                className="btn-primary-gradient rounded-full px-6 py-3 text-sm font-semibold shadow-md transition hover:opacity-95"
               >
                 View pricing
               </Link>
               <a
                 href="#early-access"
-                className="rounded-full border border-slate-200 px-6 py-3 text-sm font-semibold text-slate-900 transition hover:border-slate-300 hover:bg-white"
+                className="btn-secondary-ghost rounded-full px-6 py-3 text-sm font-semibold backdrop-blur transition hover:border-white hover:bg-white/15"
               >
                 Get early access
               </a>
             </div>
           </div>
 
-          <div className="card grid gap-4 border-slate-200 p-6 md:grid-cols-5 md:items-center">
-            <p className="text-sm font-semibold text-slate-700 md:col-span-2">Trusted by job seekers and employment agencies</p>
-            <div className="col-span-3 grid grid-cols-3 gap-4 text-sm text-slate-500 md:justify-items-center">
-              <span className="rounded bg-slate-100 px-3 py-2 text-center">Agency One</span>
-              <span className="rounded bg-slate-100 px-3 py-2 text-center">Career Coaches Intl</span>
-              <span className="rounded bg-slate-100 px-3 py-2 text-center">Pathways</span>
+          <div className="glass-card card grid gap-4 p-6 md:grid-cols-5 md:items-center">
+            <p className="text-sm font-semibold text-slate-50 md:col-span-2">Trusted by job seekers and employment agencies</p>
+            <div className="col-span-3 grid grid-cols-3 gap-4 text-sm text-slate-100/80 md:justify-items-center">
+              <span className="rounded border border-white/20 bg-white/10 px-3 py-2 text-center">Agency One</span>
+              <span className="rounded border border-white/20 bg-white/10 px-3 py-2 text-center">Career Coaches Intl</span>
+              <span className="rounded border border-white/20 bg-white/10 px-3 py-2 text-center">Pathways</span>
             </div>
           </div>
 
-          <div className="card border-slate-200 p-6">
-            <h2 className="text-lg font-semibold text-slate-900">Why VitaePro</h2>
-            <p className="mt-2 text-sm text-slate-700">
+          <div className="glass-card card p-6">
+            <h2 className="text-lg font-semibold text-white">Why VitaePro</h2>
+            <p className="mt-2 text-sm text-slate-100/90">
               Built for hiring processes where selection criteria matters. Keep authenticity, align tone, and move faster whether you’re a job seeker or an employment agency with multiple seats.
             </p>
           </div>
@@ -179,15 +179,15 @@ export default function HomePage() {
 
         <section className="mx-auto mt-16 max-w-6xl px-6">
           <div className="mb-8 flex flex-col gap-2 text-center md:text-left">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">How it works</p>
-            <h2 className="text-3xl font-semibold text-slate-900">Human, Crowd, AI — in that order</h2>
-            <p className="text-sm text-slate-700">Human-first writing with optional AI assist. Crowd examples keep outputs grounded.</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-white/80">How it works</p>
+            <h2 className="text-3xl font-semibold text-white">Human, Crowd, AI — in that order</h2>
+            <p className="text-sm text-slate-100/85">Human-first writing with optional AI assist. Crowd examples keep outputs grounded.</p>
           </div>
           <div className="grid gap-6 md:grid-cols-3">
             {howCards.map((card) => (
-              <div key={card.title} className="card h-full border-slate-200 p-6">
-                <h3 className="text-lg font-semibold text-slate-900">{card.title}</h3>
-                <p className="mt-2 text-sm text-slate-700">{card.body}</p>
+              <div key={card.title} className="glass-card card h-full p-6">
+                <h3 className="text-lg font-semibold text-white">{card.title}</h3>
+                <p className="mt-2 text-sm text-slate-100/90">{card.body}</p>
               </div>
             ))}
           </div>
@@ -195,13 +195,13 @@ export default function HomePage() {
 
         <section className="mx-auto mt-16 grid max-w-6xl gap-6 px-6 md:grid-cols-2">
           {audiences.map((audience) => (
-            <div key={audience.title} className="card border-slate-200 p-6">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">{audience.title}</p>
-              <h3 className="mt-2 text-xl font-semibold text-slate-900">Built for {audience.title.toLowerCase()}</h3>
-              <ul className="mt-4 space-y-2 text-sm text-slate-700">
+            <div key={audience.title} className="glass-card card p-6">
+              <p className="text-xs font-semibold uppercase tracking-wide text-white/80">{audience.title}</p>
+              <h3 className="mt-2 text-xl font-semibold text-white">Built for {audience.title.toLowerCase()}</h3>
+              <ul className="mt-4 space-y-2 text-sm text-slate-100/90">
                 {audience.bullets.map((item) => (
                   <li key={item} className="flex items-start gap-2">
-                    <span className="mt-1 h-2 w-2 rounded-full bg-emerald-500" aria-hidden />
+                    <span className="mt-1 h-2 w-2 rounded-full bg-emerald-400" aria-hidden />
                     <span>{item}</span>
                   </li>
                 ))}
@@ -212,14 +212,14 @@ export default function HomePage() {
 
         <section className="mx-auto mt-16 max-w-6xl px-6">
           <div className="mb-6 flex flex-col gap-2 text-center md:text-left">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">What you get</p>
-            <h2 className="text-3xl font-semibold text-slate-900">Tools for authentic job applications</h2>
+            <p className="text-xs font-semibold uppercase tracking-wide text-white/80">What you get</p>
+            <h2 className="text-3xl font-semibold text-white">Tools for authentic job applications</h2>
           </div>
           <div className="grid gap-6 md:grid-cols-3">
             {features.map((feature) => (
-              <div key={feature} className="card h-full border-slate-200 p-5">
-                <h3 className="text-base font-semibold text-slate-900">{feature}</h3>
-                <p className="mt-2 text-sm text-slate-700">Covers cover letters, selection criteria, and agency workflows.</p>
+              <div key={feature} className="glass-card card h-full p-5">
+                <h3 className="text-base font-semibold text-white">{feature}</h3>
+                <p className="mt-2 text-sm text-slate-100/90">Covers cover letters, selection criteria, and agency workflows.</p>
               </div>
             ))}
           </div>
@@ -227,27 +227,27 @@ export default function HomePage() {
 
         <section className="mx-auto mt-16 max-w-6xl px-6">
           <div className="mb-6 flex flex-col gap-2 text-center md:text-left">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Social proof</p>
-            <h2 className="text-3xl font-semibold text-slate-900">Real voices, no fluff</h2>
+            <p className="text-xs font-semibold uppercase tracking-wide text-white/80">Social proof</p>
+            <h2 className="text-3xl font-semibold text-white">Real voices, no fluff</h2>
           </div>
           <div className="grid gap-6 md:grid-cols-3">
             {testimonials.map((t) => (
-              <div key={t.name} className="card h-full border-slate-200 p-6">
-                <p className="text-sm text-slate-700">“{t.quote}”</p>
-                <p className="mt-4 text-sm font-semibold text-slate-900">{t.name}</p>
-                <p className="text-xs text-slate-600">{t.role}</p>
+              <div key={t.name} className="glass-card card h-full p-6">
+                <p className="text-sm text-slate-100/90">“{t.quote}”</p>
+                <p className="mt-4 text-sm font-semibold text-white">{t.name}</p>
+                <p className="text-xs text-slate-100/80">{t.role}</p>
               </div>
             ))}
           </div>
         </section>
 
         <section className="mx-auto mt-16 max-w-6xl px-6" id="early-access">
-          <div className="card border-slate-200 p-6 md:p-8">
+          <div className="glass-card card p-6 md:p-8">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Early access</p>
-                <h2 className="text-2xl font-semibold text-slate-900">Be first when beta slots open</h2>
-                <p className="text-sm text-slate-700">We’ll email you when beta slots open. Great for individuals and agencies wanting authentic cover letters.</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-white/80">Early access</p>
+                <h2 className="text-2xl font-semibold text-white">Be first when beta slots open</h2>
+                <p className="text-sm text-slate-100/90">We’ll email you when beta slots open. Great for individuals and agencies wanting authentic cover letters.</p>
               </div>
               <div className="w-full md:w-[360px]">
                 <EmailCaptureForm />
@@ -258,38 +258,38 @@ export default function HomePage() {
 
         <section className="mx-auto mt-16 max-w-6xl px-6">
           <div className="mb-6 flex flex-col gap-2 text-center md:text-left">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">FAQ</p>
-            <h2 className="text-3xl font-semibold text-slate-900">Questions about authenticity and billing</h2>
+            <p className="text-xs font-semibold uppercase tracking-wide text-white/80">FAQ</p>
+            <h2 className="text-3xl font-semibold text-white">Questions about authenticity and billing</h2>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             {faqs.map((item) => (
-              <div key={item.q} className="card border-slate-200 p-5">
-                <h3 className="text-base font-semibold text-slate-900">{item.q}</h3>
-                <p className="mt-2 text-sm text-slate-700">{item.a}</p>
+              <div key={item.q} className="glass-card card p-5">
+                <h3 className="text-base font-semibold text-white">{item.q}</h3>
+                <p className="mt-2 text-sm text-slate-100/90">{item.a}</p>
               </div>
             ))}
           </div>
         </section>
 
         <section className="mx-auto mt-16 max-w-6xl px-6">
-          <div className="card flex flex-col gap-4 border-slate-200 p-8 text-center md:flex-row md:items-center md:justify-between md:text-left">
+          <div className="glass-card card flex flex-col gap-4 p-8 text-center md:flex-row md:items-center md:justify-between md:text-left">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Ready to start</p>
-              <h2 className="text-2xl font-semibold text-slate-900">Launch VitaePro and keep it human</h2>
-              <p className="text-sm text-slate-700">Create cover letters that sound like you, not a bot. Great for job seekers and agencies.</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-white/80">Ready to start</p>
+              <h2 className="text-2xl font-semibold text-white">Launch VitaePro and keep it human</h2>
+              <p className="text-sm text-slate-100/90">Create cover letters that sound like you, not a bot. Great for job seekers and agencies.</p>
             </div>
             <div className="flex flex-col gap-3 md:flex-row">
               <Link
-                href="https://www.vitaepro.com.au/app.html"
+                href="https://vitaepro.com.au/app.html"
                 rel="noreferrer"
                 target="_blank"
-                className="rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+                className="btn-primary-gradient rounded-full px-6 py-3 text-sm font-semibold shadow-md transition hover:opacity-95"
               >
                 Launch App
               </Link>
               <Link
                 href="/pricing"
-                className="rounded-full border border-slate-200 px-6 py-3 text-sm font-semibold text-slate-900 transition hover:border-slate-300 hover:bg-white"
+                className="btn-secondary-ghost rounded-full px-6 py-3 text-sm font-semibold backdrop-blur transition hover:border-white hover:bg-white/15"
               >
                 View pricing
               </Link>
@@ -298,20 +298,20 @@ export default function HomePage() {
         </section>
       </main>
 
-      <footer className="border-t border-slate-200 bg-white">
+      <footer className="border-t border-white/20 bg-white/10 backdrop-blur">
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-8 md:flex-row md:items-center md:justify-between">
-          <p className="text-sm font-semibold text-slate-900">VitaePro</p>
-          <div className="flex flex-wrap gap-4 text-sm text-slate-700">
-            <Link href="/privacy" className="transition hover:text-slate-900">
+          <p className="text-sm font-semibold text-white">VitaePro</p>
+          <div className="flex flex-wrap gap-4 text-sm text-slate-100/80">
+            <Link href="/privacy" className="transition hover:text-white">
               Privacy
             </Link>
-            <Link href="/terms" className="transition hover:text-slate-900">
+            <Link href="/terms" className="transition hover:text-white">
               Terms
             </Link>
-            <Link href="/refunds" className="transition hover:text-slate-900">
+            <Link href="/refunds" className="transition hover:text-white">
               Refunds
             </Link>
-            <Link href="/contact" className="transition hover:text-slate-900">
+            <Link href="/contact" className="transition hover:text-white">
               Contact
             </Link>
           </div>

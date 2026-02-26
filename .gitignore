@@ -12,6 +12,7 @@ data.db
 data.json
 
 # Logs
+logs/
 *.log
 
 # OS files

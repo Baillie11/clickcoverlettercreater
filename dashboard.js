@@ -847,7 +847,7 @@
 
   // Expose functions for integration with main app
   window.DashboardAPI = {
-    addApplication: function(company, role, status = 'Draft', paragraphs = [], notes = '') {
+    addApplication: function(company, role, status = 'Applied', paragraphs = [], notes = '') {
       const app = {
         id: generateId(),
         company: company,

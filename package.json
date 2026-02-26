@@ -15,7 +15,8 @@
     "express": "^4.19.2",
     "mysql2": "^3.11.5",
     "nodemailer": "^7.0.12",
-    "openai": "^6.7.0"
+    "openai": "^6.7.0",
+    "winston": "^3.19.0"
   },
   "devDependencies": {
     "browser-sync": "^3.0.4",

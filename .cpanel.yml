@@ -1,6 +1,9 @@
 deployment:
   tasks:
     - export DEPLOYPATH=/home/clickecom/vitaepro.com.au
+    - /bin/mkdir -p "$DEPLOYPATH/data"
+    - /bin/mkdir -p "$DEPLOYPATH/tmp"
+    - /bin/mkdir -p "$DEPLOYPATH/logs"
     - /bin/cp -R public/* $DEPLOYPATH
     - /bin/cp -R *.html $DEPLOYPATH || true
     - /bin/cp -R *.js $DEPLOYPATH || true

@@ -3986,10 +3986,18 @@
       });
 
       if (!response.ok) {
-      const err = await response.json();
+        // Handle 401 Unauthorized - session expired
+        if (response.status === 401) {
+          authToken = null;
+          localStorage.removeItem('authToken');
+          appState.authUser = null;
+          updateAuthUI();
+          throw new Error('Session expired - please sign in again');
+        }
+        const err = await response.json();
         if (err.quotaExceeded) {
           disableAiButtons();
-          throw new Error('âš ï¸ AI quota exceeded - features disabled');
+          throw new Error('AI quota exceeded - features disabled');
         }
         throw new Error(err.error || 'Failed to extract');
       }
@@ -4081,6 +4089,15 @@
       });
 
       if (!response.ok) {
+        // Handle 401 Unauthorized - session expired
+        if (response.status === 401) {
+          authToken = null;
+          localStorage.removeItem('authToken');
+          appState.authUser = null;
+          updateAuthUI();
+          hideAiGenerateModal();
+          throw new Error('Session expired - please sign in again');
+        }
         const err = await response.json();
         if (err.quotaExceeded) {
           disableAiButtons();
@@ -4434,6 +4451,7 @@
     
     // Job info changes - update salutation preview and refresh placeholders
     [DOM.contactPerson, DOM.companyName, DOM.roleTitle, DOM.businessAddress, DOM.refNumber].forEach(input => {
+      if (!input) return;
       input.addEventListener('input', () => {
         updateSalutationPreview();
         saveCurrentLetter(); // Save job info changes
