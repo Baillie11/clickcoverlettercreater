@@ -4049,6 +4049,96 @@
     if (modal) modal.classList.add('hidden');
   }
   
+  // AI Loading overlay helpers
+  const AI_LOADING_MESSAGES = [
+    'Polishing your paragraphs so they don\u2019t sound like a robot wrote them\u2026',
+    'Teaching the AI the difference between \u201Cresults-driven\u201D and actual results\u2026',
+    'Injecting personality\u2026 carefully. No buzzword overdoses here.',
+    'Turning experience into impact (without using \u201Cdynamic self-starter\u201D).',
+    'Filtering out corporate fluff\u2026 keeping the human voice.',
+    'Aligning your brilliance with their job description\u2026 strategically.',
+    'Rewriting this so a recruiter actually reads past line three.',
+    'Removing 73% of unnecessary adjectives\u2026 you\u2019re welcome.',
+    'Translating human experience into recruiter-friendly gold.',
+  ];
+
+  let _aiLoadingInterval = null;
+  let _aiProgressInterval = null;
+
+  function showAiLoadingOverlay() {
+    const overlay = document.getElementById('aiLoadingOverlay');
+    const msgEl = document.getElementById('aiLoadingMessage');
+    const barEl = document.getElementById('aiProgressBar');
+    const labelEl = document.getElementById('aiProgressLabel');
+    if (!overlay) return;
+
+    // Shuffle messages so order varies each time
+    const msgs = [...AI_LOADING_MESSAGES].sort(() => Math.random() - 0.5);
+    let idx = 0;
+
+    // Show first message immediately
+    msgEl.textContent = msgs[0];
+    barEl.style.width = '0%';
+    labelEl.textContent = 'Warming up the AI...';
+    overlay.classList.remove('hidden');
+
+    // Rotate messages every 3.5s
+    _aiLoadingInterval = setInterval(() => {
+      idx = (idx + 1) % msgs.length;
+      // Trigger re-animation by cloning
+      const parent = msgEl.parentNode;
+      const clone = msgEl.cloneNode(false);
+      clone.id = msgEl.id;
+      clone.className = msgEl.className;
+      clone.textContent = msgs[idx];
+      parent.replaceChild(clone, msgEl);
+    }, 3500);
+
+    // Simulated progress bar (eases towards 90% over ~30s, never reaches 100% until done)
+    let progress = 0;
+    const progressLabels = [
+      { at: 10, text: 'Reading the job ad...' },
+      { at: 25, text: 'Analysing key requirements...' },
+      { at: 40, text: 'Matching your experience...' },
+      { at: 55, text: 'Crafting tailored paragraphs...' },
+      { at: 70, text: 'Fine-tuning the tone...' },
+      { at: 85, text: 'Almost there...' },
+    ];
+
+    _aiProgressInterval = setInterval(() => {
+      const remaining = 90 - progress;
+      progress += remaining * 0.04; // Asymptotically approach 90%
+      barEl.style.width = `${Math.min(progress, 90)}%`;
+
+      // Update label at milestones
+      for (const lbl of progressLabels) {
+        if (progress >= lbl.at && labelEl.textContent !== lbl.text) {
+          labelEl.textContent = lbl.text;
+        }
+      }
+    }, 500);
+  }
+
+  function hideAiLoadingOverlay(success) {
+    clearInterval(_aiLoadingInterval);
+    clearInterval(_aiProgressInterval);
+    _aiLoadingInterval = null;
+    _aiProgressInterval = null;
+
+    const overlay = document.getElementById('aiLoadingOverlay');
+    const barEl = document.getElementById('aiProgressBar');
+    const labelEl = document.getElementById('aiProgressLabel');
+
+    if (success && barEl) {
+      // Fill to 100% before hiding
+      barEl.style.width = '100%';
+      if (labelEl) labelEl.textContent = 'Done!';
+      setTimeout(() => { if (overlay) overlay.classList.add('hidden'); }, 600);
+    } else {
+      if (overlay) overlay.classList.add('hidden');
+    }
+  }
+
   async function handleAiGenerate() {
     const jobAdText = DOM.jobAdText?.value?.trim();
     if (!jobAdText) {
@@ -4064,12 +4154,13 @@
     // Check AI availability
     const aiStatus = await checkAiStatus();
     if (aiStatus.quotaExceeded) {
-      showJobAdStatus('⚠️ AI features are temporarily unavailable (quota exceeded)', 'error');
+      showJobAdStatus('\u26A0\uFE0F AI features are temporarily unavailable (quota exceeded)', 'error');
       disableAiButtons();
       return;
     }
 
-    showJobAdStatus('🤖 Analyzing job ad and generating tailored responses...', 'loading');
+    // Show loading overlay with rotating messages + progress bar
+    showAiLoadingOverlay();
     
     try {
       // Get resume text if available
@@ -4095,13 +4186,14 @@
           localStorage.removeItem('authToken');
           appState.authUser = null;
           updateAuthUI();
+          hideAiLoadingOverlay(false);
           hideAiGenerateModal();
           throw new Error('Session expired - please sign in again');
         }
         const err = await response.json();
         if (err.quotaExceeded) {
           disableAiButtons();
-          throw new Error('⚠️ AI quota exceeded - features disabled');
+          throw new Error('\u26A0\uFE0F AI quota exceeded - features disabled');
         }
         throw new Error(err.error || 'Failed to generate');
       }
@@ -4138,17 +4230,20 @@
         }
       }
 
-      showJobAdStatus(`✅ Generated ${addedCount} tailored responses and added to AI library!`, 'success');
-      // Render the updated responses (AI responses are in memory only, don't sync from DB)
-      renderResponses();
+      // Complete the progress bar, then show success
+      hideAiLoadingOverlay(true);
+      setTimeout(() => {
+        showJobAdStatus(`\u2705 Generated ${addedCount} tailored responses and added to AI library!`, 'success');
+        renderResponses();
+      }, 700);
       
-      // Close modal after 2 seconds on success
+      // Close modal after 2.5 seconds on success
       setTimeout(() => {
         hideAiGenerateModal();
-      }, 2000);
+      }, 3000);
     } catch (error) {
       console.error('AI generation error:', error);
-      // Remove emoji from error message to avoid encoding issues
+      hideAiLoadingOverlay(false);
       const cleanMessage = error.message.replace(/[^\x00-\x7F]/g, '').trim();
       showJobAdStatus(`Failed to generate paragraphs: ${cleanMessage}`, 'error');
     }
