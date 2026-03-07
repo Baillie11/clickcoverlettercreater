@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Dashboard — VitaePro</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="design-system.css" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="page-header">
+    <div class="header-row">
+      <div>
+        <h1>VitaePro</h1>
+        <p class="header-subtitle" id="welcomeMsg">Welcome back</p>
+      </div>
+      <button class="header-back" id="logoutBtn" title="Sign Out" aria-label="Sign out">⏻</button>
+    </div>
+  </header>
+
+  <!-- Content -->
+  <div class="page-wrapper">
+    <div class="page-content">
+
+      <!-- Quick Stats -->
+      <div class="stats-row" id="statsRow">
+        <div class="stat-box">
+          <div class="stat-number" id="statTotal">-</div>
+          <div class="stat-label">Applications</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-number" id="statDrafts">-</div>
+          <div class="stat-label">Drafts</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-number" id="statInterviews">-</div>
+          <div class="stat-label">Interviews</div>
+        </div>
+      </div>
+
+      <!-- Action Cards -->
+      <div class="section-title">What would you like to do?</div>
+
+      <a href="m-job-details.html" class="action-card" data-track="start_new">
+        <div class="action-icon">📝</div>
+        <div>
+          <div class="action-label">Start New Application</div>
+          <div class="action-desc">Create a tailored cover letter</div>
+        </div>
+        <div class="action-arrow">›</div>
+      </a>
+
+      <a href="m-quick-apply.html" class="action-card" data-track="quick_apply">
+        <div class="action-icon">⚡</div>
+        <div>
+          <div class="action-label">Quick Apply</div>
+          <div class="action-desc">Generate a letter in under 2 minutes</div>
+        </div>
+        <div class="action-arrow">›</div>
+      </a>
+
+      <a href="m-library.html" class="action-card" data-track="library">
+        <div class="action-icon">📚</div>
+        <div>
+          <div class="action-label">Response Library</div>
+          <div class="action-desc">Manage your reusable responses</div>
+        </div>
+        <div class="action-arrow">›</div>
+      </a>
+
+      <a href="m-account.html" class="action-card" data-track="account">
+        <div class="action-icon">👤</div>
+        <div>
+          <div class="action-label">Account Settings</div>
+          <div class="action-desc">Profile, preferences, password</div>
+        </div>
+        <div class="action-arrow">›</div>
+      </a>
+
+      <!-- Recent Applications -->
+      <div class="section-title mt-4">Recent Applications</div>
+      <div id="recentApps">
+        <div class="empty-state">
+          <div class="empty-icon">📋</div>
+          <div class="empty-title">No applications yet</div>
+          <div class="empty-desc">Start your first application to track your progress here.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <a href="m-dashboard.html" class="active">
+      <span class="nav-icon">🏠</span>
+      <span>Home</span>
+    </a>
+    <a href="m-applications.html">
+      <span class="nav-icon">📄</span>
+      <span>Applications</span>
+    </a>
+    <a href="m-library.html">
+      <span class="nav-icon">📚</span>
+      <span>Library</span>
+    </a>
+    <a href="m-account.html">
+      <span class="nav-icon">👤</span>
+      <span>Account</span>
+    </a>
+  </nav>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="m-auth.js"></script>
+  <script src="m-api.js"></script>
+  <script src="m-app.js"></script>
+  <script>VPApp.initDashboard();</script>
+</body>
+</html>

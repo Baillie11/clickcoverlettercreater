@@ -162,7 +162,7 @@
       }
 
       .features {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr !important;
       }
 
       .login-button {
@@ -178,12 +178,18 @@
     <div class="tagline">Professional Cover Letter Creator</div>
     
     <div class="coming-soon">
-      <a href="app.html" class="login-button">🔐 Login / Sign Up</a>
+      <a href="m-login.html" class="login-button">🔐 Login / Sign Up</a>
       
-      <h2>Coming Soon</h2>
+      <h2>Now in Beta — Register Now</h2>
       <p>We're building something special to help you create professional, compelling cover letters in minutes.</p>
+      <p style="font-size: 1.1rem; font-weight: 600; margin-top: 0.5rem; color: #ffd700;">✨ Free while in Beta ✨</p>
       
-      <div class="features">
+      <div style="margin-top:1.5rem;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <a href="m-login.html" style="background:#fff;color:#667eea;padding:14px 28px;border-radius:50px;text-decoration:none;font-weight:600;font-size:1rem;box-shadow:0 4px 15px rgba(0,0,0,0.2);display:inline-block">Get Started Free →</a>
+        <a href="m-quick-apply.html" style="background:rgba(255,255,255,0.15);color:#fff;padding:14px 28px;border-radius:50px;text-decoration:none;font-weight:600;font-size:1rem;border:1px solid rgba(255,255,255,0.4);display:inline-block">⚡ Quick Apply</a>
+      </div>
+      
+    <div class="features" style="grid-template-columns:repeat(3,1fr)">
         <div class="feature">
           <div class="feature-icon">📝</div>
           <div class="feature-title">Smart, Human-Centred Writing</div>
@@ -196,15 +202,34 @@
         </div>
         <div class="feature">
           <div class="feature-icon">⚡</div>
-          <div class="feature-title">Create in Minutes</div>
-          <div class="feature-desc">Create tailored, professional cover letters in minutes — without generic templates or copy-paste fatigue. More confidence. Less stress.</div>
+          <div class="feature-title">Quick Apply in 2 Minutes</div>
+          <div class="feature-desc">Paste a job ad, get a complete cover letter instantly. Review, tweak, download PDF. Done in under 2 minutes.</div>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">🎯</div>
+          <div class="feature-title">ATS Match Score</div>
+          <div class="feature-desc">See how well your letter matches the job requirements. Get keyword suggestions to beat applicant tracking systems.</div>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">🎤</div>
+          <div class="feature-title">Voice Input</div>
+          <div class="feature-desc">Answer guided questions by speaking. Perfect for mobile — dictate your experience and let AI polish it.</div>
         </div>
       </div>
     </div>
 
     <div class="footer">
-      © 2025 VitaePro. All rights reserved.
+      © 2025 VitaePro. All rights reserved. · <a href="app.html" style="color:rgba(255,255,255,0.7);text-decoration:underline">Classic App</a>
     </div>
   </div>
+
+  <!-- GA4 Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-XXXXXXXXXX');
+  </script>
 </body>
 </html>

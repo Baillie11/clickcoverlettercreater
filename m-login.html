@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Sign In — VitaePro</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="design-system.css" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+</head>
+<body style="padding-bottom:0">
+
+  <!-- Auth Screen -->
+  <div class="auth-screen" id="authScreen">
+    <div class="auth-card">
+      <h1>VitaePro</h1>
+      <p class="auth-subtitle" id="authSubtitle">Sign in to continue</p>
+
+      <div class="auth-error" id="authError"></div>
+
+      <form id="authForm" autocomplete="on">
+        <div class="form-group">
+          <label class="form-label" for="authEmail">Email address</label>
+          <input class="form-input" type="email" id="authEmail" autocomplete="username" placeholder="you@example.com" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="authPassword">Password</label>
+          <input class="form-input" type="password" id="authPassword" autocomplete="current-password" placeholder="Min. 6 characters" required />
+        </div>
+        <div class="form-group hidden" id="confirmGroup">
+          <label class="form-label" for="authConfirm">Confirm password</label>
+          <input class="form-input" type="password" id="authConfirm" autocomplete="new-password" placeholder="Confirm password" />
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg btn-full" id="authSubmitBtn">Sign In</button>
+      </form>
+
+      <div class="auth-toggle" id="authToggle">
+        Don't have an account? <a href="#" id="toggleMode">Create one</a>
+      </div>
+
+      <div style="text-align:center;margin-top:12px">
+        <a href="#" id="forgotLink" style="font-size:0.875rem">Forgot password?</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Password Reset Screen -->
+  <div class="auth-screen hidden" id="resetScreen">
+    <div class="auth-card">
+      <h1>Reset Password</h1>
+
+      <!-- Step 1: request token -->
+      <div id="resetStep1">
+        <p class="auth-subtitle">Enter your email to receive a reset token</p>
+        <div class="auth-error" id="resetError1"></div>
+        <div class="form-group">
+          <label class="form-label" for="resetEmail">Email address</label>
+          <input class="form-input" type="email" id="resetEmail" placeholder="you@example.com" required />
+        </div>
+        <button class="btn btn-primary btn-lg btn-full" id="resetRequestBtn">Send Reset Token</button>
+        <div style="text-align:center;margin-top:16px">
+          <a href="#" id="resetBackToLogin">Back to Sign In</a>
+        </div>
+      </div>
+
+      <!-- Step 2: enter token + new password -->
+      <div class="hidden" id="resetStep2">
+        <p class="auth-subtitle">Check your email and enter the token below</p>
+        <div class="auth-error" id="resetError2"></div>
+        <div class="form-group">
+          <label class="form-label" for="resetToken">Reset Token</label>
+          <input class="form-input" type="text" id="resetToken" placeholder="Paste token from email" autocomplete="off" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="resetNewPw">New Password</label>
+          <input class="form-input" type="password" id="resetNewPw" autocomplete="new-password" placeholder="Min. 6 characters" required />
+        </div>
+        <button class="btn btn-primary btn-lg btn-full" id="resetConfirmBtn">Reset Password</button>
+        <div style="text-align:center;margin-top:16px">
+          <a href="#" id="resetBack2">Back</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="m-auth.js"></script>
+  <script>
+  (function() {
+    'use strict';
+
+    // If already logged in, redirect
+    if (VPAuth.isLoggedIn()) {
+      const params = new URLSearchParams(location.search);
+      location.href = params.get('redirect') || 'm-dashboard.html';
+      return;
+    }
+
+    let isRegister = false;
+    const $ = id => document.getElementById(id);
+
+    // Toggle login / register
+    $('toggleMode').addEventListener('click', e => {
+      e.preventDefault();
+      isRegister = !isRegister;
+      $('authSubtitle').textContent = isRegister ? 'Create your account' : 'Sign in to continue';
+      $('authSubmitBtn').textContent = isRegister ? 'Create Account' : 'Sign In';
+      $('confirmGroup').classList.toggle('hidden', !isRegister);
+      $('authToggle').innerHTML = isRegister
+        ? 'Already have an account? <a href="#" id="toggleMode">Sign in</a>'
+        : 'Don\'t have an account? <a href="#" id="toggleMode">Create one</a>';
+      $('toggleMode').addEventListener('click', arguments.callee);
+      $('authError').classList.remove('show');
+    });
+
+    // Submit auth form
+    $('authForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const email = $('authEmail').value.trim();
+      const pw = $('authPassword').value;
+      $('authError').classList.remove('show');
+
+      if (!email || !pw) {
+        showError('authError', 'Please fill in all fields');
+        return;
+      }
+
+      if (isRegister) {
+        if (pw !== $('authConfirm').value) {
+          showError('authError', 'Passwords do not match');
+          return;
+        }
+        if (pw.length < 6) {
+          showError('authError', 'Password must be at least 6 characters');
+          return;
+        }
+      }
+
+      $('authSubmitBtn').disabled = true;
+      $('authSubmitBtn').textContent = 'Please wait…';
+
+      try {
+        if (isRegister) {
+          await VPAuth.register(email, pw);
+        } else {
+          await VPAuth.login(email, pw);
+        }
+        const params = new URLSearchParams(location.search);
+        location.href = params.get('redirect') || 'm-dashboard.html';
+      } catch (err) {
+        showError('authError', err.message);
+        $('authSubmitBtn').disabled = false;
+        $('authSubmitBtn').textContent = isRegister ? 'Create Account' : 'Sign In';
+      }
+    });
+
+    // Forgot password
+    $('forgotLink').addEventListener('click', e => {
+      e.preventDefault();
+      $('authScreen').classList.add('hidden');
+      $('resetScreen').classList.remove('hidden');
+      $('resetEmail').value = $('authEmail').value || '';
+    });
+
+    $('resetBackToLogin').addEventListener('click', e => {
+      e.preventDefault();
+      $('resetScreen').classList.add('hidden');
+      $('authScreen').classList.remove('hidden');
+    });
+
+    // Request reset
+    $('resetRequestBtn').addEventListener('click', async () => {
+      const email = $('resetEmail').value.trim();
+      if (!email) { showError('resetError1', 'Enter your email'); return; }
+      $('resetRequestBtn').disabled = true;
+      $('resetRequestBtn').textContent = 'Sending…';
+      try {
+        await VPAuth.requestPasswordReset(email);
+        $('resetStep1').classList.add('hidden');
+        $('resetStep2').classList.remove('hidden');
+      } catch (err) {
+        showError('resetError1', err.message);
+      }
+      $('resetRequestBtn').disabled = false;
+      $('resetRequestBtn').textContent = 'Send Reset Token';
+    });
+
+    $('resetBack2').addEventListener('click', e => {
+      e.preventDefault();
+      $('resetStep2').classList.add('hidden');
+      $('resetStep1').classList.remove('hidden');
+    });
+
+    // Confirm reset
+    $('resetConfirmBtn').addEventListener('click', async () => {
+      const token = $('resetToken').value.trim();
+      const pw = $('resetNewPw').value;
+      if (!token || !pw) { showError('resetError2', 'Fill in all fields'); return; }
+      if (pw.length < 6) { showError('resetError2', 'Password must be at least 6 characters'); return; }
+      $('resetConfirmBtn').disabled = true;
+      try {
+        await VPAuth.confirmPasswordReset(token, pw);
+        alert('Password reset successful! Please sign in.');
+        $('resetScreen').classList.add('hidden');
+        $('authScreen').classList.remove('hidden');
+      } catch (err) {
+        showError('resetError2', err.message);
+      }
+      $('resetConfirmBtn').disabled = false;
+    });
+
+    function showError(id, msg) {
+      const el = $(id);
+      el.textContent = msg;
+      el.classList.add('show');
+    }
+  })();
+  </script>
+</body>
+</html>

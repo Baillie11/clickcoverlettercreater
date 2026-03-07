@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Edit Letter — VitaePro</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="design-system.css" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+</head>
+<body class="has-sticky-bottom">
+
+  <header class="page-header">
+    <div class="header-row">
+      <button class="header-back" onclick="history.back()" aria-label="Back">←</button>
+      <h1>Edit Letter</h1>
+      <div style="width:44px"></div>
+    </div>
+    <div class="step-progress">
+      <div class="step-dot completed">✓</div>
+      <div class="step-line completed"></div>
+      <div class="step-dot completed">✓</div>
+      <div class="step-line completed"></div>
+      <div class="step-dot completed">✓</div>
+      <div class="step-line completed"></div>
+      <div class="step-dot completed">✓</div>
+      <div class="step-line completed"></div>
+      <div class="step-dot active">5</div>
+      <div class="step-line"></div>
+      <div class="step-dot">6</div>
+    </div>
+  </header>
+
+  <div class="page-wrapper">
+    <div class="page-content">
+
+      <p class="section-subtitle">Edit each section. Drag ⠿ to reorder. Tap to expand/collapse.</p>
+
+      <div id="editorSections">
+        <!-- Populated by JS -->
+      </div>
+
+      <button class="btn btn-secondary btn-full mt-3" id="addSectionBtn">+ Add Custom Section</button>
+
+    </div>
+  </div>
+
+  <div class="sticky-bottom">
+    <div class="sticky-bottom-row">
+      <button class="btn btn-secondary btn-lg" id="saveAppBtn">💾 Save</button>
+      <button class="btn btn-primary btn-lg" id="previewBtn">Preview Letter →</button>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="m-dashboard.html"><span class="nav-icon">🏠</span><span>Home</span></a>
+    <a href="m-applications.html"><span class="nav-icon">📄</span><span>Applications</span></a>
+    <a href="m-library.html"><span class="nav-icon">📚</span><span>Library</span></a>
+    <a href="m-account.html"><span class="nav-icon">👤</span><span>Account</span></a>
+  </nav>
+
+  <!-- Add Section Modal -->
+  <div class="modal-overlay" id="addSectionModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <h3 class="modal-title">Add Section</h3>
+      <div class="form-group">
+        <label class="form-label" for="newSectionLabel">Section Label</label>
+        <input class="form-input" type="text" id="newSectionLabel" placeholder="e.g. Achievements" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="newSectionText">Content</label>
+        <textarea class="form-textarea" id="newSectionText" placeholder="Write or paste your content…"></textarea>
+      </div>
+      <div class="flex gap-3">
+        <button class="btn btn-ghost btn-lg" style="flex:1" id="cancelAddSection">Cancel</button>
+        <button class="btn btn-primary btn-lg" style="flex:1" id="confirmAddSection">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="m-auth.js"></script>
+  <script src="m-api.js"></script>
+  <script src="m-app.js"></script>
+  <script>VPApp.initEditor();</script>
+</body>
+</html>

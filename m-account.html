@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Account — VitaePro</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="design-system.css" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+</head>
+<body>
+
+  <header class="page-header">
+    <div class="header-row">
+      <button class="header-back" onclick="location.href='m-dashboard.html'" aria-label="Back">←</button>
+      <h1>Account</h1>
+      <div style="width:44px"></div>
+    </div>
+  </header>
+
+  <div class="page-wrapper">
+    <div class="page-content">
+
+      <!-- Email (read-only) -->
+      <div class="card mb-3">
+        <div class="card-header">
+          <div class="card-title">Email</div>
+        </div>
+        <div class="card-body">
+          <span id="acctEmail" class="text-muted">—</span>
+        </div>
+      </div>
+
+      <!-- Profile details -->
+      <div class="section-title">Profile Details</div>
+      <p class="section-subtitle">Used to personalise your cover letters.</p>
+
+      <div class="form-group">
+        <label class="form-label" for="acctFirstName">First Name</label>
+        <input class="form-input" id="acctFirstName" placeholder="Jane" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="acctLastName">Last Name</label>
+        <input class="form-input" id="acctLastName" placeholder="Smith" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="acctPhone">Phone</label>
+        <input class="form-input" id="acctPhone" type="tel" placeholder="0400 000 000" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="acctAddress1">Address Line 1</label>
+        <input class="form-input" id="acctAddress1" placeholder="123 Main St" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="acctAddress2">Address Line 2</label>
+        <input class="form-input" id="acctAddress2" placeholder="Suburb, State 3000" />
+      </div>
+
+      <button class="btn btn-primary btn-lg btn-full" id="saveProfileBtn">Save Profile</button>
+
+      <hr style="margin:32px 0;border-color:var(--border-color)" />
+
+      <!-- Danger zone -->
+      <button class="btn btn-ghost btn-lg btn-full" id="logoutBtn" style="color:var(--color-danger)">Log Out</button>
+
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="m-dashboard.html"><span class="nav-icon">🏠</span><span>Home</span></a>
+    <a href="m-applications.html"><span class="nav-icon">📄</span><span>Applications</span></a>
+    <a href="m-library.html"><span class="nav-icon">📚</span><span>Library</span></a>
+    <a href="m-account.html" class="active"><span class="nav-icon">👤</span><span>Account</span></a>
+  </nav>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="m-auth.js"></script>
+  <script src="m-api.js"></script>
+  <script src="m-app.js"></script>
+  <script>VPApp.initAccount();</script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Quick Apply — VitaePro</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="design-system.css" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+</head>
+<body class="has-sticky-bottom">
+
+  <header class="page-header">
+    <div class="header-row">
+      <button class="header-back" onclick="location.href='m-dashboard.html'" aria-label="Back">←</button>
+      <h1>Quick Apply ⚡</h1>
+      <div style="width:44px"></div>
+    </div>
+  </header>
+
+  <div class="page-wrapper">
+    <div class="page-content">
+
+      <!-- Step 1: Paste Ad -->
+      <div id="quickStep1">
+        <div class="section-title">Paste Job Ad</div>
+        <p class="section-subtitle">Paste the job advertisement below and we'll generate a complete cover letter instantly.</p>
+
+        <div class="form-group">
+          <textarea class="form-textarea large" id="quickJobAd" placeholder="Paste the full job ad here…"></textarea>
+        </div>
+
+        <button class="btn btn-primary btn-lg btn-full" id="quickGenerateBtn">⚡ Generate Cover Letter</button>
+      </div>
+
+      <!-- Loading -->
+      <div id="quickLoading" class="hidden" style="text-align:center;padding:60px 0">
+        <div class="spinner" style="margin:0 auto 16px"></div>
+        <div class="loading-text">Generating your cover letter…</div>
+        <p class="text-sm text-muted mt-2">This usually takes 10-15 seconds</p>
+      </div>
+
+      <!-- Step 2: Review Draft -->
+      <div id="quickStep2" class="hidden">
+        <div class="section-title">Review Your Letter</div>
+        <p class="section-subtitle">Edit any section below, then preview and download.</p>
+
+        <div id="quickDraft">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Sticky bottom for step 2 -->
+  <div class="sticky-bottom hidden" id="quickStickyBottom">
+    <button class="btn btn-primary btn-lg btn-full" id="quickPreviewBtn">Preview & Download →</button>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="m-dashboard.html"><span class="nav-icon">🏠</span><span>Home</span></a>
+    <a href="m-applications.html"><span class="nav-icon">📄</span><span>Applications</span></a>
+    <a href="m-library.html"><span class="nav-icon">📚</span><span>Library</span></a>
+    <a href="m-account.html"><span class="nav-icon">👤</span><span>Account</span></a>
+  </nav>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="m-auth.js"></script>
+  <script src="m-api.js"></script>
+  <script src="m-app.js"></script>
+  <script>
+    VPApp.initQuickApply();
+    // Show sticky when step 2 is visible
+    const observer = new MutationObserver(() => {
+      const s2 = document.getElementById('quickStep2');
+      const sb = document.getElementById('quickStickyBottom');
+      if (s2 && !s2.classList.contains('hidden')) {
+        sb.classList.remove('hidden');
+      }
+    });
+    observer.observe(document.getElementById('quickStep2'), { attributes: true });
+  </script>
+</body>
+</html>

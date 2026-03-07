@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Job Details — VitaePro</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="design-system.css" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+</head>
+<body class="has-sticky-bottom">
+
+  <header class="page-header">
+    <div class="header-row">
+      <button class="header-back" onclick="history.back()" aria-label="Back">←</button>
+      <h1>Job Details</h1>
+      <div style="width:44px"></div>
+    </div>
+    <!-- Step Progress -->
+    <div class="step-progress">
+      <div class="step-dot completed">✓</div>
+      <div class="step-line completed"></div>
+      <div class="step-dot active">2</div>
+      <div class="step-line"></div>
+      <div class="step-dot">3</div>
+      <div class="step-line"></div>
+      <div class="step-dot">4</div>
+      <div class="step-line"></div>
+      <div class="step-dot">5</div>
+      <div class="step-line"></div>
+      <div class="step-dot">6</div>
+    </div>
+  </header>
+
+  <div class="page-wrapper">
+    <div class="page-content">
+
+      <div class="form-group">
+        <label class="form-label" for="jobTitle">Job Title *</label>
+        <input class="form-input" type="text" id="jobTitle" placeholder="e.g. Customer Service Officer" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="companyName">Company Name *</label>
+        <input class="form-input" type="text" id="companyName" placeholder="e.g. Telstra" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="contactPerson">Contact Person</label>
+        <input class="form-input" type="text" id="contactPerson" placeholder="e.g. Jane Smith (optional)" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="jobAdText">Paste Job Advertisement *</label>
+        <textarea class="form-textarea large" id="jobAdText" placeholder="Paste the full job ad here…"></textarea>
+        <p class="form-hint">Paste the complete job ad for the best AI suggestions.</p>
+      </div>
+
+      <button class="btn btn-secondary btn-full mb-4" id="extractBtn">
+        ✨ Extract Job Info from Ad
+      </button>
+
+    </div>
+  </div>
+
+  <!-- Sticky Continue -->
+  <div class="sticky-bottom">
+    <button class="btn btn-primary btn-lg btn-full" id="continueBtn">Continue →</button>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="m-dashboard.html"><span class="nav-icon">🏠</span><span>Home</span></a>
+    <a href="m-applications.html"><span class="nav-icon">📄</span><span>Applications</span></a>
+    <a href="m-library.html"><span class="nav-icon">📚</span><span>Library</span></a>
+    <a href="m-account.html"><span class="nav-icon">👤</span><span>Account</span></a>
+  </nav>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="m-auth.js"></script>
+  <script src="m-api.js"></script>
+  <script src="m-app.js"></script>
+  <script>VPApp.initJobDetails();</script>
+</body>
+</html>

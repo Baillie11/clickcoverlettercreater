@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>AI Suggestions — VitaePro</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="design-system.css" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+</head>
+<body class="has-sticky-bottom">
+
+  <header class="page-header">
+    <div class="header-row">
+      <button class="header-back" onclick="history.back()" aria-label="Back">←</button>
+      <h1>AI Suggestions</h1>
+      <div style="width:44px"></div>
+    </div>
+    <div class="step-progress">
+      <div class="step-dot completed">✓</div>
+      <div class="step-line completed"></div>
+      <div class="step-dot completed">✓</div>
+      <div class="step-line completed"></div>
+      <div class="step-dot completed">✓</div>
+      <div class="step-line completed"></div>
+      <div class="step-dot active">4</div>
+      <div class="step-line"></div>
+      <div class="step-dot">5</div>
+      <div class="step-line"></div>
+      <div class="step-dot">6</div>
+    </div>
+  </header>
+
+  <div class="page-wrapper">
+    <div class="page-content">
+
+      <!-- ATS Score -->
+      <div class="ats-score-card" id="atsCard" style="display:none">
+        <div class="ats-score-ring" id="atsRing">
+          <div>
+            <div class="score-value" id="atsValue">--</div>
+            <div class="score-label">ATS Match</div>
+          </div>
+        </div>
+        <div class="ats-breakdown" id="atsBreakdown"></div>
+      </div>
+
+      <p class="section-subtitle">Select the paragraphs you'd like to include in your letter. Tap to expand.</p>
+
+      <div id="suggestionsContainer">
+        <!-- Populated by JS -->
+      </div>
+
+    </div>
+  </div>
+
+  <div class="sticky-bottom">
+    <button class="btn btn-primary btn-lg btn-full" id="buildLetterBtn">Build Letter with Selected →</button>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="m-dashboard.html"><span class="nav-icon">🏠</span><span>Home</span></a>
+    <a href="m-applications.html"><span class="nav-icon">📄</span><span>Applications</span></a>
+    <a href="m-library.html"><span class="nav-icon">📚</span><span>Library</span></a>
+    <a href="m-account.html"><span class="nav-icon">👤</span><span>Account</span></a>
+  </nav>
+
+  <!-- Loading overlay -->
+  <div class="loading-overlay hidden" id="loadingOverlay">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loadingText">Generating suggestions…</div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="m-auth.js"></script>
+  <script src="m-api.js"></script>
+  <script src="m-app.js"></script>
+  <script>VPApp.initSuggestions();</script>
+</body>
+</html>

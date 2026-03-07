@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Recruiter Dashboard — VitaePro</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="design-system.css" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <style>
+    .candidate-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      background: var(--surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      margin-bottom: 12px;
+      cursor: pointer;
+    }
+    .candidate-card:active { background: var(--surface-hover); }
+    .candidate-avatar {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: var(--color-primary);
+      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 600; font-size: 18px;
+      flex-shrink: 0;
+    }
+    .candidate-info { flex: 1; min-width: 0; }
+    .candidate-name { font-weight: 600; color: var(--text-primary); }
+    .candidate-role { font-size: 13px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .candidate-status { flex-shrink: 0; }
+
+    /* Review panel */
+    .review-panel {
+      display: none;
+      position: fixed; inset: 0;
+      background: var(--surface);
+      z-index: 200;
+      overflow-y: auto;
+      padding-bottom: 120px;
+    }
+    .review-panel.open { display: block; }
+    .review-header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 16px; border-bottom: 1px solid var(--border-color);
+      position: sticky; top: 0; background: var(--surface); z-index: 1;
+    }
+    .review-body { padding: 16px; }
+    .review-section { margin-bottom: 24px; }
+    .review-section-title { font-weight: 600; margin-bottom: 8px; color: var(--text-primary); }
+    .review-letter { background: var(--surface-alt, #f9fafb); padding: 16px; border-radius: var(--radius-lg); border: 1px solid var(--border-color); white-space: pre-wrap; line-height: 1.6; }
+    .review-actions {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      padding: 16px; background: var(--surface);
+      border-top: 1px solid var(--border-color);
+      display: flex; gap: 12px;
+    }
+    .review-actions .btn { flex: 1; }
+  </style>
+</head>
+<body>
+
+  <header class="page-header">
+    <div class="header-row">
+      <button class="header-back" onclick="location.href='m-dashboard.html'" aria-label="Back">←</button>
+      <h1>Recruiter</h1>
+      <div style="width:44px"></div>
+    </div>
+  </header>
+
+  <div class="page-wrapper">
+    <div class="page-content">
+
+      <!-- Tabs -->
+      <div class="tab-bar" style="margin-bottom:16px">
+        <button class="tab active" data-view="candidates">Candidates</button>
+        <button class="tab" data-view="library">Shared Library</button>
+      </div>
+
+      <!-- Candidates View -->
+      <div id="candidatesView">
+        <div id="recruiterContent">
+          <div style="text-align:center;padding:40px 0">
+            <div class="spinner" style="margin:0 auto"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Shared Library View -->
+      <div id="libraryView" class="hidden">
+        <div id="agencyLibraryList">
+          <div style="text-align:center;padding:40px 0">
+            <div class="spinner" style="margin:0 auto"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Review slide-over panel -->
+  <div class="review-panel" id="reviewPanel">
+    <div class="review-header">
+      <button class="header-back" id="closeReview" aria-label="Close">←</button>
+      <h2 style="font-size:18px;margin:0" id="reviewTitle">Review Application</h2>
+    </div>
+    <div class="review-body">
+      <div class="review-section">
+        <div class="review-section-title">Applicant</div>
+        <div id="reviewApplicant" class="text-muted">—</div>
+      </div>
+      <div class="review-section">
+        <div class="review-section-title">Position</div>
+        <div id="reviewPosition" class="text-muted">—</div>
+      </div>
+      <div class="review-section">
+        <div class="review-section-title">Cover Letter</div>
+        <div id="reviewLetter" class="review-letter">—</div>
+      </div>
+      <div class="review-section">
+        <div class="review-section-title">Comments</div>
+        <textarea class="form-textarea" id="reviewComment" placeholder="Add your feedback…"></textarea>
+      </div>
+    </div>
+    <div class="review-actions">
+      <button class="btn btn-ghost btn-lg" id="reviewRejectBtn" style="color:var(--color-danger)">Reject</button>
+      <button class="btn btn-primary btn-lg" id="reviewApproveBtn">Approve ✓</button>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="m-dashboard.html"><span class="nav-icon">🏠</span><span>Home</span></a>
+    <a href="m-applications.html"><span class="nav-icon">📄</span><span>Applications</span></a>
+    <a href="m-library.html"><span class="nav-icon">📚</span><span>Library</span></a>
+    <a href="m-account.html"><span class="nav-icon">👤</span><span>Account</span></a>
+  </nav>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="m-auth.js"></script>
+  <script src="m-api.js"></script>
+  <script src="m-app.js"></script>
+  <script>
+    VPApp.initRecruiter();
+
+    // View switching
+    document.querySelectorAll('.tab[data-view]').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab[data-view]').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        const view = tab.dataset.view;
+        document.getElementById('candidatesView').classList.toggle('hidden', view !== 'candidates');
+        document.getElementById('libraryView').classList.toggle('hidden', view !== 'library');
+        if (view === 'library') loadAgencyLibrary();
+      });
+    });
+
+    // Review panel
+    document.getElementById('closeReview').addEventListener('click', () => {
+      document.getElementById('reviewPanel').classList.remove('open');
+    });
+
+    // Candidate click → open review
+    document.getElementById('recruiterContent').addEventListener('click', async (e) => {
+      const card = e.target.closest('.candidate-card');
+      if (!card) return;
+      const id = card.dataset.id;
+      try {
+        const app = await VPApi.getRecruiterApplication(id);
+        document.getElementById('reviewApplicant').textContent = app.username || 'Unknown';
+        document.getElementById('reviewPosition').textContent = (app.role || '') + (app.company ? ' at ' + app.company : '');
+        document.getElementById('reviewLetter').textContent = app.paragraphs || '(No letter content)';
+        document.getElementById('reviewComment').value = '';
+        document.getElementById('reviewPanel').classList.add('open');
+        document.getElementById('reviewPanel').dataset.appId = id;
+      } catch (err) { VPApp.toast(err.message, 'error'); }
+    });
+
+    // Approve / Reject
+    ['reviewApproveBtn', 'reviewRejectBtn'].forEach(btnId => {
+      document.getElementById(btnId).addEventListener('click', async () => {
+        const appId = document.getElementById('reviewPanel').dataset.appId;
+        const status = btnId.includes('Approve') ? 'approved' : 'rejected';
+        const comment = document.getElementById('reviewComment').value.trim();
+        try {
+          await VPApi.submitReview({ applicationId: appId, status, comment });
+          VPApp.toast(status === 'approved' ? 'Approved!' : 'Rejected', status === 'approved' ? 'success' : '');
+          document.getElementById('reviewPanel').classList.remove('open');
+          VPApp.initRecruiter(); // reload
+        } catch (err) { VPApp.toast(err.message, 'error'); }
+      });
+    });
+
+    // Shared library loader
+    async function loadAgencyLibrary() {
+      try {
+        const items = await VPApi.getAgencyLibrary();
+        const list = document.getElementById('agencyLibraryList');
+        if (!items || items.length === 0) {
+          list.innerHTML = '<div class="empty-state"><div class="empty-icon">📚</div><div class="empty-title">No shared responses yet</div></div>';
+          return;
+        }
+        list.innerHTML = items.map(r => `
+          <div class="response-item">
+            <div class="response-category">${r.category || 'General'}</div>
+            <div class="response-text">${r.text}</div>
+          </div>
+        `).join('');
+      } catch (e) {
+        document.getElementById('agencyLibraryList').innerHTML = '<div class="empty-state"><div class="empty-icon">🔒</div><div class="empty-title">Access Denied</div></div>';
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Applications — VitaePro</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="design-system.css" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+</head>
+<body>
+
+  <header class="page-header">
+    <div class="header-row">
+      <button class="header-back" onclick="location.href='m-dashboard.html'" aria-label="Back">←</button>
+      <h1>My Applications</h1>
+      <div style="width:44px"></div>
+    </div>
+  </header>
+
+  <div class="page-wrapper">
+    <div class="page-content">
+
+      <!-- Filter tabs -->
+      <div class="tab-bar" style="margin-bottom:16px">
+        <button class="tab active" data-filter="all">All</button>
+        <button class="tab" data-filter="draft">Drafts</button>
+        <button class="tab" data-filter="applied">Applied</button>
+        <button class="tab" data-filter="interview">Interview</button>
+      </div>
+
+      <div id="appsList">
+        <div style="text-align:center;padding:40px 0">
+          <div class="spinner" style="margin:0 auto"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="m-dashboard.html"><span class="nav-icon">🏠</span><span>Home</span></a>
+    <a href="m-applications.html" class="active"><span class="nav-icon">📄</span><span>Applications</span></a>
+    <a href="m-library.html"><span class="nav-icon">📚</span><span>Library</span></a>
+    <a href="m-account.html"><span class="nav-icon">👤</span><span>Account</span></a>
+  </nav>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="m-auth.js"></script>
+  <script src="m-api.js"></script>
+  <script src="m-app.js"></script>
+  <script>
+    VPApp.initApplications();
+
+    // Filter tabs
+    document.querySelectorAll('.tab[data-filter]').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab[data-filter]').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        const filter = tab.dataset.filter;
+        document.querySelectorAll('#appsList .card').forEach(card => {
+          if (filter === 'all') { card.style.display = ''; return; }
+          const status = (card.querySelector('.badge')?.textContent || '').toLowerCase();
+          card.style.display = status.includes(filter) ? '' : 'none';
+        });
+      });
+    });
+  </script>
+</body>
+</html>

@@ -164,6 +164,48 @@ function createSQLiteTables() {
     FOREIGN KEY(userId) REFERENCES users(id) ON DELETE CASCADE
   )`).run();
 
+  // Agencies
+  db.prepare(`CREATE TABLE IF NOT EXISTS agencies (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    createdAt TEXT NOT NULL
+  )`).run();
+
+  // Agency Members
+  db.prepare(`CREATE TABLE IF NOT EXISTS agency_members (
+    id TEXT PRIMARY KEY,
+    agencyId TEXT NOT NULL,
+    userId TEXT NOT NULL,
+    role TEXT DEFAULT 'member',
+    createdAt TEXT NOT NULL,
+    FOREIGN KEY(agencyId) REFERENCES agencies(id),
+    FOREIGN KEY(userId) REFERENCES users(id)
+  )`).run();
+
+  // Agency Responses (shared library)
+  db.prepare(`CREATE TABLE IF NOT EXISTS agency_responses (
+    id TEXT PRIMARY KEY,
+    agencyId TEXT NOT NULL,
+    text TEXT NOT NULL,
+    category TEXT DEFAULT 'General',
+    createdBy TEXT,
+    createdAt TEXT NOT NULL,
+    FOREIGN KEY(agencyId) REFERENCES agencies(id),
+    FOREIGN KEY(createdBy) REFERENCES users(id)
+  )`).run();
+
+  // Letter Reviews
+  db.prepare(`CREATE TABLE IF NOT EXISTS letter_reviews (
+    id TEXT PRIMARY KEY,
+    applicationId TEXT NOT NULL,
+    reviewerId TEXT NOT NULL,
+    status TEXT NOT NULL,
+    comment TEXT,
+    createdAt TEXT NOT NULL,
+    FOREIGN KEY(applicationId) REFERENCES applications(id),
+    FOREIGN KEY(reviewerId) REFERENCES users(id)
+  )`).run();
+
   // Indexes
   try {
     db.prepare('CREATE INDEX IF NOT EXISTS idx_applications_userId ON applications(userId)').run();
@@ -171,6 +213,10 @@ function createSQLiteTables() {
     db.prepare('CREATE INDEX IF NOT EXISTS idx_applications_status ON applications(status)').run();
     db.prepare('CREATE INDEX IF NOT EXISTS idx_reset_tokens_userId ON password_reset_tokens(userId)').run();
     db.prepare('CREATE INDEX IF NOT EXISTS idx_reset_tokens_expiresAt ON password_reset_tokens(expiresAt)').run();
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_agency_members_userId ON agency_members(userId)').run();
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_agency_members_agencyId ON agency_members(agencyId)').run();
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_agency_responses_agencyId ON agency_responses(agencyId)').run();
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_letter_reviews_applicationId ON letter_reviews(applicationId)').run();
   } catch (e) {
     console.warn('Index creation warning:', e.message);
   }
@@ -246,6 +292,53 @@ async function createMySQLTables(pool) {
       INDEX idx_userId (userId),
       INDEX idx_expiresAt (expiresAt),
       FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+
+    // Agencies
+    await connection.query(`CREATE TABLE IF NOT EXISTS agencies (
+      id VARCHAR(50) PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      createdAt DATETIME NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+
+    // Agency Members
+    await connection.query(`CREATE TABLE IF NOT EXISTS agency_members (
+      id VARCHAR(50) PRIMARY KEY,
+      agencyId VARCHAR(50) NOT NULL,
+      userId VARCHAR(50) NOT NULL,
+      role VARCHAR(50) DEFAULT 'member',
+      createdAt DATETIME NOT NULL,
+      INDEX idx_agencyId (agencyId),
+      INDEX idx_userId (userId),
+      FOREIGN KEY (agencyId) REFERENCES agencies(id) ON DELETE CASCADE,
+      FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+
+    // Agency Responses (shared library)
+    await connection.query(`CREATE TABLE IF NOT EXISTS agency_responses (
+      id VARCHAR(50) PRIMARY KEY,
+      agencyId VARCHAR(50) NOT NULL,
+      text TEXT NOT NULL,
+      category VARCHAR(50) DEFAULT 'General',
+      createdBy VARCHAR(50),
+      createdAt DATETIME NOT NULL,
+      INDEX idx_agencyId (agencyId),
+      FOREIGN KEY (agencyId) REFERENCES agencies(id) ON DELETE CASCADE,
+      FOREIGN KEY (createdBy) REFERENCES users(id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+
+    // Letter Reviews
+    await connection.query(`CREATE TABLE IF NOT EXISTS letter_reviews (
+      id VARCHAR(50) PRIMARY KEY,
+      applicationId VARCHAR(50) NOT NULL,
+      reviewerId VARCHAR(50) NOT NULL,
+      status VARCHAR(50) NOT NULL,
+      comment TEXT,
+      createdAt DATETIME NOT NULL,
+      INDEX idx_applicationId (applicationId),
+      INDEX idx_reviewerId (reviewerId),
+      FOREIGN KEY (applicationId) REFERENCES applications(id) ON DELETE CASCADE,
+      FOREIGN KEY (reviewerId) REFERENCES users(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
 
     console.log('✅ MySQL tables created/verified');
@@ -1546,6 +1639,330 @@ app.post('/api/generate-paragraphs', async (req, res) => {
     }
     
     res.status(500).json({ error: 'Failed to generate paragraphs' });
+  }
+});
+
+// ─── Generate cover letter from guided answers ───
+app.post('/api/generate-from-answers', async (req, res) => {
+  const auth = await getUserFromAuth(req);
+  if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+
+  if (aiQuotaExceeded) {
+    return res.status(503).json({ error: 'AI features temporarily unavailable', quotaExceeded: true });
+  }
+
+  const { jobAdText, answers, profile } = req.body || {};
+  if (!jobAdText || !answers) return res.status(400).json({ error: 'Missing jobAdText or answers' });
+
+  try {
+    const profileInfo = profile ? `\nCandidate: ${profile.firstName || ''} ${profile.lastName || ''}, Industry: ${profile.industry || 'N/A'}` : '';
+    const answersText = Object.entries(answers).map(([q, a]) => `Q: ${q}\nA: ${a}`).join('\n\n');
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are an expert cover letter writer. Given a job ad and the candidate\'s answers to guided questions, produce a polished cover letter broken into tagged sections. Return JSON only.'
+        },
+        {
+          role: 'user',
+          content: `Job Ad:\n${jobAdText}\n${profileInfo}\n\nCandidate Answers:\n${answersText}\n\nReturn JSON: { "sections": [ { "tag": "Introduction|Experience|Skills|Motivation|Closing", "text": "paragraph" } ] }. Generate 4-6 sections.`
+        }
+      ],
+      temperature: 0.7,
+      response_format: { type: 'json_object' }
+    });
+
+    const result = JSON.parse(completion.choices[0].message.content);
+    incrementStat('aiGenerateFromAnswersCalls');
+    res.json(result);
+  } catch (e) {
+    console.error('Generate from answers error:', e);
+    if (e.status === 429 && e.code === 'insufficient_quota') {
+      aiQuotaExceeded = true;
+      aiQuotaExceededAt = new Date().toISOString();
+      return res.status(503).json({ error: 'AI quota exceeded', quotaExceeded: true });
+    }
+    res.status(500).json({ error: 'Failed to generate letter from answers' });
+  }
+});
+
+// ─── ATS Match Score ───
+app.post('/api/ats-score', async (req, res) => {
+  const auth = await getUserFromAuth(req);
+  if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+
+  if (aiQuotaExceeded) {
+    return res.status(503).json({ error: 'AI features temporarily unavailable', quotaExceeded: true });
+  }
+
+  const { jobAdText, coverLetterText } = req.body || {};
+  if (!jobAdText || !coverLetterText) return res.status(400).json({ error: 'Missing jobAdText or coverLetterText' });
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are an ATS (Applicant Tracking System) scoring expert. Score how well a cover letter matches a job ad. Return JSON only.'
+        },
+        {
+          role: 'user',
+          content: `Score this cover letter against the job ad.\n\nJob Ad:\n${jobAdText}\n\nCover Letter:\n${coverLetterText}\n\nReturn JSON: { "score": <0-100>, "matchedKeywords": ["keyword1","keyword2",...], "missingKeywords": ["keyword1",...], "suggestions": ["improvement tip 1",...] }`
+        }
+      ],
+      temperature: 0.3,
+      response_format: { type: 'json_object' }
+    });
+
+    const result = JSON.parse(completion.choices[0].message.content);
+    incrementStat('aiAtsScoreCalls');
+    res.json(result);
+  } catch (e) {
+    console.error('ATS score error:', e);
+    if (e.status === 429 && e.code === 'insufficient_quota') {
+      aiQuotaExceeded = true;
+      aiQuotaExceededAt = new Date().toISOString();
+      return res.status(503).json({ error: 'AI quota exceeded', quotaExceeded: true });
+    }
+    res.status(500).json({ error: 'Failed to compute ATS score' });
+  }
+});
+
+// ─── Quick Apply (single-call full letter generation) ───
+app.post('/api/quick-apply', async (req, res) => {
+  const auth = await getUserFromAuth(req);
+  if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+
+  if (aiQuotaExceeded) {
+    return res.status(503).json({ error: 'AI features temporarily unavailable', quotaExceeded: true });
+  }
+
+  const { jobAdText, profile, resumeText } = req.body || {};
+  if (!jobAdText) return res.status(400).json({ error: 'Missing jobAdText' });
+
+  try {
+    const profileInfo = profile ? `\nCandidate: ${profile.firstName || ''} ${profile.lastName || ''}, Phone: ${profile.phoneNumber || ''}, Address: ${profile.addressLine1 || ''} ${profile.addressLine2 || ''}` : '';
+    const resumeInfo = resumeText ? `\nResume:\n${resumeText}` : '';
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are an expert cover letter writer. Generate a complete, professional cover letter from a job ad. Extract job details and produce polished sections. Return JSON only.'
+        },
+        {
+          role: 'user',
+          content: `Generate a full cover letter for this job ad.${profileInfo}${resumeInfo}\n\nJob Ad:\n${jobAdText}\n\nReturn JSON: { "jobInfo": { "roleTitle": string, "companyName": string, "contactPerson": string|null }, "sections": [ { "tag": "Introduction|Experience|Skills|Motivation|Closing", "text": "paragraph" } ], "atsScore": <estimated 0-100> }. Generate 4-6 sections.`
+        }
+      ],
+      temperature: 0.7,
+      response_format: { type: 'json_object' }
+    });
+
+    const result = JSON.parse(completion.choices[0].message.content);
+    incrementStat('aiQuickApplyCalls');
+    res.json(result);
+  } catch (e) {
+    console.error('Quick apply error:', e);
+    if (e.status === 429 && e.code === 'insufficient_quota') {
+      aiQuotaExceeded = true;
+      aiQuotaExceededAt = new Date().toISOString();
+      return res.status(503).json({ error: 'AI quota exceeded', quotaExceeded: true });
+    }
+    res.status(500).json({ error: 'Failed to generate quick apply letter' });
+  }
+});
+
+// ─── Recruiter Endpoints ───
+// GET /api/recruiter/candidates — list candidates visible to the recruiter's agency
+app.get('/api/recruiter/candidates', async (req, res) => {
+  const auth = await getUserFromAuth(req);
+  if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    // Check if user is an agency member
+    let agencyId = null;
+    if (dbType === 'mysql') {
+      const [rows] = await db.execute('SELECT agencyId FROM agency_members WHERE userId = ?', [auth.user.id]);
+      if (rows.length === 0) return res.status(403).json({ error: 'Not a recruiter' });
+      agencyId = rows[0].agencyId;
+    } else if (dbType === 'sqlite') {
+      const row = db.prepare('SELECT agencyId FROM agency_members WHERE userId = ?').get(auth.user.id);
+      if (!row) return res.status(403).json({ error: 'Not a recruiter' });
+      agencyId = row.agencyId;
+    } else {
+      // JSON fallback
+      const member = (store.agencyMembers || []).find(m => m.userId === auth.user.id);
+      if (!member) return res.status(403).json({ error: 'Not a recruiter' });
+      agencyId = member.agencyId;
+    }
+
+    // Get all applications from agency members' candidates
+    let candidates = [];
+    if (dbType === 'mysql') {
+      const [rows] = await db.execute(
+        `SELECT a.id, a.company, a.role, a.status, a.date, u.username
+         FROM applications a JOIN users u ON a.userId = u.id
+         ORDER BY a.updatedAt DESC LIMIT 50`);
+      candidates = rows;
+    } else if (dbType === 'sqlite') {
+      candidates = db.prepare(
+        `SELECT a.id, a.company, a.role, a.status, a.date, u.username
+         FROM applications a JOIN users u ON a.userId = u.id
+         ORDER BY a.updatedAt DESC LIMIT 50`).all();
+    } else {
+      const userMap = {};
+      (store.users || []).forEach(u => { userMap[u.id] = u.username; });
+      candidates = (store.applications || []).slice(0, 50).map(a => ({
+        ...a, username: userMap[a.userId] || 'Unknown'
+      }));
+    }
+    res.json(candidates);
+  } catch (e) {
+    console.error('Recruiter candidates error:', e);
+    res.status(500).json({ error: 'Failed to fetch candidates' });
+  }
+});
+
+// GET /api/recruiter/applications/:id — get a single application for review
+app.get('/api/recruiter/applications/:id', async (req, res) => {
+  const auth = await getUserFromAuth(req);
+  if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+
+  const { id } = req.params;
+  try {
+    let app = null;
+    if (dbType === 'mysql') {
+      const [rows] = await db.execute(
+        `SELECT a.*, u.username FROM applications a JOIN users u ON a.userId = u.id WHERE a.id = ?`, [id]);
+      app = rows[0] || null;
+    } else if (dbType === 'sqlite') {
+      app = db.prepare(
+        `SELECT a.*, u.username FROM applications a JOIN users u ON a.userId = u.id WHERE a.id = ?`).get(id);
+    } else {
+      const a = (store.applications || []).find(a => a.id === id);
+      if (a) {
+        const u = (store.users || []).find(u => u.id === a.userId);
+        app = { ...a, username: u ? u.username : 'Unknown' };
+      }
+    }
+    if (!app) return res.status(404).json({ error: 'Application not found' });
+    res.json(app);
+  } catch (e) {
+    console.error('Recruiter app detail error:', e);
+    res.status(500).json({ error: 'Failed to fetch application' });
+  }
+});
+
+// POST /api/recruiter/review — submit approval/rejection + comment
+app.post('/api/recruiter/review', async (req, res) => {
+  const auth = await getUserFromAuth(req);
+  if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+
+  const { applicationId, status, comment } = req.body || {};
+  if (!applicationId || !status) return res.status(400).json({ error: 'Missing applicationId or status' });
+
+  const reviewId = crypto.randomUUID();
+  const now = new Date().toISOString();
+
+  try {
+    if (dbType === 'mysql') {
+      await db.execute(
+        `INSERT INTO letter_reviews (id, applicationId, reviewerId, status, comment, createdAt) VALUES (?, ?, ?, ?, ?, ?)`,
+        [reviewId, applicationId, auth.user.id, status, comment || null, now]);
+      await db.execute('UPDATE applications SET status = ? WHERE id = ?', [status, applicationId]);
+    } else if (dbType === 'sqlite') {
+      db.prepare(
+        `INSERT INTO letter_reviews (id, applicationId, reviewerId, status, comment, createdAt) VALUES (?, ?, ?, ?, ?, ?)`
+      ).run(reviewId, applicationId, auth.user.id, status, comment || null, now);
+      db.prepare('UPDATE applications SET status = ? WHERE id = ?').run(status, applicationId);
+    } else {
+      if (!store.letterReviews) store.letterReviews = [];
+      store.letterReviews.push({ id: reviewId, applicationId, reviewerId: auth.user.id, status, comment: comment || null, createdAt: now });
+      const app = (store.applications || []).find(a => a.id === applicationId);
+      if (app) app.status = status;
+      saveStore();
+    }
+    res.json({ id: reviewId, message: 'Review submitted' });
+  } catch (e) {
+    console.error('Recruiter review error:', e);
+    res.status(500).json({ error: 'Failed to submit review' });
+  }
+});
+
+// GET /api/recruiter/library — shared agency response library
+app.get('/api/recruiter/library', async (req, res) => {
+  const auth = await getUserFromAuth(req);
+  if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    let agencyId = null;
+    if (dbType === 'mysql') {
+      const [rows] = await db.execute('SELECT agencyId FROM agency_members WHERE userId = ?', [auth.user.id]);
+      if (rows.length === 0) return res.status(403).json({ error: 'Not a recruiter' });
+      agencyId = rows[0].agencyId;
+      const [libRows] = await db.execute('SELECT * FROM agency_responses WHERE agencyId = ? ORDER BY createdAt DESC', [agencyId]);
+      res.json(libRows);
+    } else if (dbType === 'sqlite') {
+      const row = db.prepare('SELECT agencyId FROM agency_members WHERE userId = ?').get(auth.user.id);
+      if (!row) return res.status(403).json({ error: 'Not a recruiter' });
+      agencyId = row.agencyId;
+      const items = db.prepare('SELECT * FROM agency_responses WHERE agencyId = ? ORDER BY createdAt DESC').all(agencyId);
+      res.json(items);
+    } else {
+      const member = (store.agencyMembers || []).find(m => m.userId === auth.user.id);
+      if (!member) return res.status(403).json({ error: 'Not a recruiter' });
+      const items = (store.agencyResponses || []).filter(r => r.agencyId === member.agencyId);
+      res.json(items);
+    }
+  } catch (e) {
+    console.error('Agency library error:', e);
+    res.status(500).json({ error: 'Failed to fetch agency library' });
+  }
+});
+
+// POST /api/recruiter/library — add a response to agency library
+app.post('/api/recruiter/library', async (req, res) => {
+  const auth = await getUserFromAuth(req);
+  if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+
+  const { text, category } = req.body || {};
+  if (!text) return res.status(400).json({ error: 'Missing text' });
+
+  const id = crypto.randomUUID();
+  const now = new Date().toISOString();
+
+  try {
+    let agencyId = null;
+    if (dbType === 'mysql') {
+      const [rows] = await db.execute('SELECT agencyId FROM agency_members WHERE userId = ?', [auth.user.id]);
+      if (rows.length === 0) return res.status(403).json({ error: 'Not a recruiter' });
+      agencyId = rows[0].agencyId;
+      await db.execute(
+        'INSERT INTO agency_responses (id, agencyId, text, category, createdBy, createdAt) VALUES (?, ?, ?, ?, ?, ?)',
+        [id, agencyId, text, category || 'General', auth.user.id, now]);
+    } else if (dbType === 'sqlite') {
+      const row = db.prepare('SELECT agencyId FROM agency_members WHERE userId = ?').get(auth.user.id);
+      if (!row) return res.status(403).json({ error: 'Not a recruiter' });
+      agencyId = row.agencyId;
+      db.prepare(
+        'INSERT INTO agency_responses (id, agencyId, text, category, createdBy, createdAt) VALUES (?, ?, ?, ?, ?, ?)'
+      ).run(id, agencyId, text, category || 'General', auth.user.id, now);
+    } else {
+      const member = (store.agencyMembers || []).find(m => m.userId === auth.user.id);
+      if (!member) return res.status(403).json({ error: 'Not a recruiter' });
+      if (!store.agencyResponses) store.agencyResponses = [];
+      store.agencyResponses.push({ id, agencyId: member.agencyId, text, category: category || 'General', createdBy: auth.user.id, createdAt: now });
+      saveStore();
+    }
+    res.json({ id, message: 'Response added to agency library' });
+  } catch (e) {
+    console.error('Agency library add error:', e);
+    res.status(500).json({ error: 'Failed to add to agency library' });
   }
 });
 

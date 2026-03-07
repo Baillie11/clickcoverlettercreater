@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Response Library — VitaePro</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="design-system.css" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+</head>
+<body>
+
+  <header class="page-header">
+    <div class="header-row">
+      <button class="header-back" onclick="history.back()" aria-label="Back">←</button>
+      <h1>Response Library</h1>
+      <button class="header-back" id="addResponseBtn" title="Add Response" aria-label="Add">+</button>
+    </div>
+  </header>
+
+  <div class="page-wrapper">
+    <div class="page-content">
+
+      <!-- Search -->
+      <div class="search-bar">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="librarySearch" placeholder="Search responses…" />
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab active" data-filter="all">All</button>
+        <button class="tab" data-filter="user">My Responses</button>
+        <button class="tab" data-filter="crowd">Crowd</button>
+      </div>
+
+      <!-- Response List -->
+      <div id="libraryList">
+        <div class="empty-state">
+          <div class="empty-icon">📚</div>
+          <div class="empty-title">Loading…</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="m-dashboard.html"><span class="nav-icon">🏠</span><span>Home</span></a>
+    <a href="m-applications.html"><span class="nav-icon">📄</span><span>Applications</span></a>
+    <a href="m-library.html" class="active"><span class="nav-icon">📚</span><span>Library</span></a>
+    <a href="m-account.html"><span class="nav-icon">👤</span><span>Account</span></a>
+  </nav>
+
+  <!-- Add Response Modal -->
+  <div class="modal-overlay" id="addResponseModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <h3 class="modal-title">Add Response</h3>
+      <div class="form-group">
+        <label class="form-label" for="newResponseCategory">Category</label>
+        <select class="form-select" id="newResponseCategory">
+          <option value="Customer Service">Customer Service</option>
+          <option value="Leadership">Leadership</option>
+          <option value="Teamwork">Teamwork</option>
+          <option value="Conflict Resolution">Conflict Resolution</option>
+          <option value="Administration">Administration</option>
+          <option value="NDIS Support Work">NDIS Support Work</option>
+          <option value="Retail">Retail</option>
+          <option value="Construction">Construction</option>
+          <option value="General">General</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="newResponseText">Response Text</label>
+        <textarea class="form-textarea large" id="newResponseText" placeholder="Write your reusable response…"></textarea>
+      </div>
+      <div class="flex gap-3">
+        <button class="btn btn-ghost btn-lg" style="flex:1" id="cancelAddResponse">Cancel</button>
+        <button class="btn btn-primary btn-lg" style="flex:1" id="confirmAddResponse">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="m-auth.js"></script>
+  <script src="m-api.js"></script>
+  <script src="m-app.js"></script>
+  <script>VPApp.initLibrary();</script>
+</body>
+</html>
