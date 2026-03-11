@@ -1,41 +1,48 @@
-import Link from "next/link";
 import Script from "next/script";
 import type { Metadata } from "next";
-import EmailCaptureForm from "../components/EmailCaptureForm";
+import TrackingLink from "../components/TrackingLink";
 
-const siteUrl = "https://example.com";
+const siteUrl = "https://www.vitaepro.com.au";
+const appUrl = "https://www.vitaepro.com.au/app.html";
+
+/* ──────────────────────────── SEO metadata ──────────────────────────── */
 
 export const metadata: Metadata = {
-  title: "VitaePro | Authentic cover letters without AI fluff",
+  title: "VitaePro | Authentic Cover Letters Without AI Fluff",
   description:
-    "VitaePro helps job seekers and employment agencies craft tailored cover letters and selection criteria responses with human writing, crowd examples, and optional AI assist.",
+    "Create authentic cover letters faster with VitaePro. Build reusable responses, learn from real examples, and refine with optional AI assist.",
   keywords: [
     "cover letter",
     "selection criteria",
     "job application",
     "employment agency",
     "career coach",
-    "global hiring",
     "human writing",
     "AI assist",
+    "reusable responses",
+    "cover letter creator",
+    "authentic applications",
   ],
   alternates: {
     canonical: siteUrl,
   },
   openGraph: {
-    title: "VitaePro | Authentic cover letters without AI fluff",
+    title: "VitaePro | Authentic Cover Letters Without AI Fluff",
     description:
-      "Human-first cover letter software with crowd examples and optional AI assist for job seekers and agencies.",
+      "Create authentic cover letters faster with VitaePro. Build reusable responses, learn from real examples, and refine with optional AI assist.",
     url: siteUrl,
     siteName: "VitaePro",
+    type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "VitaePro | Authentic cover letters without AI fluff",
+    title: "VitaePro | Authentic Cover Letters Without AI Fluff",
     description:
-      "Cover letter SaaS for job seekers and employment agencies. Human writing, crowd examples, optional AI.",
+      "Human-first cover letter software with crowd examples and optional AI assist for job seekers and agencies.",
   },
 };
+
+/* ────────────────────────── Structured data ──────────────────────────── */
 
 const jsonLd = {
   "@context": "https://schema.org",
@@ -46,10 +53,10 @@ const jsonLd = {
       operatingSystem: "Web",
       applicationCategory: "BusinessApplication",
       description:
-        "Cover letter and selection criteria software for job seekers and employment agencies worldwide.",
+        "Cover letter and selection criteria software for job seekers and employment agencies.",
       offers: {
         "@type": "Offer",
-        availability: "https://schema.org/PreOrder",
+        availability: "https://schema.org/OnlineOnly",
       },
       url: siteUrl,
     },
@@ -62,66 +69,79 @@ const jsonLd = {
   ],
 };
 
-const howCards = [
+/* ────────────────────────────── Data ─────────────────────────────────── */
+
+const problemCards = [
   {
-    title: "Human-first",
-    body:
-      "Start with your own writing. Keep voice, tone, and selection criteria tight to the role.",
+    title: "Generic AI Applications",
+    body: "Recruiters are seeing hundreds of identical AI generated cover letters that say nothing real.",
   },
   {
-    title: "Crowd library",
-    body:
-      "Adapt real examples from other users and agencies. Learn what gets interviews, fast.",
+    title: "Starting From Scratch",
+    body: "Most job seekers rewrite the same experience again and again for every application.",
   },
   {
-    title: "AI assist (optional)",
-    body:
-      "Use AI sparingly to draft or tidy, then edit in your own words. No AI fluff.",
+    title: "No Clear Structure",
+    body: "Candidates struggle to explain their experience clearly against selection criteria.",
   },
 ];
 
-const audiences = [
+const howCards = [
   {
-    title: "For individuals",
-    bullets: [
-      "Target selection criteria with reusable snippets",
-      "Control tone to match the role and employer",
-      "Export polished cover letters to PDF or Docx",
-    ],
+    title: "Human-first",
+    body: "Start with your own writing. Keep voice, tone and selection criteria aligned to the role.",
   },
   {
-    title: "For agencies & coaches",
-    bullets: [
-      "Seat and client management in one place",
-      "Shared libraries across consultants",
-      "Approval, versioning, and audit trails",
-    ],
+    title: "Crowd Library",
+    body: "Adapt real examples from other users and agencies to see what works.",
+  },
+  {
+    title: "AI Assist (optional)",
+    body: "Use AI sparingly to refine structure and tone without losing authenticity.",
   },
 ];
 
 const features = [
-  "Role and criteria targeting",
-  "Tone and voice control",
-  "Reusable snippet library",
-  "Version history and comparisons",
-  "Export to PDF and Docx",
-  "Agency seats and client workflows",
+  {
+    title: "Reusable snippet library",
+    body: "Store and reuse your best responses.",
+  },
+  {
+    title: "Role and criteria targeting",
+    body: "Align cover letters clearly with role requirements.",
+  },
+  {
+    title: "Tone and voice control",
+    body: "Maintain your authentic voice while refining clarity.",
+  },
+  {
+    title: "Export to PDF and Docx",
+    body: "Generate clean professional documents instantly.",
+  },
+  {
+    title: "Agency workflows",
+    body: "Manage candidates and shared response libraries.",
+  },
 ];
 
 const testimonials = [
-  { name: "Jordan S.", role: "Career coach", quote: "VitaePro keeps drafts authentic while speeding up delivery." },
-  { name: "Taylor R.", role: "Employment consultant", quote: "Crowd examples help juniors learn what good looks like." },
-  { name: "Alex K.", role: "Job seeker", quote: "I landed interviews without sounding like a bot." },
+  {
+    role: "Career Coach",
+    quote:
+      "VitaePro keeps applications authentic while saving huge amounts of time.",
+  },
+  {
+    role: "Employment Consultant",
+    quote:
+      "Crowd examples help candidates understand what good applications look like.",
+  },
+  {
+    role: "Job Seeker",
+    quote: "I landed interviews without sounding like a bot.",
+  },
 ];
 
-const faqs = [
-  { q: "How do you avoid AI fluff?", a: "You start with human writing, then optionally layer AI for minor edits. Crowd examples anchor the tone." },
-  { q: "Is my data private?", a: "Yes. Drafts stay in your account. Shared examples are opt-in and scrubbed." },
-  { q: "Do you support agencies?", a: "Yes. Seats, client folders, and shared libraries are built in for employment agencies and career coaches worldwide." },
-  { q: "How is pricing handled?", a: "Straightforward plans on the pricing page, paid via Stripe." },
-  { q: "Can I cancel anytime?", a: "Yes. Manage billing and cancellations through the Stripe portal." },
-  { q: "Do I have to use AI?", a: "No. AI is optional and always human-edited. Human and crowd modes work alone." },
-];
+/* ────────────────────────────── Page ─────────────────────────────────── */
 
 export default function HomePage() {
   return (
@@ -132,191 +152,269 @@ export default function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <main className="pb-16">
-        <section className="section-shell mx-auto flex max-w-6xl flex-col gap-10 px-6 pt-16 text-center md:pt-20 md:text-left">
-          <div className="glass-pill inline-flex items-center gap-3 self-center rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wide md:self-start">
-            Human-first cover letters, anywhere
-          </div>
-          <div className="space-y-6">
-            <h1 className="text-4xl font-semibold leading-tight text-white md:text-5xl">
-              Authentic cover letters, zero AI fluff.
-            </h1>
-            <p className="max-w-2xl text-lg text-slate-100/90">
-              VitaePro blends your own writing, a crowd-sourced response library, and optional AI assist to craft tailored cover letters and selection criteria responses that sound human and win job application shortlists.
-            </p>
-            <div className="flex flex-col gap-3 md:flex-row md:items-center">
-              <Link
-                href="/pricing"
-                className="btn-primary-gradient rounded-full px-6 py-3 text-sm font-semibold shadow-md transition hover:opacity-95"
-              >
-                View pricing
-              </Link>
-              <a
-                href="#early-access"
-                className="btn-secondary-ghost rounded-full px-6 py-3 text-sm font-semibold backdrop-blur transition hover:border-white hover:bg-white/15"
-              >
-                Get early access
-              </a>
+      <div className="pb-20">
+        {/* ─── 1. HERO ─────────────────────────────────────────────── */}
+        <section
+          aria-label="Hero"
+          className="section-shell mx-auto flex max-w-6xl flex-col gap-10 px-6 pt-16 text-center md:pt-20 md:text-left"
+        >
+          <div className="flex flex-col gap-10 md:flex-row md:items-center md:gap-16">
+            <div className="flex-1 space-y-6">
+              <img
+                src="/logo.png"
+                alt="VitaePro — authentic cover letter creator"
+                width={240}
+                height={68}
+                className="self-center md:self-start"
+              />
+              <h1 className="text-4xl font-semibold leading-tight text-white md:text-5xl">
+                Authentic cover letters. Zero AI&nbsp;fluff.
+              </h1>
+              <p className="max-w-2xl text-lg text-slate-100/90">
+                VitaePro blends your own writing, a crowd-sourced response library, and optional AI assist to craft tailored cover letters that sound human and win job application shortlists.
+              </p>
+              <p className="text-sm font-medium italic text-slate-100/70">
+                Because AI alone isn&apos;t enough.
+              </p>
+              <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                <TrackingLink
+                  href={appUrl}
+                  event="signup_button_click"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn-primary-gradient rounded-full px-6 py-3 text-sm font-semibold shadow-md transition hover:opacity-95"
+                >
+                  Get Started
+                </TrackingLink>
+                <TrackingLink
+                  href="/pricing"
+                  event="pricing_view"
+                  className="btn-secondary-ghost rounded-full px-6 py-3 text-sm font-semibold backdrop-blur transition hover:border-white hover:bg-white/15"
+                >
+                  View Pricing
+                </TrackingLink>
+              </div>
+              <p className="text-xs text-slate-100/70">
+                Trusted by job seekers and employment agencies.
+              </p>
             </div>
-          </div>
 
-          <div className="glass-card card grid gap-4 p-6 md:grid-cols-5 md:items-center">
-            <p className="text-sm font-semibold text-slate-50 md:col-span-2">Trusted by job seekers and employment agencies</p>
-            <div className="col-span-3 grid grid-cols-3 gap-4 text-sm text-slate-100/80 md:justify-items-center">
-              <span className="rounded border border-white/20 bg-white/10 px-3 py-2 text-center">Agency One</span>
-              <span className="rounded border border-white/20 bg-white/10 px-3 py-2 text-center">Career Coaches Intl</span>
-              <span className="rounded border border-white/20 bg-white/10 px-3 py-2 text-center">Pathways</span>
+            {/* Product screenshot */}
+            <div className="flex-1">
+              <div className="glass-card card overflow-hidden rounded-2xl">
+                <img
+                  src="/screenshot.png"
+                  alt="VitaePro cover letter builder interface"
+                  width={600}
+                  height={400}
+                  className="h-auto w-full"
+                  loading="eager"
+                />
+              </div>
             </div>
-          </div>
-
-          <div className="glass-card card p-6">
-            <h2 className="text-lg font-semibold text-white">Why VitaePro</h2>
-            <p className="mt-2 text-sm text-slate-100/90">
-              Built for hiring processes where selection criteria matters. Keep authenticity, align tone, and move faster whether you’re a job seeker or an employment agency with multiple seats.
-            </p>
           </div>
         </section>
 
-        <section className="mx-auto mt-16 max-w-6xl px-6">
-          <div className="mb-8 flex flex-col gap-2 text-center md:text-left">
-            <p className="text-xs font-semibold uppercase tracking-wide text-white/80">How it works</p>
-            <h2 className="text-3xl font-semibold text-white">Human, Crowd, AI — in that order</h2>
-            <p className="text-sm text-slate-100/85">Human-first writing with optional AI assist. Crowd examples keep outputs grounded.</p>
+        {/* ─── 2. PROBLEM ──────────────────────────────────────────── */}
+        <section aria-labelledby="problem-title" className="mx-auto mt-24 max-w-6xl px-6">
+          <div className="mb-10 flex flex-col gap-2 text-center md:text-left">
+            <p className="text-xs font-semibold uppercase tracking-wide text-white/80">
+              The problem
+            </p>
+            <h2 id="problem-title" className="text-3xl font-semibold text-white">
+              Why job applications feel broken
+            </h2>
+          </div>
+          <div className="grid gap-6 md:grid-cols-3">
+            {problemCards.map((card) => (
+              <article key={card.title} className="glass-card card h-full p-6">
+                <h3 className="text-lg font-semibold text-white">{card.title}</h3>
+                <p className="mt-2 text-sm text-slate-100/90">{card.body}</p>
+              </article>
+            ))}
+          </div>
+          <p className="mt-6 text-center text-sm font-semibold text-white/90 md:text-left">
+            VitaePro fixes all three.
+          </p>
+        </section>
+
+        {/* ─── 3. HOW VITAEPRO WORKS ───────────────────────────────── */}
+        <section aria-labelledby="how-title" className="mx-auto mt-24 max-w-6xl px-6">
+          <div className="mb-10 flex flex-col gap-2 text-center md:text-left">
+            <p className="text-xs font-semibold uppercase tracking-wide text-white/80">
+              How it works
+            </p>
+            <h2 id="how-title" className="text-3xl font-semibold text-white">
+              Human, Crowd, AI — in that order
+            </h2>
+            <p className="text-sm text-slate-100/85">
+              Human-first writing with optional AI assist. Start with your own voice, refine with real examples, and optionally use AI to polish the result.
+            </p>
           </div>
           <div className="grid gap-6 md:grid-cols-3">
             {howCards.map((card) => (
-              <div key={card.title} className="glass-card card h-full p-6">
+              <article key={card.title} className="glass-card card h-full p-6">
                 <h3 className="text-lg font-semibold text-white">{card.title}</h3>
                 <p className="mt-2 text-sm text-slate-100/90">{card.body}</p>
-              </div>
+              </article>
             ))}
           </div>
         </section>
 
-        <section className="mx-auto mt-16 grid max-w-6xl gap-6 px-6 md:grid-cols-2">
-          {audiences.map((audience) => (
-            <div key={audience.title} className="glass-card card p-6">
-              <p className="text-xs font-semibold uppercase tracking-wide text-white/80">{audience.title}</p>
-              <h3 className="mt-2 text-xl font-semibold text-white">Built for {audience.title.toLowerCase()}</h3>
+        {/* ─── 4. WHO VITAEPRO IS FOR ──────────────────────────────── */}
+        <section aria-labelledby="who-title" className="mx-auto mt-24 max-w-6xl px-6">
+          <div className="mb-10 flex flex-col gap-2 text-center md:text-left">
+            <p className="text-xs font-semibold uppercase tracking-wide text-white/80">
+              Who it&apos;s for
+            </p>
+            <h2 id="who-title" className="text-3xl font-semibold text-white">
+              Who VitaePro is for
+            </h2>
+          </div>
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Job Seekers */}
+            <article className="glass-card card flex flex-col p-6">
+              <h3 className="text-xl font-semibold text-white">For Job Seekers</h3>
+              <p className="mt-2 text-sm text-slate-100/90">
+                Stop rewriting cover letters for every job. Save your best responses once and adapt them quickly for each role.
+              </p>
               <ul className="mt-4 space-y-2 text-sm text-slate-100/90">
-                {audience.bullets.map((item) => (
+                {[
+                  "Create cover letters in minutes",
+                  "Reuse your best paragraphs",
+                  "Avoid generic AI sounding applications",
+                  "Export polished letters instantly",
+                ].map((item) => (
                   <li key={item} className="flex items-start gap-2">
-                    <span className="mt-1 h-2 w-2 rounded-full bg-emerald-400" aria-hidden />
+                    <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-emerald-400" aria-hidden />
                     <span>{item}</span>
                   </li>
                 ))}
               </ul>
-            </div>
-          ))}
+              <div className="mt-6">
+                <TrackingLink
+                  href={appUrl}
+                  event="signup_button_click"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn-primary-gradient inline-block rounded-full px-5 py-2.5 text-sm font-semibold shadow-md transition hover:opacity-95"
+                >
+                  Start my first cover letter
+                </TrackingLink>
+              </div>
+            </article>
+
+            {/* Recruiters & Agencies */}
+            <article className="glass-card card flex flex-col p-6">
+              <h3 className="text-xl font-semibold text-white">For Recruiters &amp; Agencies</h3>
+              <p className="mt-2 text-sm text-slate-100/90">
+                Help candidates submit clearer, higher-quality applications recruiters actually want to read.
+              </p>
+              <ul className="mt-4 space-y-2 text-sm text-slate-100/90">
+                {[
+                  "Guide candidates with structured responses",
+                  "Reduce low quality AI generated applications",
+                  "Maintain consistency across applications",
+                  "Manage multiple candidates efficiently",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2">
+                    <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-emerald-400" aria-hidden />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-6">
+                <TrackingLink
+                  href={appUrl}
+                  event="signup_button_click"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn-secondary-ghost inline-block rounded-full px-5 py-2.5 text-sm font-semibold backdrop-blur transition hover:border-white hover:bg-white/15"
+                >
+                  Agency access
+                </TrackingLink>
+              </div>
+            </article>
+          </div>
         </section>
 
-        <section className="mx-auto mt-16 max-w-6xl px-6">
-          <div className="mb-6 flex flex-col gap-2 text-center md:text-left">
-            <p className="text-xs font-semibold uppercase tracking-wide text-white/80">What you get</p>
-            <h2 className="text-3xl font-semibold text-white">Tools for authentic job applications</h2>
+        {/* ─── 5. KEY FEATURES ─────────────────────────────────────── */}
+        <section aria-labelledby="features-title" className="mx-auto mt-24 max-w-6xl px-6">
+          <div className="mb-10 flex flex-col gap-2 text-center md:text-left">
+            <p className="text-xs font-semibold uppercase tracking-wide text-white/80">
+              What you get
+            </p>
+            <h2 id="features-title" className="text-3xl font-semibold text-white">
+              Everything you need for authentic job applications
+            </h2>
           </div>
           <div className="grid gap-6 md:grid-cols-3">
-            {features.map((feature) => (
-              <div key={feature} className="glass-card card h-full p-5">
-                <h3 className="text-base font-semibold text-white">{feature}</h3>
-                <p className="mt-2 text-sm text-slate-100/90">Covers cover letters, selection criteria, and agency workflows.</p>
-              </div>
+            {features.map((f) => (
+              <article key={f.title} className="glass-card card h-full p-6">
+                <h3 className="text-base font-semibold text-white">{f.title}</h3>
+                <p className="mt-2 text-sm text-slate-100/90">{f.body}</p>
+              </article>
             ))}
           </div>
         </section>
 
-        <section className="mx-auto mt-16 max-w-6xl px-6">
-          <div className="mb-6 flex flex-col gap-2 text-center md:text-left">
-            <p className="text-xs font-semibold uppercase tracking-wide text-white/80">Social proof</p>
-            <h2 className="text-3xl font-semibold text-white">Real voices, no fluff</h2>
+        {/* ─── 6. SOCIAL PROOF ─────────────────────────────────────── */}
+        <section aria-labelledby="proof-title" className="mx-auto mt-24 max-w-6xl px-6">
+          <div className="mb-10 flex flex-col gap-2 text-center md:text-left">
+            <p className="text-xs font-semibold uppercase tracking-wide text-white/80">
+              Social proof
+            </p>
+            <h2 id="proof-title" className="text-3xl font-semibold text-white">
+              Why people prefer VitaePro
+            </h2>
           </div>
           <div className="grid gap-6 md:grid-cols-3">
             {testimonials.map((t) => (
-              <div key={t.name} className="glass-card card h-full p-6">
-                <p className="text-sm text-slate-100/90">“{t.quote}”</p>
-                <p className="mt-4 text-sm font-semibold text-white">{t.name}</p>
-                <p className="text-xs text-slate-100/80">{t.role}</p>
-              </div>
+              <blockquote key={t.role} className="glass-card card h-full p-6">
+                <p className="text-sm text-slate-100/90">&ldquo;{t.quote}&rdquo;</p>
+                <footer className="mt-4">
+                  <p className="text-sm font-semibold text-white">{t.role}</p>
+                </footer>
+              </blockquote>
             ))}
           </div>
         </section>
 
-        <section className="mx-auto mt-16 max-w-6xl px-6" id="early-access">
-          <div className="glass-card card p-6 md:p-8">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-white/80">Early access</p>
-                <h2 className="text-2xl font-semibold text-white">Be first when beta slots open</h2>
-                <p className="text-sm text-slate-100/90">We’ll email you when beta slots open. Great for individuals and agencies wanting authentic cover letters.</p>
-              </div>
-              <div className="w-full md:w-[360px]">
-                <EmailCaptureForm />
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="mx-auto mt-16 max-w-6xl px-6">
-          <div className="mb-6 flex flex-col gap-2 text-center md:text-left">
-            <p className="text-xs font-semibold uppercase tracking-wide text-white/80">FAQ</p>
-            <h2 className="text-3xl font-semibold text-white">Questions about authenticity and billing</h2>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            {faqs.map((item) => (
-              <div key={item.q} className="glass-card card p-5">
-                <h3 className="text-base font-semibold text-white">{item.q}</h3>
-                <p className="mt-2 text-sm text-slate-100/90">{item.a}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="mx-auto mt-16 max-w-6xl px-6">
+        {/* ─── 7. FINAL CTA ────────────────────────────────────────── */}
+        <section aria-label="Call to action" className="mx-auto mt-24 max-w-6xl px-6">
           <div className="glass-card card flex flex-col gap-4 p-8 text-center md:flex-row md:items-center md:justify-between md:text-left">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-white/80">Ready to start</p>
-              <h2 className="text-2xl font-semibold text-white">Launch VitaePro and keep it human</h2>
-              <p className="text-sm text-slate-100/90">Create cover letters that sound like you, not a bot. Great for job seekers and agencies.</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-white/80">
+                Ready to start
+              </p>
+              <h2 className="text-2xl font-semibold text-white">
+                Launch VitaePro and keep it human.
+              </h2>
+              <p className="text-sm text-slate-100/90">
+                Create cover letters that sound like you — not a bot.
+              </p>
             </div>
             <div className="flex flex-col gap-3 md:flex-row">
-              <Link
-                href="https://vitaepro.com.au/app.html"
-                rel="noreferrer"
+              <TrackingLink
+                href={appUrl}
+                event="launch_app_click"
                 target="_blank"
+                rel="noreferrer"
                 className="btn-primary-gradient rounded-full px-6 py-3 text-sm font-semibold shadow-md transition hover:opacity-95"
               >
                 Launch App
-              </Link>
-              <Link
+              </TrackingLink>
+              <TrackingLink
                 href="/pricing"
+                event="pricing_view"
                 className="btn-secondary-ghost rounded-full px-6 py-3 text-sm font-semibold backdrop-blur transition hover:border-white hover:bg-white/15"
               >
-                View pricing
-              </Link>
+                View Pricing
+              </TrackingLink>
             </div>
           </div>
         </section>
-      </main>
-
-      <footer className="border-t border-white/20 bg-white/10 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-8 md:flex-row md:items-center md:justify-between">
-          <p className="text-sm font-semibold text-white">VitaePro</p>
-          <div className="flex flex-wrap gap-4 text-sm text-slate-100/80">
-            <Link href="/privacy" className="transition hover:text-white">
-              Privacy
-            </Link>
-            <Link href="/terms" className="transition hover:text-white">
-              Terms
-            </Link>
-            <Link href="/refunds" className="transition hover:text-white">
-              Refunds
-            </Link>
-            <Link href="/contact" className="transition hover:text-white">
-              Contact
-            </Link>
-          </div>
-        </div>
-      </footer>
+      </div>
     </>
   );
 }

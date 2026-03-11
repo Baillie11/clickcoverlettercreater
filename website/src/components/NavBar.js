@@ -12,8 +12,7 @@ const navLinks = [
   { href: "/faq", label: "FAQ" },
 ];
 
-const loginHref = process.env.NEXT_PUBLIC_APP_URL || "/login";
-const checkoutHref = process.env.NEXT_PUBLIC_STRIPE_CHECKOUT_URL || "/checkout";
+const appHref = "https://www.vitaepro.com.au/app.html";
 
 export default function NavBar() {
   const [scrolled, setScrolled] = useState(false);
@@ -44,8 +43,8 @@ export default function NavBar() {
       className={`sticky top-0 z-40 border-b backdrop-blur transition-colors duration-300 ${headerClasses}`}
     >
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-        <Link href="/" className={`text-lg font-semibold ${scrolled ? "text-slate-900" : "text-white"}`}>
-          VitaePro
+        <Link href="/" className="flex items-center gap-2">
+          <img src="/logo.png" alt="VitaePro" width={120} height={34} className="h-8 w-auto" />
         </Link>
         <nav className="hidden items-center gap-6 text-sm sm:flex">
           {navLinks.map((link) => (
@@ -55,11 +54,11 @@ export default function NavBar() {
           ))}
         </nav>
         <div className="flex items-center gap-3 text-sm">
-          <Link href={loginHref} className={loginClasses}>
+          <Link href={appHref} className={loginClasses}>
             Log in
           </Link>
           <Link
-            href={checkoutHref}
+            href={appHref}
             className="btn-primary-gradient rounded-full px-4 py-2 font-medium text-white shadow-md transition hover:opacity-95"
           >
             Get started

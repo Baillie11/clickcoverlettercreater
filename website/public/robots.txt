@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /login/
+Disallow: /manage/
+Disallow: /checkout/
+
+Sitemap: https://www.vitaepro.com.au/sitemap.xml

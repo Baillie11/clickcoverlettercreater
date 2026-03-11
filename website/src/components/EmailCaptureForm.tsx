@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { trackEarlyAccessSignup } from "../lib/analytics";
 
 export default function EmailCaptureForm() {
   const [email, setEmail] = useState("");
@@ -31,6 +32,7 @@ export default function EmailCaptureForm() {
         return;
       }
 
+      trackEarlyAccessSignup();
       setStatus("success");
     } catch (err) {
       setError("Network error. Please try again.");
