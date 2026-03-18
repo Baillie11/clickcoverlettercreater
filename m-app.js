@@ -141,29 +141,82 @@
     loadDashboardStats();
   }
 
+  function getStartOfToday() {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  }
+  function getStartOfWeek() {
+    const d = new Date();
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    d.setDate(diff);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  }
+  function getStartOfMonth() {
+    const d = new Date();
+    d.setDate(1);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  }
+
   async function loadDashboardStats() {
+    const container = $('recentApps');
+    const emptyHtml = '<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">No applications yet</div><div class="empty-desc">Start your first application to track your progress here.</div></div>';
+    const errorHtml = (msg) => '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Couldn\'t load applications</div><div class="empty-desc">' + esc(msg) + '</div><button type="button" class="btn btn-primary btn-sm" id="retryDashboardBtn">Try again</button></div>';
+
     try {
       const apps = await VPApi.getApplications();
-      $('statTotal').textContent = apps.length;
-      $('statDrafts').textContent = apps.filter(a => (a.status || '').toLowerCase() === 'draft').length;
-      $('statInterviews').textContent = apps.filter(a => (a.status || '').toLowerCase().includes('interview')).length;
+      const list = Array.isArray(apps) ? apps : [];
 
-      // Recent apps
-      const recent = apps.slice(0, 5);
-      const container = $('recentApps');
-      if (recent.length === 0) return;
+      const startOfToday = getStartOfToday();
+      const startOfWeek = getStartOfWeek();
+      const startOfMonth = getStartOfMonth();
+      let countToday = 0, countThisWeek = 0, countThisMonth = 0;
+      list.forEach(app => {
+        const t = app.date ? new Date(app.date).getTime() : 0;
+        if (t >= startOfToday) countToday++;
+        if (t >= startOfWeek) countThisWeek++;
+        if (t >= startOfMonth) countThisMonth++;
+      });
+      if ($('statToday')) $('statToday').textContent = countToday;
+      if ($('statThisWeek')) $('statThisWeek').textContent = countThisWeek;
+      if ($('statThisMonth')) $('statThisMonth').textContent = countThisMonth;
+      // Support old dashboard HTML (Applications / Drafts / Interviews)
+      if ($('statTotal')) $('statTotal').textContent = list.length;
+      if ($('statDrafts')) $('statDrafts').textContent = list.filter(a => (a.status || '').toLowerCase() === 'draft').length;
+      if ($('statInterviews')) $('statInterviews').textContent = list.filter(a => (a.status || '').toLowerCase().includes('interview')).length;
 
-      container.innerHTML = recent.map(app => `
-        <div class="card" style="cursor:pointer" data-id="${app.id}">
+      if (list.length === 0) {
+        container.innerHTML = emptyHtml;
+        return;
+      }
+
+      container.innerHTML = list.map(app => `
+        <div class="card mb-3" style="cursor:pointer" data-id="${esc(app.id)}" data-app role="button" tabindex="0">
           <div class="card-header">
             <div class="card-title">${esc(app.role || 'Untitled')}</div>
             <span class="badge badge-${statusColor(app.status)}">${esc(app.status || 'Draft')}</span>
           </div>
-          <div class="card-body">${esc(app.company || '')} ${app.date ? '· ' + formatDate(app.date) : ''}</div>
+          <div class="card-body">${esc(app.company || '')}${app.date ? ' · ' + formatDate(app.date) : ''}</div>
         </div>
       `).join('');
+
+      container.querySelectorAll('[data-app]').forEach(card => {
+        card.addEventListener('click', () => { location.href = 'm-applications.html'; });
+        card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); location.href = 'm-applications.html'; } });
+      });
     } catch (e) {
-      console.warn('Failed to load stats:', e);
+      console.warn('Failed to load dashboard stats:', e);
+      if ($('statToday')) $('statToday').textContent = '—';
+      if ($('statThisWeek')) $('statThisWeek').textContent = '—';
+      if ($('statThisMonth')) $('statThisMonth').textContent = '—';
+      if ($('statTotal')) $('statTotal').textContent = '—';
+      if ($('statDrafts')) $('statDrafts').textContent = '—';
+      if ($('statInterviews')) $('statInterviews').textContent = '—';
+      container.innerHTML = errorHtml(e.message || 'Check your connection and try again.');
+      $('retryDashboardBtn')?.addEventListener('click', () => loadDashboardStats());
     }
   }
 
@@ -228,9 +281,7 @@
     $('continueBtn').addEventListener('click', () => {
       const title = $('jobTitle').value.trim();
       const company = $('companyName').value.trim();
-      const ad = $('jobAdText').value.trim();
       if (!title || !company) { toast('Job title and company are required', 'error'); return; }
-      if (!ad) { toast('Please paste the job advertisement', 'error'); return; }
       location.href = 'm-guided.html';
     });
   }
@@ -587,8 +638,8 @@
       id: s.appId || genId(),
       company: s.companyName,
       role: s.jobTitle,
-      status: 'Draft',
-      notes: '',
+      status: 'Applied',
+      notes: s.appNotes || '',
       date: new Date().toISOString().split('T')[0],
       paragraphs: paragraphs
     };
@@ -750,15 +801,19 @@
         const resumeText = localStorage.getItem('vp_resume_text') || '';
         const result = await VPApi.quickApply(ad, profile, resumeText);
 
+        const sections = result.sections || result.responses || [];
+        if (!sections.length) throw new Error('No sections returned from quick apply');
+
         // Store in workflow
         const s = defaultState();
         s.jobAdText = ad;
         s.jobTitle = result.jobInfo?.roleTitle || '';
         s.companyName = result.jobInfo?.companyName || '';
         s.contactPerson = result.jobInfo?.contactPerson || '';
-        s.suggestions = result.responses || [];
-        s.selectedIndexes = s.suggestions.map((_, i) => i);
-        s.sections = s.suggestions.map(r => ({ tag: r.tag, text: r.text }));
+        s.atsScore = result.atsScore ?? null;
+        s.suggestions = sections;
+        s.selectedIndexes = sections.map((_, i) => i);
+        s.sections = sections.map(r => ({ tag: r.tag, text: r.text }));
         saveState(s);
 
         // Show draft
@@ -961,6 +1016,44 @@
     if ($('acctAddress1')) $('acctAddress1').value = profile.addressLine1 || '';
     if ($('acctAddress2')) $('acctAddress2').value = profile.addressLine2 || '';
 
+    // Resume section
+    const RESUME_KEY = 'vp_resume_text';
+    function updateResumeUI() {
+      const text = localStorage.getItem(RESUME_KEY) || '';
+      const statusEl = $('resumeStatus');
+      const removeBtn = $('removeResumeBtn');
+      if (statusEl) statusEl.textContent = text.length ? text.length.toLocaleString() + ' characters' : 'No resume';
+      if (removeBtn) removeBtn.style.display = text.length ? 'inline-flex' : 'none';
+      if ($('resumeTextarea') && !$('resumeTextarea').value && text) $('resumeTextarea').value = text;
+    }
+    updateResumeUI();
+    $('resumeFileInput')?.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const text = (reader.result || '').trim();
+        localStorage.setItem(RESUME_KEY, text);
+        if ($('resumeTextarea')) $('resumeTextarea').value = text;
+        updateResumeUI();
+        toast('Resume uploaded', 'success');
+      };
+      reader.readAsText(file, 'UTF-8');
+      e.target.value = '';
+    });
+    $('saveResumeBtn')?.addEventListener('click', () => {
+      const text = ($('resumeTextarea')?.value || '').trim();
+      localStorage.setItem(RESUME_KEY, text);
+      updateResumeUI();
+      toast(text ? 'Resume saved' : 'Resume cleared', 'success');
+    });
+    $('removeResumeBtn')?.addEventListener('click', () => {
+      localStorage.removeItem(RESUME_KEY);
+      if ($('resumeTextarea')) $('resumeTextarea').value = '';
+      updateResumeUI();
+      toast('Resume removed', 'success');
+    });
+
     // Save profile
     $('saveProfileBtn')?.addEventListener('click', () => {
       const p = getProfile();
@@ -1001,15 +1094,23 @@
           <div class="card mb-3">
             <div class="card-header">
               <div class="card-title">${esc(app.role || 'Untitled')}</div>
-              <span class="badge badge-${statusColor(app.status)}">${esc(app.status || 'Draft')}</span>
+              <span class="badge badge-${statusColor(app.status)}">${esc(app.status || 'Applied')}</span>
             </div>
             <div class="card-body">${esc(app.company || '')} ${app.date ? '· ' + formatDate(app.date) : ''}</div>
             <div class="card-footer">
-              <button class="btn btn-sm btn-ghost" data-action="delete" data-id="${app.id}">🗑 Delete</button>
+              <button type="button" class="btn btn-sm btn-ghost" data-action="edit" data-id="${esc(app.id)}">✏️ Edit</button>
+              <button type="button" class="btn btn-sm btn-ghost" data-action="delete" data-id="${esc(app.id)}">🗑 Delete</button>
             </div>
           </div>
         `).join('');
 
+        const list = apps;
+        container.querySelectorAll('[data-action="edit"]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const app = list.find(a => a.id === btn.dataset.id);
+            if (app) openEditModal(app);
+          });
+        });
         container.querySelectorAll('[data-action="delete"]').forEach(btn => {
           btn.addEventListener('click', async () => {
             if (!confirm('Delete this application?')) return;
@@ -1022,6 +1123,34 @@
         });
       } catch (e) { toast('Failed to load', 'error'); }
     }
+
+    let editingAppId = null;
+    function openEditModal(app) {
+      editingAppId = app.id;
+      if ($('editAppStatus')) $('editAppStatus').value = app.status || 'Applied';
+      if ($('editAppNotes')) $('editAppNotes').value = app.notes || '';
+      if ($('editAppRoleCompany')) $('editAppRoleCompany').textContent = (app.role || 'Untitled') + ' at ' + (app.company || '');
+      const modal = $('editAppModal');
+      if (modal) { modal.classList.add('open'); modal.setAttribute('aria-hidden', 'false'); }
+    }
+    function closeEditModal() {
+      editingAppId = null;
+      const modal = $('editAppModal');
+      if (modal) { modal.classList.remove('open'); modal.setAttribute('aria-hidden', 'true'); }
+    }
+    $('editAppCancelBtn')?.addEventListener('click', closeEditModal);
+    $('editAppSaveBtn')?.addEventListener('click', async () => {
+      if (!editingAppId) return;
+      const status = $('editAppStatus')?.value || 'Applied';
+      const notes = $('editAppNotes')?.value ?? '';
+      try {
+        await VPApi.updateApplication(editingAppId, { status, notes });
+        toast('Application updated', 'success');
+        closeEditModal();
+        loadApplicationsList();
+      } catch (e) { toast(e.message, 'error'); }
+    });
+    $('editAppModal')?.addEventListener('click', (e) => { if (e.target === $('editAppModal')) closeEditModal(); });
   }
 
   /* ──────────────────────────────────────────────────────────── *

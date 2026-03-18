@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Account — VitaePro</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="design-system.css" />
+  <link rel="stylesheet" href="./design-system.css?v=2" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
 </head>
 <body>
@@ -62,7 +62,27 @@
 
       <button class="btn btn-primary btn-lg btn-full" id="saveProfileBtn">Save Profile</button>
 
-      <hr style="margin:32px 0;border-color:var(--border-color)" />
+      <!-- Resume -->
+      <div class="section-title" style="margin-top:32px">Resume</div>
+      <p class="section-subtitle">Used for Quick Apply and cover letter generation. Upload a .txt file or paste your resume below (for PDF or Word, copy the text and paste it here).</p>
+
+      <div class="card mb-3" id="resumeCard">
+        <div class="card-header">
+          <div class="card-title">Your resume</div>
+          <span class="text-sm text-muted" id="resumeStatus">No resume</span>
+        </div>
+        <div class="card-body">
+          <input type="file" id="resumeFileInput" accept=".txt" class="form-input" style="margin-bottom:12px" />
+          <label class="form-label" for="resumeTextarea">Or paste resume text</label>
+          <textarea class="form-input form-textarea" id="resumeTextarea" placeholder="Paste your resume text here…" rows="6"></textarea>
+          <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+            <button type="button" class="btn btn-primary" id="saveResumeBtn">Save resume</button>
+            <button type="button" class="btn btn-ghost" id="removeResumeBtn" style="display:none">Remove resume</button>
+          </div>
+        </div>
+      </div>
+
+      <hr style="margin:32px 0;border-color:var(--vp-border)" />
 
       <!-- Danger zone -->
       <button class="btn btn-ghost btn-lg btn-full" id="logoutBtn" style="color:var(--color-danger)">Log Out</button>
@@ -79,7 +99,7 @@
 
   <div class="toast" id="toast"></div>
 
-  <script src="m-auth.js"></script>
+  <script src="./m-auth.js"></script>
   <script src="m-api.js"></script>
   <script src="m-app.js"></script>
   <script>VPApp.initAccount();</script>

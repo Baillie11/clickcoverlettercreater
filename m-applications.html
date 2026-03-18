@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Applications — VitaePro</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="design-system.css" />
+  <link rel="stylesheet" href="./design-system.css?v=2" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
 </head>
 <body>
@@ -47,7 +47,37 @@
 
   <div class="toast" id="toast"></div>
 
-  <script src="m-auth.js"></script>
+  <!-- Edit Application modal -->
+  <div class="modal-overlay" id="editAppModal" aria-hidden="true">
+    <div class="modal-sheet">
+      <div class="modal-handle" aria-hidden="true"></div>
+      <h2 class="modal-title">Edit application</h2>
+      <p class="text-sm text-muted" id="editAppRoleCompany"></p>
+      <div class="form-group">
+        <label class="form-label" for="editAppStatus">Status</label>
+        <select class="form-input form-select" id="editAppStatus">
+          <option value="Applied">✉️ Applied</option>
+          <option value="Draft">📄 Draft</option>
+          <option value="Interview Scheduled">📞 Interview Scheduled</option>
+          <option value="Interview Complete">✅ Interview Complete</option>
+          <option value="Assessment Pending">📋 Assessment Pending</option>
+          <option value="Offer Made">🎉 Offer Made</option>
+          <option value="Offer Accepted">🏆 Offer Accepted</option>
+          <option value="Rejected">❌ Rejected</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="editAppNotes">Notes</label>
+        <textarea class="form-input form-textarea" id="editAppNotes" rows="3" placeholder="Add notes about this application…"></textarea>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:16px">
+        <button type="button" class="btn btn-ghost btn-full" id="editAppCancelBtn">Cancel</button>
+        <button type="button" class="btn btn-primary btn-full" id="editAppSaveBtn">Save changes</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./m-auth.js"></script>
   <script src="m-api.js"></script>
   <script src="m-app.js"></script>
   <script>

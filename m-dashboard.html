@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Dashboard — VitaePro</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="design-system.css" />
+  <link rel="stylesheet" href="./design-system.css?v=2" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
 </head>
 <body>
@@ -25,19 +25,19 @@
   <div class="page-wrapper">
     <div class="page-content">
 
-      <!-- Quick Stats -->
+      <!-- Quick Stats: Applied jobs by period -->
       <div class="stats-row" id="statsRow">
         <div class="stat-box">
-          <div class="stat-number" id="statTotal">-</div>
-          <div class="stat-label">Applications</div>
+          <div class="stat-number" id="statToday">-</div>
+          <div class="stat-label">Today</div>
         </div>
         <div class="stat-box">
-          <div class="stat-number" id="statDrafts">-</div>
-          <div class="stat-label">Drafts</div>
+          <div class="stat-number" id="statThisWeek">-</div>
+          <div class="stat-label">This Week</div>
         </div>
         <div class="stat-box">
-          <div class="stat-number" id="statInterviews">-</div>
-          <div class="stat-label">Interviews</div>
+          <div class="stat-number" id="statThisMonth">-</div>
+          <div class="stat-label">This Month</div>
         </div>
       </div>
 
@@ -80,14 +80,18 @@
         <div class="action-arrow">›</div>
       </a>
 
-      <!-- Recent Applications -->
-      <div class="section-title mt-4">Recent Applications</div>
+      <!-- Your applications (all jobs) -->
+      <div class="section-title mt-4">Your applications</div>
+      <p class="section-subtitle">All your cover letter applications. Tap one to open, or manage them on the Applications tab.</p>
       <div id="recentApps">
         <div class="empty-state">
           <div class="empty-icon">📋</div>
           <div class="empty-title">No applications yet</div>
           <div class="empty-desc">Start your first application to track your progress here.</div>
         </div>
+      </div>
+      <div style="margin-top:12px;text-align:center">
+        <a href="m-applications.html" class="btn btn-ghost btn-sm">View &amp; manage all →</a>
       </div>
 
     </div>
@@ -116,7 +120,7 @@
   <!-- Toast -->
   <div class="toast" id="toast"></div>
 
-  <script src="m-auth.js"></script>
+  <script src="./m-auth.js"></script>
   <script src="m-api.js"></script>
   <script src="m-app.js"></script>
   <script>VPApp.initDashboard();</script>
