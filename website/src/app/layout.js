@@ -1,4 +1,4 @@
-import { Geist, Geist_Mono } from "next/font/google";
+﻿import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import Footer from "../components/Footer";
 import NavBar from "../components/NavBar";
@@ -17,19 +17,22 @@ const geistMono = Geist_Mono({
 const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
 
 export const metadata = {
-  title: "VitaePro | Outcome-first hiring",
-  description: "Outcome-first hiring with User, Crowd, and AI modes. Ready for Stripe checkout, analytics, and SEO.",
-  metadataBase: new URL("https://example.com"),
+  title: "VitaePro | Free cover letter and selection criteria builder",
+  description:
+    "VitaePro helps job seekers write stronger cover letters and selection criteria responses with guided structure, reusable career evidence, and optional AI assistance.",
+  metadataBase: new URL("https://www.vitaepro.com.au"),
   openGraph: {
-    title: "VitaePro | Outcome-first hiring",
-    description: "Outcome-first hiring with User, Crowd, and AI modes.",
-    url: "https://example.com",
+    title: "VitaePro | Write better job applications",
+    description:
+      "Free for a limited time: a practical cover letter and selection criteria builder for job seekers.",
+    url: "https://www.vitaepro.com.au",
     siteName: "VitaePro",
   },
   twitter: {
     card: "summary_large_image",
-    title: "VitaePro | Outcome-first hiring",
-    description: "Outcome-first hiring with User, Crowd, and AI modes.",
+    title: "VitaePro | Write better job applications",
+    description:
+      "Create sharper cover letters and selection criteria responses without sounding generic.",
   },
 };
 
@@ -55,7 +58,7 @@ export default function RootLayout({ children }) {
         ) : null}
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} bg-slate-50 text-slate-900 antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} bg-[#f7f5ef] text-slate-950 antialiased`}
       >
         <NavBar />
         <main className="min-h-[80vh]">{children}</main>
@@ -64,3 +67,4 @@ export default function RootLayout({ children }) {
     </html>
   );
 }
+

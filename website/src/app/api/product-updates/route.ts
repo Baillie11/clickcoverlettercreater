@@ -1,9 +1,9 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
 
 const storageDir = path.join(process.cwd(), "data");
-const storagePath = path.join(storageDir, "early-access.json");
+const storagePath = path.join(storageDir, "product-updates.json");
 
 async function ensureStorageFile() {
   await fs.mkdir(storageDir, { recursive: true });
@@ -36,7 +36,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error("early-access store failed", error);
+    console.error("product-updates store failed", error);
     return NextResponse.json({ error: "Failed to store email." }, { status: 500 });
   }
 }
+

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { FormEvent, useState } from "react";
 
@@ -18,7 +18,7 @@ export default function EmailCaptureForm() {
     setStatus("submitting");
 
     try {
-      const response = await fetch("/api/early-access", {
+      const response = await fetch("/api/product-updates", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
@@ -42,7 +42,7 @@ export default function EmailCaptureForm() {
     <form onSubmit={onSubmit} className="flex w-full flex-col gap-3 sm:flex-row sm:items-center">
       <div className="flex w-full flex-col gap-1">
         <label className="text-xs font-semibold uppercase tracking-wide text-slate-600" htmlFor="email">
-          Get early access
+          Get product updates
         </label>
         <div className="flex gap-3">
           <input
@@ -62,17 +62,18 @@ export default function EmailCaptureForm() {
             className="shrink-0 rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:opacity-70"
             disabled={status === "submitting" || status === "success"}
           >
-            {status === "success" ? "Thanks!" : status === "submitting" ? "Saving..." : "Notify me"}
+            {status === "success" ? "Thanks!" : status === "submitting" ? "Saving..." : "Keep me updated"}
           </button>
         </div>
         <p id="email-help" className="text-xs text-slate-600">
-          We’ll email you when beta slots open. No spam.
+          We will email occasional product updates. No spam.
         </p>
         {error ? <p className="text-xs font-semibold text-rose-600">{error}</p> : null}
         {status === "success" ? (
-          <p className="text-xs font-semibold text-emerald-600">You’re on the list.</p>
+          <p className="text-xs font-semibold text-emerald-600">You are on the list.</p>
         ) : null}
       </div>
     </form>
   );
 }
+
