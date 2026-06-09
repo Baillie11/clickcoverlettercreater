@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cover Letter Creator</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=3" />
+  <link rel="stylesheet" href="styles.css?v=12" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.11.2/html2pdf.bundle.min.js"></script>
@@ -198,19 +198,21 @@
     <div class="auth-card">
       <h1>Welcome to VitaePro</h1>
       <p class="subtle">Sign in or create an account to continue</p>
-      <label>Username (email address)
-        <input type="email" id="authUsername" autocomplete="username" placeholder="e.g. email@example.com" />
-      </label>
-      <label>Password
-        <input type="password" id="authPassword" autocomplete="current-password" />
-        <small class="field-hint">Minimum 6 characters required.</small>
-      </label>
-      <label class="inline"><input type="checkbox" id="authCreate" /> Create new account</label>
-      <div class="auth-actions">
-        <button id="authSubmitBtn">Continue</button>
-        <button type="button" id="forgotPasswordBtn" class="link-btn">Forgot Password?</button>
-      </div>
-      <div id="authError" class="auth-error" aria-live="polite"></div>
+      <form onsubmit="return false">
+        <label>Username (email address)
+          <input type="email" id="authUsername" autocomplete="username" placeholder="e.g. email@example.com" />
+        </label>
+        <label>Password
+          <input type="password" id="authPassword" autocomplete="current-password" />
+          <small class="field-hint">Minimum 6 characters required.</small>
+        </label>
+        <label class="inline"><input type="checkbox" id="authCreate" /> Create new account</label>
+        <div class="auth-actions">
+          <button id="authSubmitBtn">Continue</button>
+          <button type="button" id="forgotPasswordBtn" class="link-btn">Forgot Password?</button>
+        </div>
+        <div id="authError" class="auth-error" aria-live="polite"></div>
+      </form>
     </div>
   </div>
 
@@ -288,39 +290,44 @@
       <div id="resetStep1" class="reset-step">
         <h1>Reset Password</h1>
         <p class="subtle">Enter your email address and we'll send you a reset token</p>
-        <label>Email Address
-          <input type="email" id="resetUsername" autocomplete="username" placeholder="e.g. email@example.com" />
-        </label>
-        <div class="auth-actions">
-          <button id="requestResetBtn">Send Reset Token</button>
-          <button type="button" id="resetCancelBtn" class="link-btn">Back to Sign In</button>
-        </div>
-        <div id="resetError" class="auth-error" aria-live="polite"></div>
+        <form onsubmit="return false">
+          <label>Email Address
+            <input type="email" id="resetUsername" autocomplete="username" placeholder="e.g. email@example.com" />
+          </label>
+          <div class="auth-actions">
+            <button id="requestResetBtn">Send Reset Token</button>
+            <button type="button" id="resetCancelBtn" class="link-btn">Back to Sign In</button>
+          </div>
+          <div id="resetError" class="auth-error" aria-live="polite"></div>
+        </form>
       </div>
       
       <!-- Step 2: Confirm Reset with Token -->
       <div id="resetStep2" class="reset-step" style="display: none;">
         <h1>Enter Reset Token</h1>
         <p class="subtle">Check your email for the reset token (expires in 30 minutes)</p>
-        <label>Reset Token
-          <input type="text" id="resetToken" placeholder="Enter the token from your email" autocomplete="off" />
-        </label>
-        <label>New Password
-          <input type="password" id="resetNewPassword" autocomplete="new-password" />
-        </label>
-        <label>Confirm Password
-          <input type="password" id="resetConfirmPassword" autocomplete="new-password" />
-        </label>
-        <div class="auth-actions">
-          <button id="resetSubmitBtn">Reset Password</button>
-          <button type="button" id="resetBackBtn" class="link-btn">Back</button>
-        </div>
-        <div id="resetError2" class="auth-error" aria-live="polite"></div>
+        <form onsubmit="return false">
+          <label>Reset Token
+            <input type="text" id="resetToken" placeholder="Enter the token from your email" autocomplete="off" />
+          </label>
+          <label>New Password
+            <input type="password" id="resetNewPassword" autocomplete="new-password" />
+          </label>
+          <label>Confirm Password
+            <input type="password" id="resetConfirmPassword" autocomplete="new-password" />
+          </label>
+          <div class="auth-actions">
+            <button id="resetSubmitBtn">Reset Password</button>
+            <button type="button" id="resetBackBtn" class="link-btn">Back</button>
+          </div>
+          <div id="resetError2" class="auth-error" aria-live="polite"></div>
+        </form>
       </div>
     </div>
   </div>
 
-  <script src="env.js?v=11"></script>
-  <script src="script.js?v=11"></script>
+  <script src="env.js?v=12"></script>
+  <script src="script.js?v=12"></script>
 </body>
 </html>
+

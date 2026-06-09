@@ -3024,22 +3024,14 @@
         id: generateId(),
         company: company,
         role: jobTitle,
-        status: 'Draft',
+        status: 'Applied',
         notes: '',
         date: new Date().toISOString(),
         paragraphs: JSON.stringify(paragraphTexts),  // Store as JSON string for database
         timeSpent: 0
       };
-      
-      // Also store job info in notes
-      const jobInfo = {
-        contactPerson: DOM.contactPerson?.value || '',
-        businessAddress: DOM.businessAddress?.value || '',
-        refNumber: DOM.refNumber?.value || ''
-      };
-      draftData.notes = JSON.stringify(jobInfo);
-      
-      console.log('Saving draft with data:', draftData);
+
+      console.log('Saving application with data:', draftData);
       
       const response = await fetch('/applications', {
         method: 'POST',
@@ -3056,9 +3048,9 @@
       }
       
       const result = await response.json();
-      console.log('✅ Draft saved successfully:', result);
-      
-      alert(`✅ Draft saved: ${company} - ${jobTitle}\n\nYou can view this in your Dashboard!`);
+      console.log('✅ Application saved successfully:', result);
+
+      alert(`✅ Application saved: ${company} - ${jobTitle}\n\nYou can view this in your Dashboard!`);
       
       // Notify dashboard API if it exists (for live refresh)
       if (window.DashboardAPI && typeof window.DashboardAPI.refresh === 'function') {

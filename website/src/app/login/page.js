@@ -5,7 +5,7 @@ export const metadata = {
   description: "Link users to your app login or SSO provider.",
 };
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.example.com/login";
+const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.vitaepro.com.au/app.html";
 
 export default function LoginPage() {
   return (
