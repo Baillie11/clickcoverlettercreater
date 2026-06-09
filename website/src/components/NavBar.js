@@ -6,6 +6,7 @@ const navLinks = [
   { href: "/", label: "Home" },
   { href: "#how-it-works", label: "How it works" },
   { href: "/features", label: "Features" },
+  { href: "/pricing", label: "Pricing" },
   { href: "/faq", label: "FAQ" },
   { href: "/blog", label: "Blog" },
 ];
@@ -26,19 +27,15 @@ export default function NavBar() {
         </nav>
         <div className="flex items-center gap-3 text-sm">
           <Link
-            href="/login"
-            className="hidden rounded-md border border-black/15 px-4 py-2 font-semibold text-slate-800 transition hover:bg-white sm:inline-flex"
-          >
-            Log in
-          </Link>
-          <Link
             href={appUrl}
             className="rounded-md bg-slate-950 px-4 py-2 font-semibold text-white transition hover:bg-slate-800"
           >
-            Launch free
+            Open app
           </Link>
         </div>
       </div>
     </header>
   );
 }
+
+

@@ -3,7 +3,7 @@
 const appUrl = "https://www.vitaepro.com.au/app.html";
 
 const proofPoints = [
-  { value: "Free", label: "for a limited time during launch" },
+  { value: "Free", label: "for now while paid plans are prepared" },
   { value: "3x", label: "faster than starting every application cold" },
   { value: "Human", label: "drafts that still sound like you" },
 ];
@@ -32,7 +32,7 @@ const steps = [
 
 const features = [
   {
-    title: "Cover letters that do not sound copied",
+    title: "Cover letters that don't sound copied",
     body: "VitaePro helps you write in a clear, confident voice instead of producing a bland template or obvious AI draft.",
   },
   {
@@ -53,7 +53,7 @@ const features = [
   },
   {
     title: "Free for a limited time",
-    body: "VitaePro is launched and free for a limited time, so users can start creating stronger applications before paid plans begin.",
+    body: "VitaePro is currently free to use, giving you the chance to create stronger applications before paid plans are introduced.",
   },
 ];
 
@@ -73,7 +73,7 @@ const audienceCards = [
 const faqs = [
   {
     q: "Is VitaePro free right now?",
-    a: "Yes. VitaePro is launched and free for a limited time. Paid plans will come later, but there is no payment required right now.",
+    a: "VitaePro is currently free to use, giving you the chance to create stronger applications before paid plans are introduced.",
   },
   {
     q: "Is this just another AI cover letter generator?",
@@ -131,20 +131,20 @@ export default function Home() {
           <ProductPreview />
         </div>
         <div className="hero-content section-shell">
-          <p className="eyebrow">Launched and free for a limited time</p>
+          <p className="eyebrow">Free for now</p>
           <h1>Write the job application that gets you noticed.</h1>
           <p className="hero-copy">
             VitaePro helps job seekers turn real experience into sharper cover letters and selection criteria responses, without the stiff, generic feel of most AI writing tools.
           </p>
           <div className="hero-actions">
             <Link href={appUrl} className="button-primary">
-              Launch VitaePro free
+              Open VitaePro free
             </Link>
             <Link href="#how-it-works" className="button-secondary">
               See how it works
             </Link>
           </div>
-          <p className="hero-note">No payment required during the launch period. Start writing today and build stronger applications while VitaePro is free.</p>
+          <p className="hero-note">No payment required for now. Start writing today and build stronger applications while VitaePro is free.</p>
         </div>
       </section>
 
@@ -191,7 +191,6 @@ export default function Home() {
 
       <section className="section-shell sales-section">
         <div className="section-heading compact">
-          <p className="eyebrow">Why people will use it</p>
           <h2>Built to help users apply with more confidence, more often.</h2>
         </div>
         <div className="feature-grid">
@@ -223,7 +222,7 @@ export default function Home() {
           <p className="eyebrow">Free for a limited time</p>
           <h2>Start using VitaePro now, while it is free.</h2>
           <p>
-            VitaePro is live and ready to use. Create better applications, reduce writing stress, and take advantage of free access during the launch period.
+            VitaePro is currently free to use. Create better applications, reduce writing stress, and take advantage of free access before paid plans are introduced.
           </p>
         </div>
         <Link href={appUrl} className="button-primary dark">
@@ -248,4 +247,10 @@ export default function Home() {
     </div>
   );
 }
+
+
+
+
+
+
 
