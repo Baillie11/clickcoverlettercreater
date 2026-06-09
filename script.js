@@ -73,7 +73,8 @@
       sections: {}
     },
     currentLetter: {
-      paragraphs: []
+      paragraphs: [],
+      applicationId: null
     },
     settings: {
       theme: 'standard'
@@ -2908,6 +2909,7 @@
     try {
       const letterState = {
         paragraphs: appState.currentLetter.paragraphs,
+        applicationId: appState.currentLetter.applicationId || null,
         jobInfo: {
           roleTitle: DOM.roleTitle?.value || '',
           companyName: DOM.companyName?.value || '',
@@ -2930,6 +2932,7 @@
       if (!savedLetter) return;
       
       const letterState = JSON.parse(savedLetter);
+      appState.currentLetter.applicationId = letterState.applicationId || null;
       
       // Restore job information
       if (letterState.jobInfo) {
@@ -2972,6 +2975,7 @@
     if (confirm('Are you sure you want to start a new letter? This will clear the current letter and AI responses.')) {
       DOM.letterArea.innerHTML = '<p class="placeholder">Drag responses here to build your letter</p>';
       appState.currentLetter.paragraphs = [];
+      appState.currentLetter.applicationId = null;
       
       // Clear job form
       if (DOM.roleTitle) DOM.roleTitle.value = '';
@@ -3000,23 +3004,24 @@
     }
   }
 
-  async function saveDraft() {
+  async function saveDraft(options = {}) {
+    const silent = Boolean(options.silent);
     if (appState.currentLetter.paragraphs.length === 0) {
-      alert('Please add some content to your letter before saving.');
-      return;
+      if (!silent) alert('Please add some content to your letter before saving.');
+      return false;
     }
     
     if (!authToken) {
-      alert('Please sign in to save drafts.');
-      return;
+      if (!silent) alert('Please sign in to save applications.');
+      return false;
     }
     
     const jobTitle = sanitizeText(DOM.roleTitle.value);
     const company = sanitizeText(DOM.companyName.value);
     
     if (!company || !jobTitle) {
-      alert('Please enter at least a company name and role title.');
-      return;
+      if (!silent) alert('Please enter at least a company name and role title.');
+      return false;
     }
     
     try {
@@ -3029,8 +3034,10 @@
         return text;
       }).filter(t => t && t.trim());
       
+      const applicationId = appState.currentLetter.applicationId || generateId();
+      const isUpdate = Boolean(appState.currentLetter.applicationId);
       const draftData = {
-        id: generateId(),
+        id: applicationId,
         company: company,
         role: jobTitle,
         status: 'Applied',
@@ -3042,8 +3049,8 @@
 
       console.log('Saving application with data:', draftData);
       
-      const response = await fetch('/applications', {
-        method: 'POST',
+      const response = await fetch(isUpdate ? `/applications/${encodeURIComponent(applicationId)}` : '/applications', {
+        method: isUpdate ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${authToken}`
@@ -3058,16 +3065,20 @@
       
       const result = await response.json();
       console.log('✅ Application saved successfully:', result);
+      appState.currentLetter.applicationId = applicationId;
+      saveCurrentLetter();
 
-      alert(`✅ Application saved: ${company} - ${jobTitle}\n\nYou can view this in your Dashboard!`);
+      if (!silent) alert(`✅ Application saved: ${company} - ${jobTitle}\n\nYou can view this in your Dashboard!`);
       
       // Notify dashboard API if it exists (for live refresh)
       if (window.DashboardAPI && typeof window.DashboardAPI.refresh === 'function') {
         window.DashboardAPI.refresh();
       }
+      return true;
     } catch (error) {
       console.error('❌ Error saving draft:', error);
-      alert(`Failed to save draft: ${error.message}`);
+      if (!silent) alert(`Failed to save application: ${error.message}`);
+      return false;
     }
   }
 
@@ -4325,7 +4336,15 @@
   }
 
   // PDF Export (Enhanced)
-  function downloadPdf() {
+  async function downloadPdf() {
+    updateLetterState();
+
+    const saved = await saveDraft({ silent: true });
+    if (!saved) {
+      alert('Please sign in, add at least one paragraph, and enter a company name and role title before downloading your PDF.');
+      return;
+    }
+
     const profile = appState.profile;
     const fullName = `${profile.firstName || ''} ${profile.lastName || ''}`.trim();
     const today = new Date().toISOString().split('T')[0];
@@ -4351,14 +4370,12 @@
       jsPDF: { unit: 'in', format: pageSize === 'a4' ? 'a4' : 'letter', orientation: 'portrait' }
     };
 
-    // Generate and save PDF, then auto-save letter and clear for next one
+    // Generate and save PDF, then clear for next one
     html2pdf().set(opt).from(el).save().then(async () => {
-      // Auto-save the letter as draft
-      await saveDraft();
-      
       // Clear the letter area for next letter
       DOM.letterArea.innerHTML = '<p class="placeholder">Drag responses here to build your letter</p>';
       appState.currentLetter.paragraphs = [];
+      appState.currentLetter.applicationId = null;
       
       // Clear job form
       DOM.roleTitle.value = '';
@@ -4383,7 +4400,7 @@
       // Clear saved letter state
       localStorage.removeItem('currentLetter');
       
-      console.log('PDF downloaded, letter saved, AI responses cleared, and form cleared for next letter');
+      console.log('PDF downloaded, application saved, AI responses cleared, and form cleared for next letter');
     }).catch((error) => {
       console.error('PDF generation failed:', error);
       alert('Failed to generate PDF. Please try again.');
