@@ -41,7 +41,7 @@ EMAIL_USER=your-email@gmail.com
 EMAIL_PASSWORD=your-app-password
 
 # For production, also set the app URL
-APP_URL=https://yourdomain.com
+APP_URL=https://www.vitaepro.com.au
 ```
 
 ### Gmail App Password Setup
@@ -147,7 +147,7 @@ Confirm password reset with token.
 2. **Configure email in `.env`** (required for full testing)
 
 3. **Test the flow:**
-   - Open your browser to `http://localhost:3050`
+   - Open your browser to `http://localhost:3050` (dev) or `https://www.vitaepro.com.au` (production)
    - Click "Forgot Password?"
    - Enter your email address
    - Check your email for the reset token

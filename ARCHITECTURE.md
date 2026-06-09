@@ -429,7 +429,7 @@ See [CHANGELOG.md](CHANGELOG.md) for complete version history.
 
 ## Support & Contact
 
-- **Repository:** https://github.com/Baillie11/clickcoverlettercreater
+- **Repository:** https://github.com/Baillie11/VitaePro
 - **Production:** https://vitaepro.com.au
 - **Issues:** GitHub Issues
 

@@ -2,8 +2,8 @@
 deployment:
   tasks:
     # 1) Set paths
-    - export REPOPATH=/home/clickeco/repositories/clickcoverlettercreater
-    - export DEPLOYPATH=/home/clickeco/clickcoverlettercreator.com.au
+    - export REPOPATH=/home/clickeco/repositories/vitaepro
+    - export DEPLOYPATH=/home/clickeco/vitaepro.com.au
 
     # 2) Safety checks
     - /bin/test -d "$REPOPATH" || (echo "ERROR: Repo path not found: $REPOPATH" && exit 1)
@@ -27,3 +27,9 @@ deployment:
 
     # 5) Ensure .git never remains in live
     - /bin/rm -rf "$DEPLOYPATH/.git"
+
+    # 6) Install/update dependencies
+    - cd "$DEPLOYPATH" && source /home/clickeco/nodevenv/vitaepro.com.au/20/bin/activate && npm install --production
+
+    # 7) Restart the Node.js app
+    - mkdir -p "$DEPLOYPATH/tmp" && touch "$DEPLOYPATH/tmp/restart.txt"

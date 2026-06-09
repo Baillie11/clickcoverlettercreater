@@ -959,19 +959,32 @@ body.theme-dark .auth-card .field-hint { color: #999; }
 .letter-actions label { color: var(--muted); font-size: 0.95rem; }
 .letter-actions select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
 
-.letter-actions button::before { position: relative; margin-right: 6px; }
-#newLetterBtn::before { content: "🆕"; }
-#saveLetterBtn::before { content: "💾"; }
-#downloadPdfBtn::before { content: "⬇️"; }
-#previewLetterBtn::before { content: "👁️"; }
+.letter-actions button::before {
+  position: relative;
+  font-size: 1.05em;
+  line-height: 1;
+}
+#newLetterBtn::before { content: "\1F195"; }
+#saveDraftBtn::before { content: "\1F4BE"; }
+#loadDraftBtn::before { content: "\1F4C2"; }
+#downloadPdfBtn::before { content: "\2B07\FE0F"; }
+#previewLetterBtn::before { content: "\1F441\FE0F"; }
 
 .letter-actions button {
-  padding: 10px 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 10px 14px;
   border: none;
   background-color: var(--primary);
   color: white;
   border-radius: 10px;
   cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1.1;
+  white-space: nowrap;
   box-shadow: var(--shadow);
   transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.2s ease;
 }

@@ -2,8 +2,7 @@
 
 **Release Date:** January 16, 2026  
 **Git Tag:** v1.5.0  
-**Repository:** https://github.com/Baillie11/clickcoverlettercreater
-
+**Repository:** https://github.com/Baillie11/VitaePro
 ---
 
 ## 🎉 What's New
@@ -178,7 +177,7 @@ For detailed technical changes, see [CHANGELOG.md](./CHANGELOG.md)
 
 ## 🔗 Links
 
-- **Repository:** https://github.com/Baillie11/clickcoverlettercreater
+- **Repository:** https://github.com/Baillie11/VitaePro
 - **Tag:** v1.5.0
 - **Previous Version:** v1.1.0
 
