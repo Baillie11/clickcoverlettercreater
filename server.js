@@ -76,6 +76,57 @@ async function initDatabase() {
   }
 
   console.log(`📊 Database type: ${dbType.toUpperCase()}`);
+  await cleanupLegacyApplications();
+}
+
+function isLegacyJobInfoNotes(notes) {
+  if (!notes || typeof notes !== 'string') return false;
+  try {
+    const parsed = JSON.parse(notes);
+    return parsed && typeof parsed === 'object' && (
+      Object.prototype.hasOwnProperty.call(parsed, 'contactPerson') ||
+      Object.prototype.hasOwnProperty.call(parsed, 'businessAddress') ||
+      Object.prototype.hasOwnProperty.call(parsed, 'refNumber')
+    );
+  } catch {
+    return false;
+  }
+}
+
+function cleanApplicationNotes(notes) {
+  return isLegacyJobInfoNotes(notes) ? '' : (notes || '');
+}
+
+function cleanApplicationStatus(status) {
+  return !status || status === 'Draft' ? 'Applied' : status;
+}
+
+async function cleanupLegacyApplications() {
+  const markerFile = path.join(dataDir, 'application-cleanup-v1.json');
+  if (fs.existsSync(markerFile)) return;
+
+  try {
+    if (dbType === 'mysql') {
+      await db.execute("UPDATE applications SET status = 'Applied' WHERE status IS NULL OR status = '' OR status = 'Draft'");
+      await db.execute("UPDATE applications SET notes = '' WHERE notes IS NOT NULL AND notes <> ''");
+    } else if (dbType === 'sqlite') {
+      db.prepare("UPDATE applications SET status = 'Applied' WHERE status IS NULL OR status = '' OR status = 'Draft'").run();
+      db.prepare("UPDATE applications SET notes = '' WHERE notes IS NOT NULL AND notes <> ''").run();
+    } else if (dbType === 'json') {
+      if (!store.applications) store.applications = [];
+      store.applications = store.applications.map(app => ({
+        ...app,
+        status: cleanApplicationStatus(app.status),
+        notes: ''
+      }));
+      saveStore();
+    }
+
+    fs.writeFileSync(markerFile, JSON.stringify({ completedAt: new Date().toISOString() }, null, 2));
+    console.log('Application cleanup complete: Draft statuses set to Applied and notes cleared.');
+  } catch (error) {
+    console.error('Application cleanup failed:', error.message);
+  }
 }
 
 // SQLite table creation
@@ -764,8 +815,8 @@ const DB = {
           data.userId,
           data.company,
           data.role,
-          data.status || 'Draft',
-          data.notes || '',
+          cleanApplicationStatus(data.status),
+          cleanApplicationNotes(data.notes),
           data.date || now,
           paragraphsJson,
           data.timeSpent || 0,
@@ -782,8 +833,8 @@ const DB = {
         data.userId,
         data.company,
         data.role,
-        data.status || 'Draft',
-        data.notes || '',
+        cleanApplicationStatus(data.status),
+        cleanApplicationNotes(data.notes),
         data.date || now,
         paragraphsJson,
         data.timeSpent || 0,
@@ -797,8 +848,8 @@ const DB = {
         userId: data.userId,
         company: data.company,
         role: data.role,
-        status: data.status || 'Draft',
-        notes: data.notes || '',
+        status: cleanApplicationStatus(data.status),
+        notes: cleanApplicationNotes(data.notes),
         date: data.date || now,
         paragraphs: data.paragraphs || [],
         timeSpent: data.timeSpent || 0,

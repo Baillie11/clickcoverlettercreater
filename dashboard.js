@@ -136,6 +136,32 @@
     });
   }
 
+  function isLegacyJobInfoNotes(notes) {
+    if (!notes || typeof notes !== 'string') return false;
+    try {
+      const parsed = JSON.parse(notes);
+      return parsed && typeof parsed === 'object' && (
+        Object.prototype.hasOwnProperty.call(parsed, 'contactPerson') ||
+        Object.prototype.hasOwnProperty.call(parsed, 'businessAddress') ||
+        Object.prototype.hasOwnProperty.call(parsed, 'refNumber')
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  function normalizeApplication(app) {
+    const normalized = { ...app };
+    normalized.status = !normalized.status || normalized.status === 'Draft' ? 'Applied' : normalized.status;
+    if (isLegacyJobInfoNotes(normalized.notes)) {
+      normalized.notes = '';
+    }
+    if (!Array.isArray(normalized.paragraphs)) {
+      normalized.paragraphs = [];
+    }
+    return normalized;
+  }
+
   function getStartOfWeek(date = new Date()) {
     const d = new Date(date);
     const day = d.getDay();
@@ -168,7 +194,7 @@
             if (!Array.isArray(app.paragraphs)) {
               app.paragraphs = [];
             }
-            return app;
+            return normalizeApplication(app);
           });
           // Sync to localStorage as backup
           localStorage.setItem(STORAGE_KEY, JSON.stringify(applications));
@@ -253,7 +279,7 @@
           company: letter.jobInfo?.companyName || 'Unknown Company',
           role: letter.jobInfo?.roleTitle || 'Unknown Role',
           status: 'Applied', // Default status for migrated letters (assumed already applied)
-          notes: `Imported from saved letter (${savedDate})`,
+          notes: '',
           date: letter.savedAt ? new Date(letter.savedAt).toISOString() : new Date().toISOString(),
           paragraphs: paragraphTexts,
           timeSpent: 0
@@ -584,7 +610,7 @@
 
     document.getElementById('editAppCompany').textContent = app.company || 'N/A';
     document.getElementById('editAppRole').textContent = app.role || 'N/A';
-    document.getElementById('editAppStatus').value = app.status || 'Draft';
+    document.getElementById('editAppStatus').value = app.status || 'Applied';
     document.getElementById('editAppNotes').value = app.notes || '';
 
     const modal = document.getElementById('editApplicationModal');
@@ -622,7 +648,7 @@
       formatDate(app.date),
       app.company || '',
       app.role || '',
-      app.status || 'Draft',
+      app.status || 'Applied',
       (app.notes || '').replace(/"/g, '""') // Escape quotes
     ]);
 
@@ -847,12 +873,12 @@
 
   // Expose functions for integration with main app
   window.DashboardAPI = {
-    addApplication: function(company, role, status = 'Draft', paragraphs = [], notes = '') {
+    addApplication: function(company, role, status = 'Applied', paragraphs = [], notes = '') {
       const app = {
         id: generateId(),
         company: company,
         role: role,
-        status: status,
+        status: status || 'Applied',
         notes: '', // Always blank for new applications
         date: new Date().toISOString(),
         paragraphs: paragraphs,
