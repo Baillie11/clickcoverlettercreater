@@ -127,11 +127,27 @@ body {
 }
 
 .category-section h3 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   margin-bottom: 10px;
   padding-left: 8px;
   font-size: 1.05rem;
   color: var(--text);
   border-left: 4px solid var(--border);
+  line-height: 1.2;
+}
+
+.category-title {
+  min-width: 0;
+}
+
+.category-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 /* Empty State for Response Categories */
@@ -345,8 +361,10 @@ body.theme-dark .toggle-category-btn:hover {
 
 /* Sort Select Dropdown */
 .sort-select {
-  float: right;
-  padding: 5px 8px;
+  float: none;
+  width: auto;
+  max-width: 120px;
+  padding: 6px 8px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: white;

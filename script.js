@@ -2209,20 +2209,29 @@
     // Skip if response columns not present (e.g., on profile page)
     if (!DOM.categoryUser || !DOM.categoryCrowd || !DOM.categoryAi) return;
     // Clear existing responses
-    DOM.categoryUser.innerHTML = `<h3>User Created 
-      <button type="button" id="toggleUserBtn" class="toggle-category-btn" title="${categoryVisibility.user ? 'Hide' : 'Show'}">${categoryVisibility.user ? '▼' : '▶'}</button>
-      <button type="button" id="addUserResponseBtn" class="add-category-btn" title="Add new response">+</button>
-      <select id="userSortSelect" class="sort-select" title="Sort by">
-        <option value="tag">Sort by Tag</option>
-        <option value="date-desc">Newest First</option>
-        <option value="date-asc">Oldest First</option>
-      </select>
+    DOM.categoryUser.innerHTML = `<h3>
+      <span class="category-title">User Created</span>
+      <span class="category-actions">
+        <button type="button" id="toggleUserBtn" class="toggle-category-btn" title="${categoryVisibility.user ? 'Hide' : 'Show'}">${categoryVisibility.user ? '▼' : '▶'}</button>
+        <button type="button" id="addUserResponseBtn" class="add-category-btn" title="Add new response">+</button>
+        <select id="userSortSelect" class="sort-select" title="Sort by">
+          <option value="tag">Sort by Tag</option>
+          <option value="date-desc">Newest First</option>
+          <option value="date-asc">Oldest First</option>
+        </select>
+      </span>
     </h3>`;
-    DOM.categoryCrowd.innerHTML = `<h3>Crowd Sourced 
-      <button type="button" id="toggleCrowdBtn" class="toggle-category-btn" title="${categoryVisibility.crowd ? 'Hide' : 'Show'}">${categoryVisibility.crowd ? '▼' : '▶'}</button>
+    DOM.categoryCrowd.innerHTML = `<h3>
+      <span class="category-title">Crowd Sourced</span>
+      <span class="category-actions">
+        <button type="button" id="toggleCrowdBtn" class="toggle-category-btn" title="${categoryVisibility.crowd ? 'Hide' : 'Show'}">${categoryVisibility.crowd ? '▼' : '▶'}</button>
+      </span>
     </h3>`;
-    DOM.categoryAi.innerHTML = `<h3>AI Generated 
-      <button type="button" id="toggleAiBtn" class="toggle-category-btn" title="${categoryVisibility.ai ? 'Hide' : 'Show'}">${categoryVisibility.ai ? '▼' : '▶'}</button>
+    DOM.categoryAi.innerHTML = `<h3>
+      <span class="category-title">AI Generated</span>
+      <span class="category-actions">
+        <button type="button" id="toggleAiBtn" class="toggle-category-btn" title="${categoryVisibility.ai ? 'Hide' : 'Show'}">${categoryVisibility.ai ? '▼' : '▶'}</button>
+      </span>
     </h3>`;
     
     // Re-attach event listener for the + button
