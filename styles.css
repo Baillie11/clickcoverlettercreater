@@ -949,6 +949,12 @@ body.theme-dark .auth-card .field-hint { color: #999; }
   flex-wrap: wrap;
   gap: 10px 12px;
 }
+.letter-actions .left-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 10px;
+}
 .letter-actions .right-actions { display: flex; align-items: center; gap: 8px; }
 .letter-actions label { color: var(--muted); font-size: 0.95rem; }
 .letter-actions select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
@@ -961,7 +967,6 @@ body.theme-dark .auth-card .field-hint { color: #999; }
 
 .letter-actions button {
   padding: 10px 16px;
-  margin-right: 10px;
   border: none;
   background-color: var(--primary);
   color: white;
@@ -975,6 +980,12 @@ body.theme-dark .auth-card .field-hint { color: #999; }
   background-color: var(--primary-600);
   transform: translateY(-1px);
   box-shadow: 0 10px 24px rgba(17, 29, 74, 0.12);
+}
+
+@media (max-width: 900px) {
+  .letter-actions .left-actions {
+    flex-wrap: wrap;
+  }
 }
 
 /* Letter preview panel */
