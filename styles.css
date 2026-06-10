@@ -1305,7 +1305,48 @@ body.theme-dark #jobAdText:focus {
 }
 
 /* Profile page layout adjustments */
-body.profile-page .builder-panel { width: 100%; max-width: 900px; margin: 0 auto; }
+body.profile-page .app-container {
+  display: block;
+  height: auto;
+  min-height: calc(100vh - 76px);
+  max-width: 980px;
+}
+
+body.profile-page .builder-panel {
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+body.profile-page .user-info h3 {
+  margin: 0 0 18px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 12px;
+  color: var(--text);
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+
+body.profile-page .keywords-section,
+body.profile-page .sharing-preferences-section,
+body.profile-page .resume-upload-section {
+  margin-top: 26px;
+  padding-top: 22px;
+  border-top: 1px solid var(--border);
+}
+
+body.profile-page .keywords-section h4,
+body.profile-page .sharing-preferences-section h4,
+body.profile-page .resume-upload-section h4 {
+  margin: 0 0 12px;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 800;
+}
 
 /* Dark theme overrides */
 body.theme-dark {
@@ -1343,15 +1384,15 @@ body.theme-dark .modal-content { background: #141a2a; color: #e8edf7; border-col
   gap: 10px;
   cursor: pointer;
   padding: 12px;
-  background: rgba(108, 99, 255, 0.05);
-  border: 1px solid rgba(108, 99, 255, 0.2);
-  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   transition: all 0.2s ease;
 }
 
 .checkbox-label:hover {
-  background: rgba(108, 99, 255, 0.1);
-  border-color: rgba(108, 99, 255, 0.3);
+  background: #ffffff;
+  border-color: rgba(162, 67, 20, 0.34);
 }
 
 .checkbox-label input[type="checkbox"] {
@@ -1374,7 +1415,7 @@ body.theme-dark .modal-content { background: #141a2a; color: #e8edf7; border-col
   line-height: 1.5;
   padding: 8px 12px;
   background: rgba(0, 0, 0, 0.02);
-  border-left: 3px solid var(--primary);
+  border-left: 3px solid var(--accent);
   border-radius: 4px;
 }
 
@@ -1397,43 +1438,43 @@ body.theme-dark .preference-hint {
 
 /* Resume Upload Section */
 .resume-upload-section {
-  margin-top: 25px;
-  padding-top: 20px;
-  border-top: 1px solid #eee;
+  margin-top: 26px;
+  padding-top: 22px;
+  border-top: 1px solid var(--border);
 }
 
 .resume-upload-section h4 {
   margin-bottom: 10px;
-  color: #2C3E50;
+  color: var(--text);
   font-size: 1.1rem;
 }
 
 .resume-upload-area {
-  border: 2px dashed var(--border);
-  border-radius: 12px;
+  border: 1px dashed rgba(15, 23, 42, 0.25);
+  border-radius: var(--radius);
   padding: 22px;
   text-align: center;
-  background: linear-gradient(180deg, #fbfcff, #f6f8fb);
+  background: rgba(248, 250, 252, 0.74);
   cursor: pointer;
   transition: all 0.25s ease;
   margin-bottom: 16px;
 }
 
 .resume-upload-area:hover {
-  border-color: var(--primary);
-  background: #f0f4ff;
-  box-shadow: var(--shadow);
+  border-color: rgba(162, 67, 20, 0.38);
+  background: #ffffff;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
 }
 
 .resume-upload-area.drag-over {
-  border-color: #2ecc71;
-  background: #f0fff0;
+  border-color: #0f766e;
+  background: rgba(15, 118, 110, 0.06);
   transform: scale(1.02);
 }
 
 .upload-placeholder p {
   margin: 5px 0;
-  color: #666;
+  color: var(--muted);
 }
 
 .upload-placeholder p:first-child {
@@ -1448,15 +1489,15 @@ body.theme-dark .preference-hint {
 
 .upload-note {
   font-size: 0.8rem;
-  color: #3498db !important;
+  color: var(--accent) !important;
   font-style: italic;
   margin-top: 5px;
 }
 
 .resume-status {
-  background: #e8f5e8;
-  border: 1px solid #c3e6c3;
-  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   padding: 15px;
   margin-top: 10px;
 }
@@ -1470,7 +1511,7 @@ body.theme-dark .preference-hint {
 
 .resume-name {
   font-weight: 600;
-  color: #2C3E50;
+  color: var(--text);
   flex: 1;
 }
 
@@ -1483,7 +1524,7 @@ body.theme-dark .preference-hint {
 }
 
 .remove-resume-btn {
-  background: #ff4757;
+  background: #991b1b;
   color: white;
   border: none;
   padding: 6px 12px;
@@ -1494,7 +1535,7 @@ body.theme-dark .preference-hint {
 }
 
 .remove-resume-btn:hover {
-  background: #ff3838;
+  background: #7f1d1d;
 }
 
 .parsing-status {
@@ -1503,7 +1544,7 @@ body.theme-dark .preference-hint {
   padding: 8px;
   background: #fff;
   border-radius: 4px;
-  border-left: 4px solid #3498db;
+  border-left: 4px solid var(--accent);
 }
 
 .parsing-status.success {
@@ -1527,19 +1568,27 @@ body.theme-dark .preference-hint {
 
 .dashboard-container {
   display: block;
-  padding: 20px 40px;
+  height: auto;
+  min-height: calc(100vh - 76px);
+  padding: 18px;
   max-width: 1400px;
-  margin: 0 auto;
+  margin: 76px auto 0;
 }
 
 .dashboard-panel {
   width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 28px;
 }
 
 .dashboard-panel h2 {
-  margin-bottom: 30px;
-  font-size: 2rem;
+  margin: 0 0 26px;
+  font-size: 1.9rem;
   color: var(--text);
+  font-weight: 800;
 }
 
 /* Stats Grid */
@@ -1564,19 +1613,26 @@ body.theme-dark .preference-hint {
 
 .stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(17, 29, 74, 0.12);
+  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.12);
 }
 
 .stat-icon {
-  font-size: 2.5rem;
+  font-size: 2rem;
   line-height: 1;
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  background: rgba(162, 67, 20, 0.08);
 }
 
 .stat-content h3 {
   margin: 0 0 4px 0;
   font-size: 2rem;
   color: var(--primary);
-  font-weight: 600;
+  font-weight: 800;
 }
 
 .stat-content p {
@@ -1599,6 +1655,7 @@ body.theme-dark .preference-hint {
   margin: 0 0 20px 0;
   font-size: 1.4rem;
   color: var(--text);
+  font-weight: 800;
 }
 
 .section-header {
@@ -1618,26 +1675,29 @@ body.theme-dark .preference-hint {
 }
 
 .export-btn, .reimport-btn {
-  background: var(--secondary);
+  background: var(--primary);
   color: white;
   border: none;
   padding: 10px 18px;
-  border-radius: 6px;
+  border-radius: var(--radius);
   font-size: 0.9rem;
   cursor: pointer;
   transition: background 0.2s ease;
 }
 
 .export-btn:hover {
-  background: #00a17a;
+  background: var(--primary-600);
 }
 
 .reimport-btn {
-  background: var(--primary);
+  background: #ffffff;
+  color: var(--text);
+  border: 1px solid var(--border);
 }
 
 .reimport-btn:hover {
-  background: var(--primary-600);
+  background: #ffffff;
+  border-color: rgba(162, 67, 20, 0.34);
 }
 
 /* Status Breakdown */
@@ -1652,15 +1712,15 @@ body.theme-dark .preference-hint {
   justify-content: space-between;
   align-items: center;
   padding: 14px 16px;
-  background: linear-gradient(135deg, #f8f9fb 0%, #ffffff 100%);
+  background: #ffffff;
   border: 1px solid var(--border);
   border-radius: 8px;
   transition: all 0.2s ease;
 }
 
 .status-item:hover {
-  border-color: var(--primary);
-  box-shadow: 0 4px 12px rgba(108, 99, 255, 0.15);
+  border-color: rgba(162, 67, 20, 0.34);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
 }
 
 .status-label {
@@ -1693,15 +1753,15 @@ body.theme-dark .preference-hint {
   justify-content: space-between;
   align-items: center;
   padding: 14px;
-  background: #f9fafb;
+  background: #ffffff;
   border: 1px solid var(--border);
   border-radius: 6px;
   transition: all 0.2s ease;
 }
 
 .paragraph-item:hover {
-  background: #f0f4ff;
-  border-color: var(--primary);
+  background: rgba(248, 250, 252, 0.78);
+  border-color: rgba(162, 67, 20, 0.34);
 }
 
 .paragraph-text {
@@ -1732,9 +1792,9 @@ body.theme-dark .preference-hint {
 
 .filter-controls input,
 .filter-controls select {
-  padding: 10px 12px;
+  padding: 11px 12px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius);
   font-family: inherit;
   font-size: 0.95rem;
   transition: border-color 0.2s ease;
@@ -1752,8 +1812,8 @@ body.theme-dark .preference-hint {
 .filter-controls input:focus,
 .filter-controls select:focus {
   outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.15);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus);
 }
 
 /* Applications Table */
@@ -1768,8 +1828,8 @@ body.theme-dark .preference-hint {
 }
 
 .applications-table thead {
-  background: linear-gradient(135deg, #6c63ff 0%, #5a54d6 100%);
-  color: white;
+  background: #101827;
+  color: #ffffff;
 }
 
 .applications-table th {
@@ -1827,7 +1887,7 @@ body.theme-dark .preference-hint {
   background: transparent;
   border: 1px solid var(--border);
   padding: 6px 12px;
-  border-radius: 4px;
+  border-radius: var(--radius);
   cursor: pointer;
   font-size: 0.85rem;
   transition: all 0.2s ease;
@@ -1864,7 +1924,7 @@ body.theme-dark .preference-hint {
   display: block;
   margin-top: 4px;
   margin-bottom: 8px;
-  color: var(--primary);
+  color: var(--text);
   font-weight: 600;
   font-size: 1.05rem;
 }
@@ -1874,7 +1934,7 @@ body.theme-dark .preference-hint {
   width: 100%;
   padding: 12px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius);
   font-family: inherit;
   font-size: 0.95rem;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -1885,7 +1945,7 @@ body.theme-dark .preference-hint {
 #editApplicationModal select {
   cursor: pointer;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236c63ff' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23111827' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 12px center;
   padding-right: 36px;
@@ -1894,8 +1954,8 @@ body.theme-dark .preference-hint {
 #editApplicationModal select:focus,
 #editApplicationModal textarea:focus {
   outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.15);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus);
 }
 
 #editApplicationModal textarea {
