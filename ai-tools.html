@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>VitaePro App</title>
+  <title>AI Tools - VitaePro</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css?v=16" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
@@ -76,7 +76,8 @@
     }
   </style>
 </head>
-<body>
+<body class="ai-tools-page">
+
   <!-- Mobile Device Notice -->
   <div class="mobile-notice">
     <div class="mobile-notice-content">
@@ -87,17 +88,16 @@
       <button class="mobile-notice-btn" onclick="this.parentElement.parentElement.style.display='none'">Continue Anyway</button>
     </div>
   </div>
-
   <header class="app-header">
       <h1>VitaePro</h1>
     <nav class="app-nav">
       <div class="nav-left">
-        <a href="app.html" class="active">Create Letter</a>
+        <a href="app.html">Create Letter</a>
         <a href="profile.html">Profile</a>
         <a href="dashboard.html">Dashboard</a>
       </div>
       <div class="nav-center">
-        <a href="ai-tools.html" class="ai-tools-link">AI Tools</a>
+        <a href="ai-tools.html" class="ai-tools-link active">AI Tools</a>
       </div>
       <div class="nav-right">
         <div id="userSection" class="user-section">
@@ -108,84 +108,39 @@
     </nav>
   </header>
 
-  <div class="app-container">
-    <aside class="response-panel">
-      <h2>Response Library</h2>
-      
-      <div class="search-container">
-        <input type="text" id="responseSearchInput" placeholder="Search responses by keyword or tag..." />
-        <button type="button" id="clearSearchBtn" class="clear-search-btn" title="Clear search">✕</button>
-      </div>
 
-      <div class="category-section" id="category-user">
-        <h3>User Created <button type="button" id="addUserResponseBtn" class="add-category-btn" title="Add new response">+</button></h3>
-      </div>
-
-      <div class="category-section" id="category-crowd">
-        <h3>Crowd Sourced</h3>
-      </div>
-
-      <div class="category-section" id="category-ai">
-        <h3>AI Generated</h3>
-      </div>
-
-    </aside>
-
-    <main class="builder-panel">
-      <section class="job-info">
-        <div class="section-header collapsible-header" id="jobInfoHeader">
-          <h3>Job Information</h3>
-          <button type="button" id="toggleJobInfoBtn" class="toggle-btn" title="Collapse/Expand">▼</button>
-        </div>
-        <div id="jobInfoContent" class="collapsible-content">
-          <form id="jobForm">
-            <input type="text" id="roleTitle" placeholder="Role Title" />
-            <input type="text" id="companyName" list="companyNameList" placeholder="Company Name" />
-            <datalist id="companyNameList"></datalist>
-            <input type="text" id="contactPerson" placeholder="Contact Person" />
-            <input type="text" id="businessAddress" placeholder="Business Address" />
-            <input type="text" id="refNumber" placeholder="Reference Number" />
-          </form>
-        </div>
+  <div class="app-container ai-tools-container">
+    <main class="builder-panel ai-tools-panel">
+      <section class="ai-tools-hero">
+        <p class="eyebrow">AI Tools</p>
+        <h2>Turn a job ad into stronger application material.</h2>
+        <p>Paste the job ad below and VitaePro will extract the role details, save them for your Create Letter page, and add tailored AI Generated responses to your response library.</p>
       </section>
 
-      <section class="letter-builder">
-        <div class="section-header">
-          <h3>Your Cover Letter</h3>
-          <button type="button" id="newLetterBtnTop" class="new-letter-btn-top">🆕 New Cover Letter</button>
+      <section class="job-ad-section ai-tools-section">
+        <h3>Paste Job Ad</h3>
+        <textarea id="jobAdText" placeholder="Paste the job ad text here..."></textarea>
+        <form id="jobForm" class="ai-hidden-job-info" aria-hidden="true">
+          <input type="text" id="roleTitle" tabindex="-1" />
+          <input type="text" id="companyName" tabindex="-1" />
+          <input type="text" id="contactPerson" tabindex="-1" />
+          <input type="text" id="businessAddress" tabindex="-1" />
+          <input type="text" id="refNumber" tabindex="-1" />
+        </form>
+        <div class="job-ad-controls">
+          <button type="button" id="aiGenerateBtn" title="Extract job info and generate tailored cover letter responses with AI">AI Generate</button>
         </div>
-        <div class="letter-drop-area" id="letterArea">
-          <p class="placeholder">Drag responses here to build your letter</p>
-        </div>
-        <div class="letter-actions">
-          <div class="left-actions">
-            <button id="newLetterBtn">New Cover Letter</button>
-            <button id="saveDraftBtn">Save Draft</button>
-            <button id="loadDraftBtn">Load Draft</button>
-            <button id="previewLetterBtn">Preview</button>
-            <button id="downloadPdfBtn">Download as PDF</button>
-          </div>
-          <div class="right-actions">
-            <label for="themeSelect">Theme:</label>
-            <select id="themeSelect">
-              <option value="standard">Standard (Left/Right Header)</option>
-              <option value="modern-centered">Modern Header (Centered)</option>
-              <option value="formal-classic">Formal Classic (Sender Right + Date)</option>
-              <option value="sidebar-profile">Sidebar Profile (Left)</option>
-              <option value="letterhead-accent">Letterhead Accent Bar</option>
-              <option value="teal-sidebar">Teal Sidebar (Professional)</option>
-            </select>
-            <label for="pageSizeSelect">Page:</label>
-            <select id="pageSizeSelect">
-              <option value="letter">Letter</option>
-              <option value="a4" selected>A4</option>
-            </select>
-          </div>
-        </div>
-        <div id="letterPreview" class="letter-preview" aria-live="polite"></div>
+        <div id="jobAdParseStatus" class="job-ad-status" aria-live="polite"></div>
+      </section>
+
+      <section class="dashboard-section ai-tools-next-step">
+        <h3>After AI Generate</h3>
+        <p>The generated responses will appear under <strong>AI Generated</strong> in the Create Letter page. The extracted role, company, contact and address details will also be ready in Job Information.</p>
+        <a href="app.html" class="button-like-link">Go to Create Letter</a>
       </section>
     </main>
   </div>
+
 
   <!-- Auth Landing (full-screen) -->
   <div id="authLanding" class="auth-landing hidden" aria-live="polite">
@@ -324,4 +279,3 @@
   <script src="script.js?v=14"></script>
 </body>
 </html>
-

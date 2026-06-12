@@ -2773,6 +2773,8 @@
   }
 
   function updateSalutationPreview() {
+    if (!DOM.letterArea) return;
+
     // Remove existing header elements
     const existingHeader = DOM.letterArea.querySelector('.letter-header-preview');
     if (existingHeader) {
@@ -2907,9 +2909,10 @@
   
   function saveCurrentLetter() {
     try {
+      const savedLetter = JSON.parse(localStorage.getItem('currentLetter') || '{}');
       const letterState = {
-        paragraphs: appState.currentLetter.paragraphs,
-        applicationId: appState.currentLetter.applicationId || null,
+        paragraphs: DOM.letterArea ? appState.currentLetter.paragraphs : (savedLetter.paragraphs || appState.currentLetter.paragraphs),
+        applicationId: DOM.letterArea ? (appState.currentLetter.applicationId || null) : (savedLetter.applicationId || appState.currentLetter.applicationId || null),
         jobInfo: {
           roleTitle: DOM.roleTitle?.value || '',
           companyName: DOM.companyName?.value || '',
@@ -4017,6 +4020,7 @@
 
       showJobAdStatus('âœ… Job information extracted successfully!', 'success');
       updateSalutationPreview();
+      saveCurrentLetter();
     } catch (error) {
       console.error('AI extraction error:', error);
       showJobAdStatus(`âŒ ${error.message}`, 'error');
@@ -4092,6 +4096,7 @@
           DOM.refNumber.value = result.jobInfo.reference;
         }
         updateSalutationPreview();
+        saveCurrentLetter();
       }
       
       // Add generated responses to AI library
@@ -4417,6 +4422,7 @@
     
     // Job info changes - update salutation preview and refresh placeholders
     [DOM.contactPerson, DOM.companyName, DOM.roleTitle, DOM.businessAddress, DOM.refNumber].forEach(input => {
+      if (!input) return;
       input.addEventListener('input', () => {
         updateSalutationPreview();
         saveCurrentLetter(); // Save job info changes
