@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AI Tools - VitaePro</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=16" />
+  <link rel="stylesheet" href="styles.css?v=17" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.11.2/html2pdf.bundle.min.js"></script>
@@ -118,7 +118,10 @@
       </section>
 
       <section class="job-ad-section ai-tools-section">
-        <h3>Paste Job Ad</h3>
+        <div class="ai-tools-section-header">
+          <h3>Paste Job Ad</h3>
+          <button type="button" id="aiGenerateBtn" class="ai-generate-inline" title="Paste a job ad before generating responses" disabled>AI Generate</button>
+        </div>
         <textarea id="jobAdText" placeholder="Paste the job ad text here..."></textarea>
         <form id="jobForm" class="ai-hidden-job-info" aria-hidden="true">
           <input type="text" id="roleTitle" tabindex="-1" />
@@ -127,18 +130,20 @@
           <input type="text" id="businessAddress" tabindex="-1" />
           <input type="text" id="refNumber" tabindex="-1" />
         </form>
-        <div class="job-ad-controls">
-          <button type="button" id="aiGenerateBtn" title="Extract job info and generate tailored cover letter responses with AI">AI Generate</button>
-        </div>
         <div id="jobAdParseStatus" class="job-ad-status" aria-live="polite"></div>
       </section>
-
-      <section class="dashboard-section ai-tools-next-step">
-        <h3>After AI Generate</h3>
-        <p>The generated responses will appear under <strong>AI Generated</strong> in the Create Letter page. The extracted role, company, contact and address details will also be ready in Job Information.</p>
-        <a href="app.html" class="button-like-link">Go to Create Letter</a>
-      </section>
     </main>
+  </div>
+
+  <div id="aiGeneratedModal" class="modal hidden" aria-live="polite">
+    <div class="modal-content ai-generated-modal">
+      <h3>AI responses created</h3>
+      <p id="aiGeneratedModalMessage">Your generated responses are ready under <strong>AI Generated</strong> on the Create Letter page. The extracted role, company, contact and address details are also ready in Job Information.</p>
+      <div class="modal-actions">
+        <button type="button" id="aiGeneratedCloseBtn" class="secondary-btn">Stay here</button>
+        <a href="app.html" class="button-like-link">Go to Create Letter</a>
+      </div>
+    </div>
   </div>
 
 
@@ -276,6 +281,6 @@
   </div>
 
   <script src="env.js?v=12"></script>
-  <script src="script.js?v=14"></script>
+  <script src="script.js?v=15"></script>
 </body>
 </html>

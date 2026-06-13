@@ -1378,8 +1378,44 @@ body.theme-dark #jobAdText:focus {
 }
 
 .ai-tools-section h3,
-.ai-tools-next-step h3 {
+.ai-generated-modal h3 {
   margin-top: 0;
+}
+
+.ai-tools-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.ai-tools-section-header h3 {
+  margin-bottom: 0;
+}
+
+.ai-generate-inline {
+  flex-shrink: 0;
+  padding: 12px 20px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--primary);
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+
+.ai-generate-inline:hover {
+  background: var(--primary-600);
+}
+
+.ai-generate-inline:disabled {
+  background: #d7dce5;
+  color: #697386;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 .ai-tools-section #jobAdText {
@@ -1388,10 +1424,6 @@ body.theme-dark #jobAdText:focus {
 
 .ai-hidden-job-info {
   display: none;
-}
-
-.ai-tools-next-step {
-  margin-top: 20px;
 }
 
 .button-like-link {
@@ -1411,6 +1443,20 @@ body.theme-dark #jobAdText:focus {
 .button-like-link:hover {
   background: var(--primary-600);
   color: #ffffff;
+}
+
+.ai-generated-modal {
+  max-width: 560px;
+}
+
+.ai-generated-modal p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.ai-generated-modal .modal-actions {
+  align-items: center;
 }
 .overwrite-toggle {
   display: inline-flex;

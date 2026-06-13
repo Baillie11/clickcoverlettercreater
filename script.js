@@ -4041,6 +4041,8 @@
       return;
     }
 
+    updateAiGenerateButtonState(true);
+
     // Check AI availability
     const aiStatus = await checkAiStatus();
     if (aiStatus.quotaExceeded) {
@@ -4116,6 +4118,8 @@
       }
 
       showJobAdStatus(`✅ Generated ${addedCount} tailored responses. Open Create Letter to view them under AI Generated.`, 'success');
+      showAiGeneratedModal(addedCount);
+      updateAiGenerateButtonState(false);
       // Render the updated responses (AI responses are in memory only, don't sync from DB)
       renderResponses();
     } catch (error) {
@@ -4123,6 +4127,7 @@
       // Remove emoji from error message to avoid encoding issues
       const cleanMessage = error.message.replace(/[^\x00-\x7F]/g, '').trim();
       showJobAdStatus(`Failed to generate paragraphs: ${cleanMessage}`, 'error');
+      updateAiGenerateButtonState(false);
     }
   }
 
@@ -4179,15 +4184,48 @@
     DOM.jobAdParseStatus.className = `job-ad-status ${type}`;
   }
 
+  function updateAiGenerateButtonState(isBusy = false) {
+    if (!DOM.aiGenerateBtn) return;
+    if (DOM.aiGenerateBtn.dataset.aiUnavailable === 'quota') return;
+
+    const hasJobAdText = !!DOM.jobAdText?.value?.trim();
+    DOM.aiGenerateBtn.disabled = isBusy || !hasJobAdText;
+    DOM.aiGenerateBtn.textContent = isBusy ? 'Generating...' : 'AI Generate';
+    DOM.aiGenerateBtn.title = hasJobAdText
+      ? 'Extract job info and generate tailored cover letter responses with AI'
+      : 'Paste a job ad before generating responses';
+  }
+
+  function showAiGeneratedModal(count) {
+    const modal = document.getElementById('aiGeneratedModal');
+    const message = document.getElementById('aiGeneratedModalMessage');
+    if (!modal) return;
+
+    if (message) {
+      const responseText = count === 1 ? '1 response is' : `${count} responses are`;
+      message.innerHTML = `Your generated ${responseText} ready under <strong>AI Generated</strong> on the Create Letter page. The extracted role, company, contact and address details are also ready in Job Information.`;
+    }
+
+    modal.classList.remove('hidden');
+  }
+
+  function hideAiGeneratedModal() {
+    const modal = document.getElementById('aiGeneratedModal');
+    if (modal) modal.classList.add('hidden');
+  }
+
   function disableAiButtons() {
     if (DOM.aiExtractBtn) {
       DOM.aiExtractBtn.disabled = true;
+      DOM.aiExtractBtn.dataset.aiUnavailable = 'quota';
       DOM.aiExtractBtn.title = 'AI quota exceeded - temporarily unavailable';
       DOM.aiExtractBtn.style.opacity = '0.5';
       DOM.aiExtractBtn.style.cursor = 'not-allowed';
     }
     if (DOM.aiGenerateBtn) {
       DOM.aiGenerateBtn.disabled = true;
+      DOM.aiGenerateBtn.dataset.aiUnavailable = 'quota';
+      DOM.aiGenerateBtn.textContent = 'AI Generate';
       DOM.aiGenerateBtn.title = 'AI quota exceeded - temporarily unavailable';
       DOM.aiGenerateBtn.style.opacity = '0.5';
       DOM.aiGenerateBtn.style.cursor = 'not-allowed';
@@ -4197,15 +4235,16 @@
   function enableAiButtons() {
     if (DOM.aiExtractBtn) {
       DOM.aiExtractBtn.disabled = false;
+      delete DOM.aiExtractBtn.dataset.aiUnavailable;
       DOM.aiExtractBtn.title = 'Use AI to extract job info';
       DOM.aiExtractBtn.style.opacity = '1';
       DOM.aiExtractBtn.style.cursor = 'pointer';
     }
     if (DOM.aiGenerateBtn) {
-      DOM.aiGenerateBtn.disabled = false;
-      DOM.aiGenerateBtn.title = 'Generate cover letter paragraphs with AI';
+      delete DOM.aiGenerateBtn.dataset.aiUnavailable;
       DOM.aiGenerateBtn.style.opacity = '1';
       DOM.aiGenerateBtn.style.cursor = 'pointer';
+      updateAiGenerateButtonState(false);
     }
   }
 
@@ -4522,6 +4561,18 @@
     DOM.aiGenerateBtn = document.getElementById('aiGenerateBtn');
     if (DOM.aiExtractBtn) DOM.aiExtractBtn.addEventListener('click', handleAiExtract);
     if (DOM.aiGenerateBtn) DOM.aiGenerateBtn.addEventListener('click', handleAiGenerate);
+    if (DOM.jobAdText) {
+      DOM.jobAdText.addEventListener('input', () => updateAiGenerateButtonState(false));
+      updateAiGenerateButtonState(false);
+    }
+    const aiGeneratedCloseBtn = document.getElementById('aiGeneratedCloseBtn');
+    const aiGeneratedModal = document.getElementById('aiGeneratedModal');
+    if (aiGeneratedCloseBtn) aiGeneratedCloseBtn.addEventListener('click', hideAiGeneratedModal);
+    if (aiGeneratedModal) {
+      aiGeneratedModal.addEventListener('click', (e) => {
+        if (e.target === aiGeneratedModal) hideAiGeneratedModal();
+      });
+    }
 
     // Header/Nav events
     if (DOM.themeToggleBtn) DOM.themeToggleBtn.addEventListener('click', toggleTheme);
