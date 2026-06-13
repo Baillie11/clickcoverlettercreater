@@ -469,6 +469,7 @@
       const savedResponses = localStorage.getItem('responses');
       const savedResume = localStorage.getItem('resumeData');
       const savedSettings = localStorage.getItem('appSettings');
+      let savedAiResponses = [];
       
       if (savedProfile) {
         appState.profile = JSON.parse(savedProfile);
@@ -476,6 +477,7 @@
       
       if (savedResponses) {
         appState.responses = JSON.parse(savedResponses);
+        savedAiResponses = appState.responses.filter(r => r.category === 'ai');
       } else {
         // First time - seed with default responses
         seedDefaultResponses();
@@ -542,7 +544,7 @@
           console.warn('Unable to fetch crowd-sourced responses:', e.message || e);
         }
         
-        appState.responses = allResponses;
+        appState.responses = allResponses.concat(savedAiResponses);
         // Cache to localStorage as well
         localStorage.setItem('responses', JSON.stringify(appState.responses));
       } catch (e) {
@@ -4101,14 +4103,19 @@
       
       // Add generated responses to AI library
       let addedCount = 0;
-      if (result.responses && Array.isArray(result.responses)) {
-        for (const resp of result.responses) {
-          await addResponseToLibrary(resp.text, 'ai', resp.tag || 'AI Generated', [resp.tag || 'AI Generated']);
-          addedCount++;
-        }
+      const generatedResponses = Array.isArray(result.responses)
+        ? result.responses
+        : (Array.isArray(result.paragraphs) ? result.paragraphs : []);
+
+      for (const item of generatedResponses) {
+        const text = typeof item === 'string' ? item : item?.text;
+        const tag = typeof item === 'string' ? 'AI Generated' : (item?.tag || 'AI Generated');
+        if (!text || !text.trim()) continue;
+        await addResponseToLibrary(text, 'ai', tag, [tag]);
+        addedCount++;
       }
 
-      showJobAdStatus(`✅ Generated ${addedCount} tailored responses and added to AI library!`, 'success');
+      showJobAdStatus(`✅ Generated ${addedCount} tailored responses. Open Create Letter to view them under AI Generated.`, 'success');
       // Render the updated responses (AI responses are in memory only, don't sync from DB)
       renderResponses();
     } catch (error) {
