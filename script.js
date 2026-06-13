@@ -2172,12 +2172,22 @@
   const AI_TAG_ORDER = [
     'Introduction',
     'Experience',
-    'Education / Qualifications',
+    'Qualifications',
     'Skills',
-    'Motivation / Why this role',
-    'Why this company',
+    'Motivation',
     'Closing'
   ];
+
+  function normalizeAiTag(tag) {
+    const normalized = (tag || '').toLowerCase().trim();
+    if (normalized.includes('introduction')) return 'Introduction';
+    if (normalized.includes('experience')) return 'Experience';
+    if (normalized.includes('qualification') || normalized.includes('education')) return 'Qualifications';
+    if (normalized.includes('skill')) return 'Skills';
+    if (normalized.includes('motivation') || normalized.includes('why this role') || normalized.includes('why this company')) return 'Motivation';
+    if (normalized.includes('closing')) return 'Closing';
+    return tag || '';
+  }
   
   // Track visibility state of response categories
   let categoryVisibility = {
@@ -2280,10 +2290,12 @@
         // Get first tag for each response
         const aFirstTag = (a.tags && a.tags.length > 0) ? a.tags[0] : '';
         const bFirstTag = (b.tags && b.tags.length > 0) ? b.tags[0] : '';
+        const aSortTag = normalizeAiTag(aFirstTag);
+        const bSortTag = normalizeAiTag(bFirstTag);
         
         // Get order index for each tag (-1 if not in custom order)
-        const aIndex = AI_TAG_ORDER.indexOf(aFirstTag);
-        const bIndex = AI_TAG_ORDER.indexOf(bFirstTag);
+        const aIndex = AI_TAG_ORDER.indexOf(aSortTag);
+        const bIndex = AI_TAG_ORDER.indexOf(bSortTag);
         
         // If both tags are in custom order, sort by their order
         if (aIndex !== -1 && bIndex !== -1) {
