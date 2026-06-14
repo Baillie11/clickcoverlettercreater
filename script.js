@@ -4078,7 +4078,8 @@
         body: JSON.stringify({
           jobAdText,
           profile: appState.profile,
-          resumeText
+          resumeText,
+          placeholderTags: ['[Company Name]', '[Role Title]', '[Contact]', '[Reference]', '[Business Address]', '[Industry]']
         })
       });
 
@@ -4125,7 +4126,8 @@
         const text = typeof item === 'string' ? item : item?.text;
         const tag = typeof item === 'string' ? 'AI Generated' : (item?.tag || 'AI Generated');
         if (!text || !text.trim()) continue;
-        await addResponseToLibrary(text, 'ai', tag, [tag]);
+        const normalizedText = normalizeAiGeneratedPlaceholders(text, result.jobInfo);
+        await addResponseToLibrary(normalizedText, 'ai', tag, [tag]);
         addedCount++;
       }
 
@@ -4141,6 +4143,39 @@
       showJobAdStatus(`Failed to generate paragraphs: ${cleanMessage}`, 'error');
       updateAiGenerateButtonState(false);
     }
+  }
+
+  function escapeRegExp(value) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  function normalizeAiGeneratedPlaceholders(text, jobInfo = {}) {
+    let output = text || '';
+    const replacements = [
+      { label: 'Company Name', value: jobInfo.companyName || DOM.companyName?.value },
+      { label: 'Role Title', value: jobInfo.roleTitle || DOM.roleTitle?.value },
+      { label: 'Contact', value: jobInfo.contactPerson || DOM.contactPerson?.value },
+      { label: 'Reference', value: jobInfo.reference || DOM.refNumber?.value },
+      { label: 'Business Address', value: jobInfo.businessAddress || DOM.businessAddress?.value },
+      { label: 'Industry', value: appState.profile?.industry }
+    ];
+
+    replacements.forEach(({ label }) => {
+      const placeholder = `[${label}]`;
+      const labelPattern = new RegExp(`[\\[{]?\\b${escapeRegExp(label)}\\b[\\]}]?`, 'gi');
+      output = output.replace(labelPattern, placeholder);
+    });
+
+    replacements
+      .filter(({ value }) => value && value.trim().length >= 3)
+      .sort((a, b) => b.value.length - a.value.length)
+      .forEach(({ label, value }) => {
+        const placeholder = `[${label}]`;
+        const valuePattern = new RegExp(escapeRegExp(value.trim()), 'gi');
+        output = output.replace(valuePattern, placeholder);
+      });
+
+    return output;
   }
 
   async function addResponseToLibrary(text, category, source, tags = []) {
@@ -4194,6 +4229,7 @@
     if (!DOM.jobAdParseStatus) return;
     DOM.jobAdParseStatus.textContent = message;
     DOM.jobAdParseStatus.className = `job-ad-status ${type}`;
+    DOM.jobAdParseStatus.hidden = !message;
   }
 
   function updateAiGenerateButtonState(isBusy = false) {

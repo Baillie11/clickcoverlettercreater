@@ -93,8 +93,8 @@
     <nav class="app-nav">
       <div class="nav-left">
         <a href="app.html">Create Letter</a>
-        <a href="profile.html">Profile</a>
         <a href="dashboard.html">Dashboard</a>
+        <a href="profile.html">Profile</a>
       </div>
       <div class="nav-center">
         <a href="ai-tools.html" class="ai-tools-link active">AI Tools</a>
@@ -120,7 +120,10 @@
       <section class="job-ad-section ai-tools-section">
         <div class="ai-tools-section-header">
           <h3>Paste Job Ad</h3>
-          <button type="button" id="aiGenerateBtn" class="ai-generate-inline" title="Paste a job ad before generating responses" disabled>AI Generate</button>
+          <div class="ai-tools-action-bar">
+            <div id="jobAdParseStatus" class="job-ad-status" aria-live="polite"></div>
+            <button type="button" id="aiGenerateBtn" class="ai-generate-inline" title="Paste a job ad before generating responses" disabled>AI Generate</button>
+          </div>
         </div>
         <textarea id="jobAdText" placeholder="Paste the job ad text here..."></textarea>
         <form id="jobForm" class="ai-hidden-job-info" aria-hidden="true">
@@ -130,7 +133,6 @@
           <input type="text" id="businessAddress" tabindex="-1" />
           <input type="text" id="refNumber" tabindex="-1" />
         </form>
-        <div id="jobAdParseStatus" class="job-ad-status" aria-live="polite"></div>
       </section>
     </main>
   </div>
@@ -281,6 +283,6 @@
   </div>
 
   <script src="env.js?v=12"></script>
-  <script src="script.js?v=16"></script>
+  <script src="script.js?v=17"></script>
 </body>
 </html>
