@@ -1,5 +1,5 @@
 // coverLetterTemplates.js
-// 20 structured cover letter templates for VitaePro
+// 25 structured cover letter templates for VitaePro
 // Each template follows the required structure and is exported as an array.
 // To add more templates: copy an existing object, update `id` (use vitaepro_template_XX),
 // `name`, `industry`, `careerLevel`, `tone`, and `contentSkeleton` placeholders.
@@ -524,6 +524,136 @@ const templates = [
       { tag: 'Achievements / Awards', placeholder: 'Bold results and recognitions you want to highlight.' },
       { tag: 'Motivation / Why this role', placeholder: 'Ambitious but realistic plan to add immediate value.' },
       { tag: 'Closing', placeholder: 'Strong call-to-action and next-step request.' }
+    ]
+  },
+
+  {
+    id: 'vitaepro_template_21',
+    name: 'Premium Strategic Leader',
+    themeId: 'formal-classic',
+    description: 'A premium senior-career template for leadership roles, built around strategic judgement, influence and measurable transformation.',
+    industry: ['Executive / Leadership','Corporate / Office','Government'],
+    careerLevel: ['Senior','Executive'],
+    tone: ['Executive','Professional','Confident'],
+    layoutStyle: 'Executive letterhead with strategic value proposition and transformation highlights',
+    imagery: {
+      type: 'minimal',
+      previewImage: 'https://source.unsplash.com/featured/?executive,strategy,boardroom',
+      theme: 'Premium executive strategy'
+    },
+    supportedTags: ['Introduction','Why this company','Experience','Skills','Achievements / Awards','Motivation / Why this role','Closing'],
+    contentSkeleton: [
+      { tag: 'Introduction', placeholder: 'Open with a refined leadership proposition, naming the role and the scale of impact you bring.' },
+      { tag: 'Why this company', placeholder: 'Connect the organisation\'s strategic direction to your leadership experience and commercial judgement.' },
+      { tag: 'Experience', placeholder: 'Summarise senior roles, team or budget scale, stakeholder complexity and transformation remit.' },
+      { tag: 'Skills', placeholder: 'Highlight executive strengths such as strategy, governance, people leadership, risk and change management.' },
+      { tag: 'Achievements / Awards', placeholder: 'Use 1-2 premium proof points with metrics: growth, savings, turnaround, compliance or service improvement.' },
+      { tag: 'Motivation / Why this role', placeholder: 'Explain the strategic contribution you would make in the first 6-12 months.' },
+      { tag: 'Closing', placeholder: 'Close with calm confidence and invite a senior-level discussion about priorities and fit.' }
+    ]
+  },
+
+  {
+    id: 'vitaepro_template_22',
+    name: 'Finance & Compliance Precision',
+    themeId: 'letterhead-accent',
+    description: 'A precise, evidence-led template for finance, accounting, risk, payroll and compliance roles.',
+    industry: ['Finance & Accounting','Corporate / Office','Government'],
+    careerLevel: ['Entry','Mid','Senior'],
+    tone: ['Professional','Analytical'],
+    layoutStyle: 'Clean letterhead with audit-ready evidence and risk-control highlights',
+    imagery: {
+      type: 'abstract',
+      previewImage: 'https://source.unsplash.com/featured/?finance,accounting,analysis',
+      theme: 'Finance and compliance'
+    },
+    supportedTags: ['Introduction','Why this company','Experience','Skills','Achievements / Awards','Motivation / Why this role','Closing'],
+    contentSkeleton: [
+      { tag: 'Introduction', placeholder: 'State your finance, accounting or compliance background and the role you are applying for.' },
+      { tag: 'Why this company', placeholder: 'Reference the organisation\'s standards, governance, growth or service model.' },
+      { tag: 'Experience', placeholder: 'Describe reporting, reconciliations, payroll, audits, budgets, risk controls or stakeholder support.' },
+      { tag: 'Skills', placeholder: 'List systems, regulatory knowledge, attention to detail, analysis and communication strengths.' },
+      { tag: 'Achievements / Awards', placeholder: 'Quantify accuracy gains, audit outcomes, reporting improvements, savings or process efficiencies.' },
+      { tag: 'Motivation / Why this role', placeholder: 'Explain how you will strengthen reliability, compliance and decision-making.' },
+      { tag: 'Closing', placeholder: 'Close professionally and offer to discuss examples of reporting, controls or process improvement.' }
+    ]
+  },
+
+  {
+    id: 'vitaepro_template_23',
+    name: 'Legal & Policy Professional',
+    themeId: 'formal-classic',
+    description: 'A considered template for legal, policy, governance and regulatory roles where clarity and judgement matter.',
+    industry: ['Legal & Policy','Government','Corporate / Office'],
+    careerLevel: ['Entry','Mid','Senior'],
+    tone: ['Formal','Professional','Analytical'],
+    layoutStyle: 'Formal letter structure with concise argument and evidence-led credibility',
+    imagery: {
+      type: 'photo',
+      previewImage: 'https://source.unsplash.com/featured/?law,policy,documents',
+      theme: 'Legal and policy work'
+    },
+    supportedTags: ['Introduction','Why this company','Experience','Skills','Achievements / Awards','Motivation / Why this role','Closing'],
+    contentSkeleton: [
+      { tag: 'Introduction', placeholder: 'Introduce your legal, policy or governance background and clearly identify the role.' },
+      { tag: 'Why this company', placeholder: 'Link your interest to the organisation\'s remit, public value, clients, regulation or policy area.' },
+      { tag: 'Experience', placeholder: 'Summarise advisory work, research, drafting, case management, briefs, submissions or stakeholder liaison.' },
+      { tag: 'Skills', placeholder: 'Emphasise judgement, drafting, interpretation, confidentiality, negotiation and complex problem solving.' },
+      { tag: 'Achievements / Awards', placeholder: 'Mention outcomes such as improved processes, successful submissions, resolved matters or recognition.' },
+      { tag: 'Motivation / Why this role', placeholder: 'Explain how the role aligns with your commitment to sound decisions and practical advice.' },
+      { tag: 'Closing', placeholder: 'Close with a measured invitation to discuss your experience and suitability.' }
+    ]
+  },
+
+  {
+    id: 'vitaepro_template_24',
+    name: 'Mining, Energy & Resources',
+    themeId: 'standard',
+    description: 'A practical, safety-conscious template for mining, resources, utilities, field operations and energy roles.',
+    industry: ['Mining & Resources','Energy & Utilities','Trades & Construction'],
+    careerLevel: ['Entry','Mid','Senior'],
+    tone: ['Professional','Direct'],
+    layoutStyle: 'Operational layout with safety, licence and site-readiness highlights',
+    imagery: {
+      type: 'photo',
+      previewImage: 'https://source.unsplash.com/featured/?mining,energy,industrial',
+      theme: 'Resources and field operations'
+    },
+    supportedTags: ['Introduction','Why this company','Experience','Skills','Achievements / Awards','Motivation / Why this role','Closing'],
+    contentSkeleton: [
+      { tag: 'Introduction', placeholder: 'State your trade, operator, technical or field background and relevant licences or tickets.' },
+      { tag: 'Why this company', placeholder: 'Reference the organisation\'s safety culture, project type, site, roster or operating standards.' },
+      { tag: 'Experience', placeholder: 'Summarise site experience, equipment, maintenance, production, shutdowns, compliance or team responsibilities.' },
+      { tag: 'Skills', placeholder: 'Highlight safety focus, reliability, technical capability, teamwork and readiness for site requirements.' },
+      { tag: 'Achievements / Awards', placeholder: 'Mention incident-free performance, productivity gains, quality outcomes or supervisor recognition.' },
+      { tag: 'Motivation / Why this role', placeholder: 'Explain why this role suits your practical strengths, availability and long-term goals.' },
+      { tag: 'Closing', placeholder: 'Confirm availability for interview, site onboarding, medicals or licence verification.' }
+    ]
+  },
+
+  {
+    id: 'vitaepro_template_25',
+    name: 'Premium Career Pivot',
+    themeId: 'modern-centered',
+    description: 'A premium template for candidates changing industry or returning to work, reframing transferable value with confidence and polish.',
+    industry: ['Career Change','Corporate / Office','Remote / Digital Work'],
+    careerLevel: ['Entry','Mid','Senior'],
+    tone: ['Warm','Confident','Modern'],
+    layoutStyle: 'Premium narrative layout with transferable strengths and credibility bridge',
+    imagery: {
+      type: 'abstract',
+      previewImage: 'https://source.unsplash.com/featured/?career,transition,professional',
+      theme: 'Career transition'
+    },
+    supportedTags: ['Introduction','Why this company','Experience','Skills','Achievements / Awards','Motivation / Why this role','Closing'],
+    contentSkeleton: [
+      { tag: 'Introduction', placeholder: 'Open with the role you are pursuing and a confident bridge from your previous experience.' },
+      { tag: 'Why this company', placeholder: 'Explain why this organisation or industry is the right next step, with specific alignment.' },
+      { tag: 'Experience', placeholder: 'Translate prior roles into relevant responsibilities, customer groups, systems, projects or outcomes.' },
+      { tag: 'Skills', placeholder: 'Prioritise transferable strengths such as communication, analysis, leadership, service or digital capability.' },
+      { tag: 'Achievements / Awards', placeholder: 'Choose achievements that prove adaptability, learning speed, resilience or measurable contribution.' },
+      { tag: 'Motivation / Why this role', placeholder: 'Show a thoughtful reason for the pivot and what makes your background an advantage.' },
+      { tag: 'Closing', placeholder: 'Close with polished enthusiasm and invite discussion about how your transferable experience fits the role.' }
     ]
   }
 ];

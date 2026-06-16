@@ -3235,6 +3235,263 @@
     printEl.style.overflowWrap = 'anywhere';
     printEl.style.whiteSpace = 'pre-wrap';
 
+    const appendBodyParagraphs = (target, options = {}) => {
+      const paras = DOM.letterArea.querySelectorAll('.letter-paragraph');
+      paras.forEach(para => {
+        const p = document.createElement('p');
+        p.innerText = getParagraphText(para);
+        p.style.marginBottom = options.marginBottom || '12px';
+        p.style.lineHeight = options.lineHeight || '1.5';
+        p.style.textAlign = options.textAlign || 'left';
+        p.style.pageBreakInside = 'avoid';
+        p.style.breakInside = 'avoid-page';
+        p.style.wordBreak = 'break-word';
+        p.style.overflowWrap = 'anywhere';
+        p.style.whiteSpace = 'pre-wrap';
+        target.appendChild(p);
+      });
+    };
+
+    const appendSignature = (target, options = {}) => {
+      if (!fullName && !profile.phoneNumber && !profile.emailAddress) return;
+      const signatureP = document.createElement('p');
+      signatureP.style.marginTop = options.marginTop || '30px';
+      signatureP.style.pageBreakInside = 'avoid';
+      signatureP.style.breakInside = 'avoid-page';
+      signatureP.style.whiteSpace = 'pre-wrap';
+      let sig = 'Sincerely,';
+      if (fullName) sig += `\n${fullName}`;
+      if (profile.phoneNumber) sig += `\nPhone: ${profile.phoneNumber}`;
+      if (profile.emailAddress) sig += `\nEmail: ${profile.emailAddress}`;
+      signatureP.innerText = sig;
+      target.appendChild(signatureP);
+    };
+
+    const createSalutation = (fallback = 'Dear Hiring Team,') => {
+      const salutationP = document.createElement('p');
+      salutationP.innerText = contactPerson && contactPerson.trim()
+        ? `Dear ${contactPerson.trim()},`
+        : fallback;
+      salutationP.style.marginBottom = '16px';
+      salutationP.style.pageBreakInside = 'avoid';
+      salutationP.style.breakInside = 'avoid-page';
+      return salutationP;
+    };
+
+    if (selectedTheme === 'premium-executive') {
+      printEl.style.fontFamily = 'Georgia, "Times New Roman", serif';
+      printEl.style.color = '#111827';
+      printEl.style.padding = '28px';
+
+      const header = document.createElement('div');
+      header.style.borderTop = '6px solid #0f172a';
+      header.style.borderBottom = '1px solid #cbd5e1';
+      header.style.padding = '18px 0 14px';
+      header.style.marginBottom = '22px';
+      header.style.display = 'flex';
+      header.style.justifyContent = 'space-between';
+      header.style.gap = '24px';
+
+      const left = document.createElement('div');
+      left.style.flex = '1';
+      const name = document.createElement('div');
+      name.innerText = fullName || 'Applicant Name';
+      name.style.fontSize = '24pt';
+      name.style.fontWeight = '700';
+      name.style.letterSpacing = '0';
+      left.appendChild(name);
+      const proposition = document.createElement('div');
+      proposition.innerText = jobTitle ? `Strategic application for ${jobTitle}` : 'Strategic leadership application';
+      proposition.style.marginTop = '6px';
+      proposition.style.color = '#475569';
+      proposition.style.fontSize = '10pt';
+      proposition.style.textTransform = 'uppercase';
+      left.appendChild(proposition);
+
+      const right = document.createElement('div');
+      right.style.textAlign = 'right';
+      right.style.fontSize = '10pt';
+      right.style.color = '#334155';
+      right.innerText = [todayLong, profile.phoneNumber, profile.emailAddress].filter(Boolean).join('\n');
+
+      header.appendChild(left);
+      header.appendChild(right);
+      printEl.appendChild(header);
+
+      const companyDetails = createCompanyDetailsBlock(companyName, contactPerson, businessAddress, refNumber);
+      if (companyDetails) printEl.appendChild(companyDetails);
+      printEl.appendChild(createSalutation('Dear Hiring Manager,'));
+      appendBodyParagraphs(printEl, { marginBottom: '14px', lineHeight: '1.58' });
+      appendSignature(printEl, { marginTop: '34px' });
+      return printEl;
+    }
+
+    if (selectedTheme === 'finance-compliance') {
+      printEl.style.fontFamily = 'Arial, sans-serif';
+      printEl.style.color = '#0f172a';
+
+      const header = document.createElement('div');
+      header.style.display = 'grid';
+      header.style.gridTemplateColumns = '1.2fr 0.8fr';
+      header.style.gap = '20px';
+      header.style.borderLeft = '8px solid #2563eb';
+      header.style.padding = '12px 0 12px 16px';
+      header.style.marginBottom = '18px';
+      header.style.background = '#f8fafc';
+
+      const left = document.createElement('div');
+      left.innerText = [fullName, jobTitle ? `Application: ${jobTitle}` : 'Finance and compliance application'].filter(Boolean).join('\n');
+      left.style.fontWeight = '700';
+      left.style.lineHeight = '1.35';
+
+      const right = document.createElement('div');
+      right.style.textAlign = 'right';
+      right.style.fontSize = '10pt';
+      right.style.color = '#475569';
+      right.innerText = [todayLong, profile.phoneNumber, profile.emailAddress].filter(Boolean).join('\n');
+
+      header.appendChild(left);
+      header.appendChild(right);
+      printEl.appendChild(header);
+
+      const companyDetails = createCompanyDetailsBlock(companyName, contactPerson, businessAddress, refNumber);
+      if (companyDetails) printEl.appendChild(companyDetails);
+      printEl.appendChild(createSalutation('Dear Hiring Manager,'));
+      appendBodyParagraphs(printEl, { marginBottom: '12px' });
+      appendSignature(printEl);
+      return printEl;
+    }
+
+    if (selectedTheme === 'legal-policy') {
+      printEl.style.fontFamily = 'Georgia, "Times New Roman", serif';
+      printEl.style.color = '#111111';
+      printEl.style.padding = '26px';
+
+      const header = document.createElement('div');
+      header.style.textAlign = 'center';
+      header.style.borderBottom = '2px solid #111111';
+      header.style.paddingBottom = '12px';
+      header.style.marginBottom = '20px';
+      const name = document.createElement('div');
+      name.innerText = fullName || 'Applicant Name';
+      name.style.fontSize = '20pt';
+      name.style.fontWeight = '700';
+      header.appendChild(name);
+      const contact = document.createElement('div');
+      contact.innerText = [profile.phoneNumber, profile.emailAddress].filter(Boolean).join(' | ');
+      contact.style.fontSize = '10pt';
+      contact.style.marginTop = '4px';
+      header.appendChild(contact);
+      printEl.appendChild(header);
+
+      const dateEl = document.createElement('div');
+      dateEl.innerText = todayLong;
+      dateEl.style.textAlign = 'right';
+      dateEl.style.marginBottom = '14px';
+      printEl.appendChild(dateEl);
+      const companyDetails = createCompanyDetailsBlock(companyName, contactPerson, businessAddress, refNumber);
+      if (companyDetails) printEl.appendChild(companyDetails);
+
+      const subject = document.createElement('p');
+      subject.innerText = jobTitle ? `Re: Application for ${jobTitle}` : 'Re: Application';
+      subject.style.fontWeight = '700';
+      subject.style.marginBottom = '14px';
+      printEl.appendChild(subject);
+
+      printEl.appendChild(createSalutation('Dear Hiring Manager,'));
+      appendBodyParagraphs(printEl, { marginBottom: '13px', lineHeight: '1.55' });
+      appendSignature(printEl);
+      return printEl;
+    }
+
+    if (selectedTheme === 'resources-field') {
+      printEl.style.fontFamily = 'Segoe UI, Arial, sans-serif';
+      printEl.style.color = '#1f2937';
+
+      const header = document.createElement('div');
+      header.style.background = '#111827';
+      header.style.color = '#ffffff';
+      header.style.padding = '16px 18px';
+      header.style.borderBottom = '6px solid #f59e0b';
+      header.style.marginBottom = '18px';
+      const name = document.createElement('div');
+      name.innerText = fullName || 'Applicant Name';
+      name.style.fontSize = '20pt';
+      name.style.fontWeight = '800';
+      header.appendChild(name);
+      const sub = document.createElement('div');
+      sub.innerText = jobTitle || profile.industry || 'Site-ready professional';
+      sub.style.marginTop = '4px';
+      sub.style.fontSize = '10pt';
+      sub.style.color = '#fde68a';
+      header.appendChild(sub);
+      printEl.appendChild(header);
+
+      const meta = document.createElement('div');
+      meta.style.display = 'flex';
+      meta.style.justifyContent = 'space-between';
+      meta.style.gap = '18px';
+      meta.style.fontSize = '10pt';
+      meta.style.marginBottom = '16px';
+      meta.style.borderBottom = '1px solid #d1d5db';
+      meta.style.paddingBottom = '10px';
+      const companyDetails = createCompanyDetailsBlock(companyName, contactPerson, businessAddress, refNumber);
+      if (companyDetails) meta.appendChild(companyDetails);
+      const contact = document.createElement('div');
+      contact.style.textAlign = 'right';
+      contact.innerText = [todayLong, profile.phoneNumber, profile.emailAddress].filter(Boolean).join('\n');
+      meta.appendChild(contact);
+      printEl.appendChild(meta);
+
+      printEl.appendChild(createSalutation('Dear Hiring Manager,'));
+      appendBodyParagraphs(printEl, { marginBottom: '12px', lineHeight: '1.52' });
+      appendSignature(printEl);
+      return printEl;
+    }
+
+    if (selectedTheme === 'premium-career-pivot') {
+      printEl.style.fontFamily = 'Calibri, Arial, sans-serif';
+      printEl.style.color = '#111827';
+      printEl.style.padding = '26px';
+
+      const header = document.createElement('div');
+      header.style.background = '#f3f4f6';
+      header.style.border = '1px solid #d1d5db';
+      header.style.borderRadius = '10px';
+      header.style.padding = '18px';
+      header.style.marginBottom = '20px';
+      const name = document.createElement('div');
+      name.innerText = fullName || 'Applicant Name';
+      name.style.fontSize = '22pt';
+      name.style.fontWeight = '700';
+      header.appendChild(name);
+      const bridge = document.createElement('div');
+      bridge.innerText = jobTitle ? `Transferable strengths for ${jobTitle}` : 'Transferable strengths and career transition';
+      bridge.style.marginTop = '6px';
+      bridge.style.color = '#374151';
+      bridge.style.fontWeight = '600';
+      header.appendChild(bridge);
+      const contact = document.createElement('div');
+      contact.innerText = [profile.phoneNumber, profile.emailAddress].filter(Boolean).join(' | ');
+      contact.style.marginTop = '8px';
+      contact.style.fontSize = '10pt';
+      contact.style.color = '#4b5563';
+      header.appendChild(contact);
+      printEl.appendChild(header);
+
+      const dateEl = document.createElement('div');
+      dateEl.innerText = todayLong;
+      dateEl.style.textAlign = 'right';
+      dateEl.style.marginBottom = '12px';
+      printEl.appendChild(dateEl);
+      const companyDetails = createCompanyDetailsBlock(companyName, contactPerson, businessAddress, refNumber);
+      if (companyDetails) printEl.appendChild(companyDetails);
+      printEl.appendChild(createSalutation('Dear Hiring Team,'));
+      appendBodyParagraphs(printEl, { marginBottom: '13px', lineHeight: '1.56' });
+      appendSignature(printEl, { marginTop: '32px' });
+      return printEl;
+    }
+
     if (selectedTheme === 'modern-centered') {
       const headerBlock = document.createElement('div');
       headerBlock.style.textAlign = 'center';
